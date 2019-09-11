@@ -1,13 +1,19 @@
 import os
 import re
 import pickle
+import argparse
 
 import numpy as np
-import matplotlib.pyplot as plt
 import h5py
 from eolearn.core import EOTask, EOPatch
 
-DATASET_DIR = 'data/slovenia/'
+# Arg parser
+parser = argparse.ArgumentParser(
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('-d', type=str, default='data/slovenia/')
+args = parser.parse_args()
+
+DATASET_DIR = args.d
 
 PATCHES_W = 15
 PATCHES_H = 10
@@ -64,8 +70,6 @@ def main():
             metadict = dict(eo_patch.meta_info)
             data = np.void(pickle.dumps(metadict))
             write_to_hdf5(h5set, 'pickled_metadata', patch_indices, data=data)
-
-
 
 def extract_name(eopatch_name):
     indices = tuple(int(s) for s in re.findall(r'\d+', eopatch_name))
