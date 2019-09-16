@@ -10,7 +10,8 @@ from eolearn.core import EOTask, EOPatch
 # Arg parser
 parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('-d', type=str, default='data/slovenia/')
+parser.add_argument('-d', type=str, default='data/slovenia/') # input directory
+parser.add_argument('-o', type=str, default='data/slovenia/' ) # output directory
 args = parser.parse_args()
 
 DATASET_DIR = args.d
@@ -20,7 +21,7 @@ PATCHES_H = 10
 
 def main():
     # Read through all directories
-    with h5py.File(DATASET_DIR + "slovenia2017.hdf5", "w") as f:
+    with h5py.File(args.o + "slovenia2017.hdf5", "w") as f:
 
         n_patches = len(os.listdir(DATASET_DIR))
         for i, patch_name in enumerate(os.listdir(DATASET_DIR)):
@@ -48,6 +49,8 @@ def main():
 
             # Write timeless mask
             data = eo_patch.mask_timeless['LULC']
+            # TODO One Hot encode this thing
+            print('max', data.max())
             subset = write_to_hdf5(h5set, 'mask_timeless/lulc', data=data)
 
             data = eo_patch.mask_timeless['VALID_COUNT']
@@ -69,8 +72,6 @@ def main():
             metadict = dict(eo_patch.meta_info)
             data = np.void(pickle.dumps(metadict))
             write_to_hdf5(h5set, 'pickled_metadata', data=data)
-
-
 
 def write_to_hdf5(dset,
                   subset_name,

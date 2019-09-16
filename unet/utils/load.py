@@ -6,8 +6,35 @@ import os
 
 import numpy as np
 from PIL import Image
+import torch
+import h5py
 
 from .utils import resize_and_crop, get_square, normalize, hwc_to_chw
+
+
+
+
+class SloveniaDataset(torch.utils.data.Dataset):
+    def __init__(self, file_path):
+        super().__init__()
+        self.dataset = h5py.File(file_path, 'r')
+        self.dataset_indices = list(self.dataset.keys())
+        self.episode = None
+
+    def __getitem__(self, index):
+
+        subset_name = self.dataset_indices[index]
+        subset = self.dataset[subset_name]
+
+        obs = subset['data_bands']
+        # move from (x, y, c) to (c, x, y) PyTorch style
+        obs = np.moveaxis(obs, -1, 1)
+        label = subset['mask_timeless']['lulc'].value
+        return obs, label
+
+    def __len__(self):
+
+        return len(list(self.dataset.keys()))
 
 
 def get_ids(dir):

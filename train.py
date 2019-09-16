@@ -7,10 +7,14 @@ import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
 from torch import optim
+from torch.utils import data as torch_data
 
 from eval import eval_net
 from unet import UNet
-from utils import get_ids, split_ids, split_train_val, get_imgs_and_masks, batch
+from unet.utils import SloveniaDataset
+
+DATASET_DIR = 'data/slovenia/slovenia2017.hdf5'
+BATCH_SIZE = 1
 
 def train_net(net,
               epochs=5,
@@ -18,31 +22,8 @@ def train_net(net,
               lr=0.1,
               val_percent=0.05,
               save_cp=True,
-              gpu=False,
+              device=torch.device('cpu'),
               img_scale=0.5):
-
-    dir_img = 'data/train/'
-    dir_mask = 'data/train_masks/'
-    dir_checkpoint = 'checkpoints/'
-
-    ids = get_ids(dir_img)
-    ids = split_ids(ids)
-
-    iddataset = split_train_val(ids, val_percent)
-
-    print('''
-    Starting training:
-        Epochs: {}
-        Batch size: {}
-        Learning rate: {}
-        Training size: {}
-        Validation size: {}
-        Checkpoints: {}
-        CUDA: {}
-    '''.format(epochs, batch_size, lr, len(iddataset['train']),
-               len(iddataset['val']), str(save_cp), str(gpu)))
-
-    N_train = len(iddataset['train'])
 
     optimizer = optim.SGD(net.parameters(),
                           lr=lr,
@@ -56,21 +37,19 @@ def train_net(net,
         net.train()
 
         # reset the generators
-        train = get_imgs_and_masks(iddataset['train'], dir_img, dir_mask, img_scale)
-        val = get_imgs_and_masks(iddataset['val'], dir_img, dir_mask, img_scale)
+        dataset = SloveniaDataset(DATASET_DIR)
+        dataloader = torch_data.DataLoader(dataset,
+                                           batch_size=BATCH_SIZE,
+                                           pin_memory=True,
+                                           num_workers=1,
+                                           drop_last=True,
+                                           )
 
         epoch_loss = 0
 
-        for i, b in enumerate(batch(train, batch_size)):
-            imgs = np.array([i[0] for i in b]).astype(np.float32)
-            true_masks = np.array([i[1] for i in b])
-
-            imgs = torch.from_numpy(imgs)
-            true_masks = torch.from_numpy(true_masks)
-
-            if gpu:
-                imgs = imgs.cuda()
-                true_masks = true_masks.cuda()
+        for i, (imgs, true_masks) in enumerate(dataloader):
+            imgs = imgs.to(device)
+            true_masks = true_masks.to(device)
 
             masks_pred = net(imgs)
             masks_probs_flat = masks_pred.view(-1)
@@ -79,24 +58,12 @@ def train_net(net,
 
             loss = criterion(masks_probs_flat, true_masks_flat)
             epoch_loss += loss.item()
-
-            print('{0:.4f} --- loss: {1:.6f}'.format(i * batch_size / N_train, loss.item()))
-
+            print(loss.item())
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
         print('Epoch finished ! Loss: {}'.format(epoch_loss / i))
-
-        if 1:
-            val_dice = eval_net(net, val, gpu)
-            print('Validation Dice Coeff: {}'.format(val_dice))
-
-        if save_cp:
-            torch.save(net.state_dict(),
-                       dir_checkpoint + 'CP{}.pth'.format(epoch + 1))
-            print('Checkpoint {} saved !'.format(epoch + 1))
-
 
 
 def get_args():
@@ -120,14 +87,16 @@ def get_args():
 if __name__ == '__main__':
     args = get_args()
 
-    net = UNet(n_channels=3, n_classes=1)
+    net = UNet(n_channels=8, n_classes=9)
 
     if args.load:
         net.load_state_dict(torch.load(args.load))
         print('Model loaded from {}'.format(args.load))
 
     if args.gpu:
-        net.cuda()
+        device = torch.device("cuda" if (torch.cuda.is_available() and args.gpu) else "cpu")
+    else:
+        device = torch.device('cpu')
         # cudnn.benchmark = True # faster convolutions, but more memory
 
     try:
@@ -135,7 +104,7 @@ if __name__ == '__main__':
                   epochs=args.epochs,
                   batch_size=args.batchsize,
                   lr=args.lr,
-                  gpu=args.gpu,
+                  device=device,
                   img_scale=args.scale)
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
