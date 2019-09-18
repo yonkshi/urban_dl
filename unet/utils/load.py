@@ -34,6 +34,7 @@ class SloveniaDataset(torch.utils.data.Dataset):
 
         label = subset['mask_timeless']['lulc'].value
         label = np.moveaxis(label, -1, 0).astype(np.float32)
+        label = np.argmax(label, axis=0)
         return obs, label
 
     def __len__(self):

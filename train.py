@@ -1,13 +1,16 @@
 import sys
 import os
 from optparse import OptionParser
-import numpy as np
+import datetime
 
+import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
 from torch import optim
 from torch.utils import data as torch_data
+from tensorboardX import SummaryWriter
+from coolname import generate_slug
 
 from eval import eval_net
 from unet import UNet
@@ -25,12 +28,19 @@ def train_net(net,
               device=torch.device('cpu'),
               img_scale=0.5):
 
+    run_name = generate_slug(2) + '-' + datetime.datetime.today().strftime('%b-%d')
+    log_path = 'logs/%s' % run_name
+    writer = SummaryWriter(log_path)
+
+    # TODO Save Run Config in Pandas
+    # TODO Save
+
     optimizer = optim.SGD(net.parameters(),
                           lr=lr,
                           momentum=0.9,
                           weight_decay=0.0005)
 
-    criterion = nn.BCELoss()
+    criterion = nn.CrossEntropyLoss()
 
     for epoch in range(epochs):
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
@@ -48,22 +58,24 @@ def train_net(net,
         epoch_loss = 0
 
         for i, (imgs, true_masks) in enumerate(dataloader):
+
+            global_step = epoch * batch_size + i
+
             imgs = imgs.to(device)
             true_masks = true_masks.to(device)
 
             masks_pred = net(imgs)
-            masks_probs_flat = masks_pred.view(-1)
-
-            true_masks_flat = true_masks.view(-1)
-
-            loss = criterion(masks_probs_flat, true_masks_flat)
+            loss = criterion(masks_pred, true_masks)
             epoch_loss += loss.item()
-            print(loss.item())
+
+            print('loss', loss.item())
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-        print('Epoch finished ! Loss: {}'.format(epoch_loss / i))
+            # Write things in
+            writer.add_scalar('loss', loss, global_step)
+
 
 
 def get_args():
