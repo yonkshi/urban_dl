@@ -17,7 +17,7 @@ from .utils import resize_and_crop, get_square, normalize, hwc_to_chw
 class SloveniaDataset(torch.utils.data.Dataset):
     def __init__(self, file_path):
         super().__init__()
-        self.dataset = h5py.File(file_path, 'r')
+        self.dataset = h5py.File(file_path, 'r', libver='latest', swmr=True)
         self.dataset_indices = list(self.dataset.keys())
         self.episode = None
 
