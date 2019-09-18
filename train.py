@@ -38,7 +38,7 @@ def train_net(net,
 
     # TODO Save Run Config in Pandas
     # TODO Save
-
+    print('run started, running on ', device)
     optimizer = optim.SGD(net.parameters(),
                           lr=lr,
                           momentum=0.9,
