@@ -29,6 +29,7 @@ def train_net(net,
               lr=0.1,
               val_percent=0.05,
               save_cp=True,
+              num_dataloaders = 1,
               device=torch.device('cpu'),
               img_scale=0.5):
 
@@ -57,7 +58,7 @@ def train_net(net,
         dataloader = torch_data.DataLoader(dataset,
                                            batch_size=batch_size,
                                            pin_memory=True,
-                                           num_workers=1,
+                                           num_workers=num_dataloaders,
                                            drop_last=True,
                                            )
 
@@ -172,6 +173,8 @@ def get_args():
                       type='int', help='batch size')
     parser.add_option('-l', '--learning-rate', dest='lr', default=0.1,
                       type='float', help='learning rate')
+    parser.add_option('-w', '--num-worker', dest='num_dataloaders', default=1,
+                      type='int', help='number of dataloader workers')
     parser.add_option('-g', '--gpu', action='store_true', dest='gpu',
                       default=False, help='use cuda')
     parser.add_option('-c', '--load', dest='load',
@@ -203,6 +206,7 @@ if __name__ == '__main__':
                   batch_size=args.batchsize,
                   lr=args.lr,
                   device=device,
+                  num_dataloaders = args.num_dataloaders,
                   img_scale=args.scale)
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
