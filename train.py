@@ -148,11 +148,11 @@ def visualize_image(input_image, output_segmentation, gt_segmentation, writer:Su
 
 
 def toNp_vanilla(t:torch.Tensor):
-    return t[0,...].detach().numpy()
+    return t[0,...].detach().cpu().numpy()
 
 def toNp(t:torch.Tensor):
     # Pick the first item
-    return to_H_W_C(t)[0,...].detach().numpy()
+    return to_H_W_C(t)[0,...].detach().cpu().numpy()
 
 def to_C_H_W(t:torch.Tensor):
     # From [B, H, W, C] to [B, C, H, W]
