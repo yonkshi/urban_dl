@@ -39,6 +39,7 @@ def train_net(net,
 
     # TODO Save Run Config in Pandas
     # TODO Save
+    print('>>>>> run name', run_name)
     print('run started, running on ', device)
     optimizer = optim.SGD(net.parameters(),
                           lr=lr,
@@ -65,9 +66,9 @@ def train_net(net,
         epoch_loss = 0
 
         for i, (imgs, true_masks) in enumerate(dataloader):
-            print('data sample loaded')
             global_step = epoch * batch_size + i
-
+            print('step', global_step)
+            print('data sample loaded')
             imgs = imgs.to(device)
             true_masks = true_masks.to(device)
 
