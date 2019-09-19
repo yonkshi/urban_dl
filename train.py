@@ -33,7 +33,7 @@ def train_net(net,
               device=torch.device('cpu'),
               img_scale=0.5):
 
-    run_name = generate_slug(2) + '-' + datetime.datetime.today().strftime('%b-%d')
+    run_name = datetime.datetime.today().strftime('%b-%d') + '-' generate_slug(2)
     log_path = 'logs/%s' % run_name
     writer = SummaryWriter(log_path)
 
