@@ -142,9 +142,7 @@ def visualize_image(input_image, output_segmentation, gt_segmentation, writer:Su
     ax2.set_title('ground_truth')
     ax2.axis('off')
 
-    writer.add_figure(plt,global_step)
-
-    print('hello world')
+    writer.add_figure('output_image',plt,global_step)
 
 
 def toNp_vanilla(t:torch.Tensor):
