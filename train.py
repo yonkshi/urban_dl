@@ -64,25 +64,32 @@ def train_net(net,
         epoch_loss = 0
 
         for i, (imgs, true_masks) in enumerate(dataloader):
-
+            print('data sample loaded')
             global_step = epoch * batch_size + i
 
             imgs = imgs.to(device)
             true_masks = true_masks.to(device)
 
+            print('data sample loaded to CUDA')
             masks_pred = net(imgs)
-
+            print('inference computed')
             loss = criterion(masks_pred, true_masks)
+            print('loss computed ')
             epoch_loss += loss.item()
 
             print('loss', loss.item())
             optimizer.zero_grad()
             loss.backward()
+            print('loss backward')
             optimizer.step()
+            print('optimzer executed')
 
             # Write things in
-            visualize_image(imgs, masks_pred, true_masks, writer, global_step)
             writer.add_scalar('loss', loss, global_step)
+            print('add loss')
+            visualize_image(imgs, masks_pred, true_masks, writer, global_step)
+            print('visualize image')
+
 
 
 class LULC(enum.Enum):
