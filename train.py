@@ -46,6 +46,8 @@ def train_net(net,
 
     criterion = nn.CrossEntropyLoss()
 
+    net.to(device)
+
     for epoch in range(epochs):
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
         net.train()
@@ -69,8 +71,6 @@ def train_net(net,
             true_masks = true_masks.to(device)
 
             masks_pred = net(imgs)
-
-
 
             loss = criterion(masks_pred, true_masks)
             epoch_loss += loss.item()
