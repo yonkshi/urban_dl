@@ -87,10 +87,11 @@ def train_net(net,
             print('optimzer executed')
 
             # Write things in
-            writer.add_scalar('loss', loss, global_step)
-            print('add loss')
-            visualize_image(imgs, masks_pred, true_masks, writer, global_step)
-            print('visualize image')
+            if global_step % 30 == 0:
+                writer.add_scalar('loss', loss, global_step)
+                print('add loss')
+                visualize_image(imgs, masks_pred, true_masks, writer, global_step)
+                print('visualize image')
 
 
 
