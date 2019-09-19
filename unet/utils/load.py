@@ -20,6 +20,7 @@ class SloveniaDataset(torch.utils.data.Dataset):
         self.dataset = h5py.File(file_path, 'r', libver='latest', swmr=True)
         self.dataset_indices = list(self.dataset.keys())
         self.episode = None
+        self.length = len(list(self.dataset.keys()))
 
     def __getitem__(self, index):
 
@@ -42,7 +43,7 @@ class SloveniaDataset(torch.utils.data.Dataset):
 
     def __len__(self):
 
-        return len(list(self.dataset.keys()))
+        return self.length
 
 
 def get_ids(dir):
