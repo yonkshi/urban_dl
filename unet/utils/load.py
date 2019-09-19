@@ -25,15 +25,17 @@ class SloveniaDataset(torch.utils.data.Dataset):
 
         subset_name = self.dataset_indices[index]
         subset = self.dataset[subset_name]
-        subset.refresh()
 
         obs = subset['data_bands']
+        obs.refresh()
         # move from (x, y, c) to (c, x, y) PyTorch style
         obs = np.moveaxis(obs, -1, 1)
         # TODO For now, only pick the first image of each pixel
         obs = obs[0,...]
 
-        label = subset['mask_timeless']['lulc'].value
+        label = subset['mask_timeless']['lulc']
+        label.refresh()
+        label = label.value
         label = np.moveaxis(label, -1, 0).astype(np.float32)
         label = np.argmax(label, axis=0)
         return obs, label
