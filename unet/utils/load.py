@@ -25,6 +25,7 @@ class SloveniaDataset(torch.utils.data.Dataset):
 
         subset_name = self.dataset_indices[index]
         subset = self.dataset[subset_name]
+        subset.refresh()
 
         obs = subset['data_bands']
         # move from (x, y, c) to (c, x, y) PyTorch style
