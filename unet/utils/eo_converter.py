@@ -53,10 +53,10 @@ def main():
             data = eo_patch.mask_timeless['LULC']
             print('max', data.max())
             # Convert to One Hot, might be slow but simple.
-            data = data.astype(np.long)
-            t_data = torch.tensor(data).squeeze()
-            t_onehot = F.one_hot(t_data, 10) # 10 classes as was present in the slovenia dataset
-            data = t_onehot.numpy().astype(np.uint8)
+            # data = data.astype(np.long)
+            # t_data = torch.tensor(data).squeeze()
+            # t_onehot = F.one_hot(t_data, 10) # 10 classes as was present in the slovenia dataset
+            # data = t_onehot.numpy().astype(np.uint8)
             subset = write_to_hdf5(h5set, 'mask_timeless/lulc', data=data)
 
             data = eo_patch.mask_timeless['VALID_COUNT']
