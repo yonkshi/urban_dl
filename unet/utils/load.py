@@ -15,12 +15,13 @@ from .utils import resize_and_crop, get_square, normalize, hwc_to_chw
 
 
 class SloveniaDataset(torch.utils.data.Dataset):
-    def __init__(self, file_path):
+    def __init__(self, file_path, timeidx):
         super().__init__()
         self.dataset = h5py.File(file_path, 'r', libver='latest', swmr=True)
         self.dataset_indices = list(self.dataset.keys())
         self.episode = None
         self.length = len(list(self.dataset.keys()))
+        self.timeidx = timeidx
 
     def __getitem__(self, index):
 
@@ -32,13 +33,14 @@ class SloveniaDataset(torch.utils.data.Dataset):
         # move from (x, y, c) to (c, x, y) PyTorch style
         obs = np.moveaxis(obs, -1, 1)
         # TODO For now, only pick the first image of each pixel
-        obs = obs[0,...]
+        idx = self.timeidx % self.length
+        obs = obs[idx,...]
 
-        label = subset['mask_timeless']['lulc']
-        label.refresh()
-        label = label.value
-        label = np.moveaxis(label, -1, 0).astype(np.float32)
-        label = np.argmax(label, axis=0)
+        label = subset['mask_timeless']['lulc'][...,0].astype(np.long)
+        # label.refresh()
+        # label = label1.value
+        # label = np.moveaxis(label, -1, 0).squeeze().astype(np.long)
+        # label = np.argmax(label, axis=0)
         return obs, label
 
     def __len__(self):

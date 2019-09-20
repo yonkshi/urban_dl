@@ -55,7 +55,7 @@ def train_net(net,
         net.train()
 
         # reset the generators
-        dataset = SloveniaDataset(DATASET_DIR)
+        dataset = SloveniaDataset(DATASET_DIR, epoch)
         dataloader = torch_data.DataLoader(dataset,
                                            batch_size=batch_size,
                                            pin_memory=True,
