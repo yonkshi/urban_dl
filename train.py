@@ -65,6 +65,7 @@ def train_net(net,
 
         epoch_loss = 0
         datasize = dataset.length
+        print('Dataset ready')
 
         for i, (imgs, true_masks) in enumerate(dataloader):
             global_step = epoch * datasize + i
