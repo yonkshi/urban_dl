@@ -21,8 +21,6 @@ from eval import eval_net
 from unet import UNet
 from unet.utils import SloveniaDataset
 
-DATASET_DIR = 'data/slovenia/slovenia2017.hdf5'
-
 def train_net(net,
               epochs=5,
               batch_size=1,
@@ -31,6 +29,7 @@ def train_net(net,
               save_cp=True,
               num_dataloaders = 1,
               device=torch.device('cpu'),
+              data_dir = 'data/slovenia/slovenia2017.hdf5',
               img_scale=0.5):
 
     run_name = datetime.datetime.today().strftime('%b-%d') + '-' + generate_slug(2)
@@ -55,7 +54,7 @@ def train_net(net,
         net.train()
 
         # reset the generators
-        dataset = SloveniaDataset(DATASET_DIR, epoch)
+        dataset = SloveniaDataset(data_dir, epoch)
         dataloader = torch_data.DataLoader(dataset,
                                            batch_size=batch_size,
                                            pin_memory=True,
@@ -184,6 +183,9 @@ def get_args():
     parser.add_option('-s', '--scale', dest='scale', type='float',
                       default=0.5, help='downscaling factor of the images')
 
+    parser.add_option('-d', '--data-dir', dest='data_dir', type='str',
+                      default='data/slovenia/slovenia2017.hdf5', help='dataset directory')
+
     (options, args) = parser.parse_args()
     return options
 
@@ -209,6 +211,7 @@ if __name__ == '__main__':
                   lr=args.lr,
                   device=device,
                   num_dataloaders = args.num_dataloaders,
+                  data_dir = args.data_dir,
                   img_scale=args.scale)
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
