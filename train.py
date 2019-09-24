@@ -17,6 +17,7 @@ from tensorboardX import SummaryWriter
 from coolname import generate_slug
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+from tabulate import tabulate
 
 
 
@@ -44,8 +45,18 @@ def train_net(net,
 
     # TODO Save Run Config in Pandas
     # TODO Save
-    print('>>>>> run name', run_name)
-    print('run started, running on ', device)
+    run_config = {}
+    run_config['run_name'] = run_name
+    run_config['device'] = device
+    run_config['log_path'] = log_path
+    run_config['data_dir'] = data_dir
+    run_config['epochs'] = epochs
+    table = {'run config name': run_config.keys(),
+             ' ': run_config.values(),
+             }
+    print(tabulate(table, headers='keys', tablefmt="fancy_grid", ))
+
+
     optimizer = optim.SGD(net.parameters(),
                           lr=lr,
                           momentum=0.9,
