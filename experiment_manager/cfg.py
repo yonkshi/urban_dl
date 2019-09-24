@@ -42,17 +42,31 @@ class HPConfig():
             self.data[key] = value
 
     def __str__(self):
+        '''
+        Converts the HP into a human readable string format
+        :return:
+        '''
         table = {'hyperparameter': self.data.keys(),
                 'values': list(self.data.values()),
                  }
         return tabulate(table, headers='keys', tablefmt="fancy_grid", )
 
 
-    def to_yml(self, file_path):
+    def save_yml(self, file_path):
+        '''
+        Save HP config to a yaml file
+        :param file_path:
+        :return:
+        '''
         with open(file_path, 'w') as file:
             yaml.dump(self.data, file, default_flow_style=False)
 
     def load_yml(self, file_path):
+        '''
+        Load HP Config from a yaml file
+        :param file_path:
+        :return:
+        '''
         with open(file_path, 'r') as file:
             yml_hp = yaml.safe_load(file)
 

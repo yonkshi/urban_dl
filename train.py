@@ -1,6 +1,6 @@
 import sys
 import os
-from optparse import OptionParser
+from argparse import ArgumentParser
 import datetime
 from collections import OrderedDict
 import enum
@@ -20,6 +20,7 @@ from matplotlib.colors import ListedColormap
 from eval import eval_net
 from unet import UNet
 from unet.utils import SloveniaDataset
+# import hp
 
 def train_net(net,
               epochs=5,
@@ -97,17 +98,17 @@ def train_net(net,
 
 
 class LULC(enum.Enum):
-    NO_DATA = (0, 'No Data', 'white')
-    CULTIVATED_LAND = (1, 'Cultivated Land', 'xkcd:lime')
-    FOREST = (2, 'Forest', 'xkcd:darkgreen')
-    GRASSLAND = (3, 'Grassland', 'orange')
-    SHRUBLAND = (4, 'Shrubland', 'xkcd:tan')
-    WATER = (5, 'Water', 'xkcd:azure')
-    WETLAND = (6, 'Wetlands', 'xkcd:lightblue')
-    TUNDRA = (7, 'Tundra', 'xkcd:lavender')
-    ARTIFICIAL_SURFACE = (8, 'Artificial Surface', 'crimson')
-    BARELAND = (9, 'Bareland', 'xkcd:beige')
-    SNOW_AND_ICE = (10, 'Snow and Ice', 'black')
+    # NO_DATA = (0, 'No Data', 'white')
+    CULTIVATED_LAND = (0, 'Cultivated Land', 'xkcd:lime')
+    FOREST = (1, 'Forest', 'xkcd:darkgreen')
+    GRASSLAND = (2, 'Grassland', 'orange')
+    SHRUBLAND = (3, 'Shrubland', 'xkcd:tan')
+    WATER = (4, 'Water', 'xkcd:azure')
+    WETLAND = (5, 'Wetlands', 'xkcd:lightblue')
+    TUNDRA = (6, 'Tundra', 'xkcd:lavender')
+    ARTIFICIAL_SURFACE = (7, 'Artificial Surface', 'crimson')
+    BARELAND = (8, 'Bareland', 'xkcd:beige')
+    SNOW_AND_ICE = (9, 'Snow and Ice', 'black')
 
     def __init__(self, val1, val2, val3):
         self.id = val1
@@ -167,26 +168,26 @@ def to_H_W_C(t:torch.Tensor):
 
 
 def get_args():
-    parser = OptionParser()
-    parser.add_option('-e', '--epochs', dest='epochs', default=5, type='int',
+    parser = ArgumentParser()
+    parser.add_argument('-e', '--epochs', dest='epochs', default=5, type=int,
                       help='number of epochs')
-    parser.add_option('-b', '--batch-size', dest='batchsize', default=10,
-                      type='int', help='batch size')
-    parser.add_option('-l', '--learning-rate', dest='lr', default=0.1,
-                      type='float', help='learning rate')
-    parser.add_option('-w', '--num-worker', dest='num_dataloaders', default=1,
-                      type='int', help='number of dataloader workers')
-    parser.add_option('-g', '--gpu', action='store_true', dest='gpu',
+    parser.add_argument('-b', '--batch_size', dest='batchsize', default=10,
+                      type=int, help='batch size')
+    parser.add_argument('-l', '--learning-rate', dest='lr', default=0.1,
+                      type=float, help='learning rate')
+    parser.add_argument('-w', '--num-worker', dest='num_dataloaders', default=1,
+                      type=int, help='number of dataloader workers')
+    parser.add_argument('-g', '--gpu', action='store_true', dest='gpu',
                       default=False, help='use cuda')
-    parser.add_option('-c', '--load', dest='load',
+    parser.add_argument('-c', '--load', dest='load',
                       default=False, help='load file model')
-    parser.add_option('-s', '--scale', dest='scale', type='float',
+    parser.add_argument('-s', '--scale', dest='scale', type=float,
                       default=0.5, help='downscaling factor of the images')
 
-    parser.add_option('-d', '--data-dir', dest='data_dir', type='str',
+    parser.add_argument('-d', '--data-dir', dest='data_dir', type=str,
                       default='data/slovenia/slovenia2017.hdf5', help='dataset directory')
 
-    (options, args) = parser.parse_args()
+    (options, args) = parser.parse_known_args()
     return options
 
 if __name__ == '__main__':
