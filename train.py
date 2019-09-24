@@ -1,9 +1,11 @@
 import sys
+from os import path
 import os
 from argparse import ArgumentParser
 import datetime
 from collections import OrderedDict
 import enum
+import time
 
 import numpy as np
 import torch
@@ -15,6 +17,7 @@ from tensorboardX import SummaryWriter
 from coolname import generate_slug
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+
 
 
 from eval import eval_net
@@ -31,10 +34,12 @@ def train_net(net,
               num_dataloaders = 1,
               device=torch.device('cpu'),
               data_dir = 'data/slovenia/slovenia2017.hdf5',
+              log_dir = 'logs/',
               img_scale=0.5):
 
     run_name = datetime.datetime.today().strftime('%b-%d') + '-' + generate_slug(2)
-    log_path = 'logs/%s' % run_name
+    #log_path = 'logs/%s' % run_name
+    log_path = path.join(log_dir, run_name)
     writer = SummaryWriter(log_path)
 
     # TODO Save Run Config in Pandas
@@ -50,6 +55,7 @@ def train_net(net,
 
     net.to(device)
 
+    __benchmark_init()
     for epoch in range(epochs):
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
         net.train()
@@ -65,35 +71,37 @@ def train_net(net,
 
         epoch_loss = 0
         datasize = dataset.length
-        print('Dataset ready')
+        __benchmark('Dataset Setup')
 
         for i, (imgs, true_masks) in enumerate(dataloader):
             global_step = epoch * datasize + i
-            print('step', global_step)
-            print('data sample loaded')
+            print('step', global_step, 'epoch', epoch)
+            __benchmark('Dataloding')
             imgs = imgs.to(device)
             true_masks = true_masks.to(device)
-
-            print('data sample loaded to CUDA')
+            __benchmark('Send to GPU')
             masks_pred = net(imgs)
-            print('inference computed')
+            __benchmark('Inference')
             loss = criterion(masks_pred, true_masks)
-            print('loss computed ')
+            __benchmark('Compute Loss')
             epoch_loss += loss.item()
 
             print('loss', loss.item())
             optimizer.zero_grad()
             loss.backward()
-            print('loss backward')
+            __benchmark('Backprop')
             optimizer.step()
-            print('optimzer executed')
+            __benchmark('Optimizer')
 
             # Write things in
             if global_step % 30 == 0:
                 writer.add_scalar('loss', loss, global_step)
-                print('add loss')
+
+                __benchmark('LossWriter')
                 visualize_image(imgs, masks_pred, true_masks, writer, global_step)
-                print('visualize image')
+                __benchmark('Img Writer')
+
+            __benchmark_init()
 
 
 
@@ -186,9 +194,23 @@ def get_args():
 
     parser.add_argument('-d', '--data-dir', dest='data_dir', type=str,
                       default='data/slovenia/slovenia2017.hdf5', help='dataset directory')
+    parser.add_argument('-o', '--log-dir', dest='log_dir', type=str,
+                      default='logs', help='logging directory')
 
     (options, args) = parser.parse_known_args()
     return options
+
+def __benchmark_init():
+    global BENCHMARK_INIT_TIME
+    BENCHMARK_INIT_TIME = time.time()
+
+def __benchmark(name='', print_benchmark=True):
+    global BENCHMARK_INIT_TIME
+    now = time.time()
+    diff = now - BENCHMARK_INIT_TIME
+    BENCHMARK_INIT_TIME = now
+    if print_benchmark: print('{} time: {:.4f} seconds'.format(name, diff))
+    return diff
 
 if __name__ == '__main__':
     args = get_args()
@@ -213,6 +235,7 @@ if __name__ == '__main__':
                   device=device,
                   num_dataloaders = args.num_dataloaders,
                   data_dir = args.data_dir,
+                  log_dir = args.log_dir,
                   img_scale=args.scale)
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
@@ -221,3 +244,5 @@ if __name__ == '__main__':
             sys.exit(0)
         except SystemExit:
             os._exit(0)
+
+
