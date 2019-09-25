@@ -81,10 +81,10 @@ def train_net(net,
         benchmark('Dataset Setup')
 
         for i, (imgs, true_masks) in enumerate(dataloader):
-            print(f'\n======== epoch{epoch}, global step{global_step} ')
+
             optimizer.zero_grad()
             global_step = epoch * datasize + i
-
+            print(f'\n======== epoch{epoch}, global step{global_step} ')
             imgs = imgs.to(device)
             true_masks = true_masks.to(device)
 
