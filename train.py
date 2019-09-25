@@ -59,7 +59,7 @@ def train_net(net,
     criterion = nn.CrossEntropyLoss()
 
     net.to(device)
-    print('GPU Memory allocation: NETWORK', torch.cuda.memory_allocated())
+    print('GPU Memory allocation: NETWORK', f'{torch.cuda.memory_allocated():,}')
     __benchmark_init()
     for epoch in range(epochs):
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
@@ -81,10 +81,10 @@ def train_net(net,
         for i, (imgs, true_masks) in enumerate(dataloader):
             optimizer.zero_grad()
             global_step = epoch * datasize + i
-            print('GPU Memory allocation: BEFORE LOADING DATA', torch.cuda.memory_allocated())
+            print('GPU Memory allocation: BEFORE LOADING DATA:', f'{torch.cuda.memory_allocated():,}')
             imgs = imgs.to(device)
             true_masks = true_masks.to(device)
-            print('GPU Memory allocation: AFTER LOADING DATA', torch.cuda.memory_allocated())
+            print('GPU Memory allocation: AFTER LOADING DATA:', f'{torch.cuda.memory_allocated():,}')
             masks_pred = net(imgs)
             loss = criterion(masks_pred, true_masks)
             epoch_loss += loss.item()
@@ -96,7 +96,7 @@ def train_net(net,
             # Write things in
             if global_step % 10 == 0 or global_step < 5:
                 if global_step % 100 == 0:
-                    print(f'\n======== epoch{epoch}, global step{global_step} ')
+                    print(f'\n======== COMPLETED epoch{epoch}, global step{global_step} ')
                 if global_step % 60 == 0:
                     writer.add_histogram('output_categories', masks_pred)
 
