@@ -57,7 +57,7 @@ def train_net(net,
                           momentum=0.9,
                           weight_decay=0.0005)
 
-    criterion = nn.CrossEntropyLoss(reduction='sum')
+    criterion = nn.CrossEntropyLoss()
 
     net.to(device)
 
@@ -208,7 +208,7 @@ def get_args():
 if __name__ == '__main__':
     args = get_args()
 
-    net = UNet(n_channels=6, n_classes=10)
+    net = UNet(n_channels=6, n_classes=3)
 
     if args.load:
         net.load_state_dict(torch.load(args.load))

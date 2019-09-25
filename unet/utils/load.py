@@ -33,7 +33,14 @@ class SloveniaDataset(torch.utils.data.Dataset):
         obs = np.moveaxis(obs, -1, 0)
         # TODO For now, only pick the first image of each pixel
 
-        label = subset['mask_timeless']['lulc'][...,0].astype(np.long)
+
+        label = subset['mask_timeless']['lulc'][...,0]
+        # TODO REMOVE ME Testing three class classification
+        label = np.floor(label / 3.1)
+        label = label.astype(np.long)
+
+
+
         # label.refresh()
         # label = label1.value
         # label = np.moveaxis(label, -1, 0).squeeze().astype(np.long)
