@@ -104,7 +104,8 @@ def train_net(net,
             print('GPU Memory allocation: BACKPROP', f'{torch.cuda.memory_allocated():,}')
             print('GPU Cache allocation: BACKPROP', f'{torch.cuda.memory_cached():,}')
             # Write things in
-            if global_step % 10 == 0 or global_step < 5 and False:
+            if global_step % 10 == 0 or global_step < 5:
+                continue
                 if global_step % 100 == 0:
                     print(f'\n======== COMPLETED epoch{epoch}, global step{global_step} ')
                 if global_step % 60 == 0 and False:
