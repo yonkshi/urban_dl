@@ -60,9 +60,11 @@ def train_net(net,
 
     net.to(device)
     print('GPU Memory allocation: NETWORK', f'{torch.cuda.memory_allocated():,}')
+    print('GPU Memory allocation: NETWORK:', f'{torch.cuda.memory_cached():,}')
     __benchmark_init()
     for epoch in range(epochs):
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
+
         net.train()
 
         # reset the generators
@@ -82,9 +84,11 @@ def train_net(net,
             optimizer.zero_grad()
             global_step = epoch * datasize + i
             print('GPU Memory allocation: BEFORE LOADING DATA:', f'{torch.cuda.memory_allocated():,}')
+            print('GPU Memory allocation: BEFORE LOADING DATA:', f'{torch.cuda.memory_cached():,}')
             imgs = imgs.to(device)
             true_masks = true_masks.to(device)
             print('GPU Memory allocation: AFTER LOADING DATA:', f'{torch.cuda.memory_allocated():,}')
+            print('GPU Memory allocation: AFTER LOADING DATA:', f'{torch.cuda.memory_cached():,}')
             masks_pred = net(imgs)
             loss = criterion(masks_pred, true_masks)
             epoch_loss += loss.item()
@@ -92,7 +96,8 @@ def train_net(net,
             print('loss', loss.item())
             loss.backward()
             optimizer.step()
-            print('GPU Memory allocation: BACKPROP', torch.cuda.memory_allocated())
+            print('GPU Memory allocation: BACKPROP', f'{torch.cuda.memory_allocated():,}')
+            print('GPU Memory allocation: BACKPROP', f'{torch.cuda.memory_cached():,}')
             # Write things in
             if global_step % 10 == 0 or global_step < 5:
                 if global_step % 100 == 0:
@@ -105,7 +110,7 @@ def train_net(net,
                 visualize_image(imgs, masks_pred, true_masks, writer, global_step)
                 benchmark('Img Writer')
 
-            # torch.cuda.empty_cache()
+            torch.cuda.empty_cache()
             __benchmark_init()
 
 
