@@ -81,11 +81,13 @@ def train_net(net,
         benchmark('Dataset Setup')
 
         for i, (imgs, true_masks) in enumerate(dataloader):
+            print(f'\n======== epoch{epoch}, global step{global_step} ')
             optimizer.zero_grad()
             global_step = epoch * datasize + i
 
             imgs = imgs.to(device)
             true_masks = true_masks.to(device)
+
             print('GPU Memory allocation: AFTER LOADING DATA:', f'{torch.cuda.memory_allocated():,}')
             print('GPU Cache allocation: AFTER LOADING DATA:', f'{torch.cuda.memory_cached():,}')
             masks_pred = net(imgs)
@@ -103,6 +105,7 @@ def train_net(net,
             optimizer.step()
             print('GPU Memory allocation: BACKPROP', f'{torch.cuda.memory_allocated():,}')
             print('GPU Cache allocation: BACKPROP', f'{torch.cuda.memory_cached():,}')
+
             # Write things in
             if global_step % 10 == 0 or global_step < 5:
                 continue
@@ -116,7 +119,7 @@ def train_net(net,
                 visualize_image(imgs, masks_pred, true_masks, writer, global_step)
                 benchmark('Img Writer')
 
-            torch.cuda.empty_cache()
+            # torch.cuda.empty_cache()
             __benchmark_init()
 
 
