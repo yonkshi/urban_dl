@@ -80,8 +80,9 @@ def train_net(net,
         benchmark('Dataset Setup')
 
         for i, (imgs, true_masks) in enumerate(dataloader):
+            optimizer.zero_grad()
             global_step = epoch * datasize + i
-            print('======== step', global_step, 'epoch', epoch)
+            print('\n======== step', global_step, 'epoch', epoch)
             benchmark('Dataloding')
             imgs = imgs.to(device)
             true_masks = true_masks.to(device)
@@ -93,7 +94,6 @@ def train_net(net,
             epoch_loss += loss.item()
 
             print('loss', loss.item())
-            optimizer.zero_grad()
             loss.backward()
             benchmark('Backprop')
             optimizer.step()

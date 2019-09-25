@@ -23,28 +23,21 @@ class SloveniaDataset(torch.utils.data.Dataset):
         self.timeidx = timeidx
 
     def __getitem__(self, index):
-        benchmark('Dataloader: Begin loading')
         subset_name = self.dataset_indices[index]
         subset = self.dataset[subset_name]
-        benchmark('Dataloader: HD5Loaded')
         dset = subset['data_bands']
         dset.refresh()
         idx = self.timeidx % self.length
         obs = dset[idx]
-        benchmark('Dataloader: HD5 Refresh')
         # move from (x, y, c) to (c, x, y) PyTorch style
         obs = np.moveaxis(obs, -1, 0)
         # TODO For now, only pick the first image of each pixel
-        benchmark('Dataloader: Observation')
 
         label = subset['mask_timeless']['lulc'][...,0].astype(np.long)
         # label.refresh()
         # label = label1.value
         # label = np.moveaxis(label, -1, 0).squeeze().astype(np.long)
         # label = np.argmax(label, axis=0)
-
-        benchmark('Dataloader: Np operation')
-
         return obs, label
 
     def __len__(self):
