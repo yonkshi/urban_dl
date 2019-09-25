@@ -71,7 +71,7 @@ def train_net(net,
         dataset = SloveniaDataset(data_dir, epoch)
         dataloader = torch_data.DataLoader(dataset,
                                            batch_size=batch_size,
-                                           pin_memory=True,
+                                           # pin_memory=True,
                                            num_workers=num_dataloaders,
                                            drop_last=True,
                                            )
