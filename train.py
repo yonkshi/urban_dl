@@ -52,9 +52,8 @@ def train_net(net,
     print(tabulate(table, headers='keys', tablefmt="fancy_grid", ))
 
 
-    optimizer = optim.SGD(net.parameters(),
+    optimizer = optim.Adam(net.parameters(),
                           lr=lr,
-                          momentum=0.9,
                           weight_decay=0.0005)
 
     criterion = nn.CrossEntropyLoss()
