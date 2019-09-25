@@ -59,8 +59,7 @@ def train_net(net,
     criterion = nn.CrossEntropyLoss()
 
     net.to(device)
-    print('GPU Memory allocation: NETWORK', f'{torch.cuda.memory_allocated():,}')
-    print('GPU Cache allocation: NETWORK:', f'{torch.cuda.memory_cached():,}')
+
     __benchmark_init()
     for epoch in range(epochs):
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
@@ -84,34 +83,22 @@ def train_net(net,
 
             optimizer.zero_grad()
             global_step = epoch * datasize + i
-            print(f'\n======== epoch{epoch}, global step{global_step} ')
             imgs = imgs.to(device)
             true_masks = true_masks.to(device)
 
-            print('GPU Memory allocation: AFTER LOADING DATA:', f'{torch.cuda.memory_allocated():,}')
-            print('GPU Cache allocation: AFTER LOADING DATA:', f'{torch.cuda.memory_cached():,}')
             masks_pred = net(imgs)
-            print('GPU Memory allocation: 0:', f'{torch.cuda.memory_allocated():,}')
-            print('GPU Cache allocation: 0:', f'{torch.cuda.memory_cached():,}')
             loss = criterion(masks_pred, true_masks)
-            print('GPU Memory allocation: 1:', f'{torch.cuda.memory_allocated():,}')
-            print('GPU Cache allocation: 1:', f'{torch.cuda.memory_cached():,}')
             epoch_loss += loss.item()
 
             print('loss', loss.item())
             loss.backward()
-            print('GPU Memory allocation: 2:', f'{torch.cuda.memory_allocated():,}')
-            print('GPU Cache allocation: 2:', f'{torch.cuda.memory_cached():,}')
             optimizer.step()
-            print('GPU Memory allocation: BACKPROP', f'{torch.cuda.memory_allocated():,}')
-            print('GPU Cache allocation: BACKPROP', f'{torch.cuda.memory_cached():,}')
 
             # Write things in
             if global_step % 10 == 0 or global_step < 5:
-                continue
                 if global_step % 100 == 0:
                     print(f'\n======== COMPLETED epoch{epoch}, global step{global_step} ')
-                if global_step % 60 == 0 and False:
+                if global_step % 60 == 0:
                     writer.add_histogram('output_categories', masks_pred.detach)
 
                 writer.add_scalar('loss', loss.item(), global_step)
