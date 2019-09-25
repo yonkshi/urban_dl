@@ -31,6 +31,7 @@ class SloveniaDataset(torch.utils.data.Dataset):
         obs = dset[idx]
         # move from (x, y, c) to (c, x, y) PyTorch style
         obs = np.moveaxis(obs, -1, 0)
+        obs = obs.astype(np.float16)
         # TODO For now, only pick the first image of each pixel
 
 
