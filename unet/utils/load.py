@@ -9,9 +9,8 @@ from PIL import Image
 import torch
 import h5py
 
-from .utils import resize_and_crop, get_square, normalize, hwc_to_chw
-
-
+from unet.utils import *
+from debug_tools import __benchmark_init, benchmark
 
 
 class SloveniaDataset(torch.utils.data.Dataset):
@@ -24,23 +23,28 @@ class SloveniaDataset(torch.utils.data.Dataset):
         self.timeidx = timeidx
 
     def __getitem__(self, index):
-
+        benchmark('Dataloader: Begin loading')
         subset_name = self.dataset_indices[index]
         subset = self.dataset[subset_name]
-
-        obs = subset['data_bands']
-        obs.refresh()
-        # move from (x, y, c) to (c, x, y) PyTorch style
-        obs = np.moveaxis(obs, -1, 1)
-        # TODO For now, only pick the first image of each pixel
+        benchmark('Dataloader: HD5Loaded')
+        dset = subset['data_bands']
+        dset.refresh()
         idx = self.timeidx % self.length
-        obs = obs[idx,...]
+        obs = dset[idx]
+        benchmark('Dataloader: HD5 Refresh')
+        # move from (x, y, c) to (c, x, y) PyTorch style
+        obs = np.moveaxis(obs, -1, 0)
+        # TODO For now, only pick the first image of each pixel
+        benchmark('Dataloader: Observation')
 
         label = subset['mask_timeless']['lulc'][...,0].astype(np.long)
         # label.refresh()
         # label = label1.value
         # label = np.moveaxis(label, -1, 0).squeeze().astype(np.long)
         # label = np.argmax(label, axis=0)
+
+        benchmark('Dataloader: Np operation')
+
         return obs, label
 
     def __len__(self):

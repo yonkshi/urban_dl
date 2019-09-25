@@ -3,13 +3,10 @@ from os import path
 import os
 from argparse import ArgumentParser
 import datetime
-from collections import OrderedDict
 import enum
-import time
 
 import numpy as np
 import torch
-import torch.backends.cudnn as cudnn
 import torch.nn as nn
 from torch import optim
 from torch.utils import data as torch_data
@@ -19,9 +16,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from tabulate import tabulate
 
-
-
-from eval import eval_net
+from debug_tools import __benchmark_init, benchmark
 from unet import UNet
 from unet.utils import SloveniaDataset
 # import hp
@@ -82,35 +77,35 @@ def train_net(net,
 
         epoch_loss = 0
         datasize = dataset.length
-        __benchmark('Dataset Setup')
+        benchmark('Dataset Setup')
 
         for i, (imgs, true_masks) in enumerate(dataloader):
             global_step = epoch * datasize + i
-            print('step', global_step, 'epoch', epoch)
-            __benchmark('Dataloding')
+            print('======== step', global_step, 'epoch', epoch)
+            benchmark('Dataloding')
             imgs = imgs.to(device)
             true_masks = true_masks.to(device)
-            __benchmark('Send to GPU')
+            benchmark('Send to GPU')
             masks_pred = net(imgs)
-            __benchmark('Inference')
+            benchmark('Inference')
             loss = criterion(masks_pred, true_masks)
-            __benchmark('Compute Loss')
+            benchmark('Compute Loss')
             epoch_loss += loss.item()
 
             print('loss', loss.item())
             optimizer.zero_grad()
             loss.backward()
-            __benchmark('Backprop')
+            benchmark('Backprop')
             optimizer.step()
-            __benchmark('Optimizer')
+            benchmark('Optimizer')
 
             # Write things in
             if global_step % 30 == 0:
                 writer.add_scalar('loss', loss, global_step)
 
-                __benchmark('LossWriter')
+                benchmark('LossWriter')
                 visualize_image(imgs, masks_pred, true_masks, writer, global_step)
-                __benchmark('Img Writer')
+                benchmark('Img Writer')
 
             __benchmark_init()
 
@@ -211,17 +206,6 @@ def get_args():
     (options, args) = parser.parse_known_args()
     return options
 
-def __benchmark_init():
-    global BENCHMARK_INIT_TIME
-    BENCHMARK_INIT_TIME = time.time()
-
-def __benchmark(name='', print_benchmark=True):
-    global BENCHMARK_INIT_TIME
-    now = time.time()
-    diff = now - BENCHMARK_INIT_TIME
-    BENCHMARK_INIT_TIME = now
-    if print_benchmark: print('{} time: {:.4f} seconds'.format(name, diff))
-    return diff
 
 if __name__ == '__main__':
     args = get_args()
