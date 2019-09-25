@@ -58,6 +58,7 @@ def train_net(net,
                           weight_decay=0.0005)
 
     criterion = nn.CrossEntropyLoss()
+    print('GPU Memory allocation', torch.cuda.memory_allocated())
     net.to(device)
 
     __benchmark_init()
