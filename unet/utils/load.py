@@ -36,7 +36,7 @@ class SloveniaDataset(torch.utils.data.Dataset):
 
         label = subset['mask_timeless']['lulc'][...,0]
         # TODO REMOVE ME Testing three class classification
-        label = np.floor(label / 3.1)
+        label = label % 3
         label = label.astype(np.long)
 
 
