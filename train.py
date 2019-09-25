@@ -105,6 +105,7 @@ def train_net(net,
                 visualize_image(imgs, masks_pred, true_masks, writer, global_step)
                 benchmark('Img Writer')
 
+            torch.cuda.empty_cache()
             __benchmark_init()
 
 
