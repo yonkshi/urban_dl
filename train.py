@@ -82,28 +82,25 @@ def train_net(net,
         for i, (imgs, true_masks) in enumerate(dataloader):
             optimizer.zero_grad()
             global_step = epoch * datasize + i
-            print('\n======== step', global_step, 'epoch', epoch)
-            benchmark('Dataloding')
+
             imgs = imgs.to(device)
             true_masks = true_masks.to(device)
-            benchmark('Send to GPU')
             masks_pred = net(imgs)
-            benchmark('Inference')
             loss = criterion(masks_pred, true_masks)
-            benchmark('Compute Loss')
             epoch_loss += loss.item()
 
             print('loss', loss.item())
             loss.backward()
-            benchmark('Backprop')
             optimizer.step()
-            benchmark('Optimizer')
 
             # Write things in
-            if global_step % 30 == 0:
-                writer.add_scalar('loss', loss, global_step)
-                writer.add_histogram('output categories', masks_pred)
+            if global_step % 10 == 0 or global_step < 5:
+                if global_step % 100 == 0:
+                    print('\n======== step', global_step, 'epoch', epoch)
+                if global_step % 60 == 0:
+                    writer.add_histogram('output_categories', masks_pred)
 
+                writer.add_scalar('loss', loss, global_step)
                 benchmark('LossWriter')
                 visualize_image(imgs, masks_pred, true_masks, writer, global_step)
                 benchmark('Img Writer')
