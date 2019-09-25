@@ -57,7 +57,7 @@ def train_net(net,
                           momentum=0.9,
                           weight_decay=0.0005)
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(reduction='sum')
 
     net.to(device)
 
@@ -96,7 +96,7 @@ def train_net(net,
             # Write things in
             if global_step % 10 == 0 or global_step < 5:
                 if global_step % 100 == 0:
-                    print('\n======== step', global_step, 'epoch', epoch)
+                    print(f'\n======== epoch{epoch}, global step{global_step} ')
                 if global_step % 60 == 0:
                     writer.add_histogram('output_categories', masks_pred)
 
