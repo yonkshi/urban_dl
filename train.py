@@ -100,12 +100,12 @@ def train_net(net,
                 if global_step % 60 == 0:
                     writer.add_histogram('output_categories', masks_pred)
 
-                writer.add_scalar('loss', loss, global_step)
+                writer.add_scalar('loss', loss.item(), global_step)
                 benchmark('LossWriter')
                 visualize_image(imgs, masks_pred, true_masks, writer, global_step)
                 benchmark('Img Writer')
 
-            torch.cuda.empty_cache()
+            # torch.cuda.empty_cache()
             __benchmark_init()
 
 
@@ -163,11 +163,11 @@ def visualize_image(input_image, output_segmentation, gt_segmentation, writer:Su
 
 
 def toNp_vanilla(t:torch.Tensor):
-    return t[0,...].detach().cpu().numpy()
+    return t[0,...].cpu().detach().numpy()
 
 def toNp(t:torch.Tensor):
     # Pick the first item
-    return to_H_W_C(t)[0,...].detach().cpu().numpy()
+    return to_H_W_C(t)[0,...].cpu().detach().numpy()
 
 def to_C_H_W(t:torch.Tensor):
     # From [B, H, W, C] to [B, C, H, W]
