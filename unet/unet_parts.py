@@ -63,8 +63,8 @@ class up(nn.Module):
         x1 = self.up(x1)
         
         # input is CHW
-        diffY = x2.size()[2] - x1.size()[2]
-        diffX = x2.size()[3] - x1.size()[3]
+        diffY = x2.detach().size()[2] - x1.detach().size()[2]
+        diffX = x2.detach().size()[3] - x1.detach().size()[3]
 
         x1 = F.pad(x1, (diffX // 2, diffX - diffX//2,
                         diffY // 2, diffY - diffY//2))
