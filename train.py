@@ -102,6 +102,7 @@ def train_net(net,
             # Write things in
             if global_step % 30 == 0:
                 writer.add_scalar('loss', loss, global_step)
+                writer.add_histogram('output categories', masks_pred)
 
                 benchmark('LossWriter')
                 visualize_image(imgs, masks_pred, true_masks, writer, global_step)
