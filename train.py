@@ -24,7 +24,7 @@ from unet.utils import SloveniaDataset
 def train_net(net,
               epochs=5,
               batch_size=1,
-              lr=0.1,
+              lr=0.001,
               val_percent=0.05,
               save_cp=True,
               num_dataloaders = 1,
@@ -52,13 +52,11 @@ def train_net(net,
     print(tabulate(table, headers='keys', tablefmt="fancy_grid", ))
 
 
-    optimizer = optim.SGD(net.parameters(),
+    optimizer = optim.Adam(net.parameters(),
                           lr=lr,
-                          momentum=0.9,
                           weight_decay=0.0005)
 
     criterion = nn.CrossEntropyLoss()
-
     net.to(device)
 
     __benchmark_init()
@@ -185,7 +183,7 @@ def get_args():
                       help='number of epochs')
     parser.add_argument('-b', '--batch_size', dest='batchsize', default=10,
                       type=int, help='batch size')
-    parser.add_argument('-l', '--learning-rate', dest='lr', default=0.1,
+    parser.add_argument('-l', '--learning-rate', dest='lr', default=0.001,
                       type=float, help='learning rate')
     parser.add_argument('-w', '--num-worker', dest='num_dataloaders', default=1,
                       type=int, help='number of dataloader workers')
