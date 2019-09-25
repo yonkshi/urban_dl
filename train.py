@@ -107,15 +107,15 @@ def train_net(net,
             if global_step % 10 == 0 or global_step < 5:
                 if global_step % 100 == 0:
                     print(f'\n======== COMPLETED epoch{epoch}, global step{global_step} ')
-                if global_step % 60 == 0:
-                    writer.add_histogram('output_categories', masks_pred)
+                if global_step % 60 == 0 and False:
+                    writer.add_histogram('output_categories', masks_pred.detach)
 
                 writer.add_scalar('loss', loss.item(), global_step)
                 benchmark('LossWriter')
                 visualize_image(imgs, masks_pred, true_masks, writer, global_step)
                 benchmark('Img Writer')
 
-            torch.cuda.empty_cache()
+            # torch.cuda.empty_cache()
             __benchmark_init()
 
 
