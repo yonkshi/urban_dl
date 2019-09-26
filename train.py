@@ -72,7 +72,7 @@ def train_net(net,
         dataset = SloveniaDataset(data_dir, epoch)
         dataloader = torch_data.DataLoader(dataset,
                                            batch_size=batch_size,
-                                           # pin_memory=True,
+                                           pin_memory=True,
                                            num_workers=num_dataloaders,
                                            drop_last=True,
                                            )
@@ -212,7 +212,7 @@ def get_args():
 if __name__ == '__main__':
     args = get_args()
     # torch.set_default_dtype(torch.float16)
-    net = UNet(n_channels=6, n_classes=3)
+    net = UNet(n_channels=6, n_classes=2)
 
     if args.load:
         net.load_state_dict(torch.load(args.load))
