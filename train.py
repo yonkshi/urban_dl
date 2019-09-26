@@ -39,13 +39,15 @@ def train_net(net,
     writer = SummaryWriter(log_path)
 
     # TODO Save Run Config in Pandas
-    # TODO Save
+
     run_config = {}
     run_config['run_name'] = run_name
     run_config['device'] = device
     run_config['log_path'] = log_path
     run_config['data_dir'] = data_dir
     run_config['epochs'] = epochs
+    run_config['learning rate'] = lr
+    run_config['batch size'] = batch_size
     table = {'run config name': run_config.keys(),
              ' ': run_config.values(),
              }
