@@ -160,7 +160,7 @@ def visualize_image(input_image, output_segmentation, gt_segmentation, cloud_mas
     ax1.set_title('output')
     ax1.axis('off')
 
-    cloud_mask = toNp_vanilla(cloud_mask).squeezE()
+    cloud_mask = toNp_vanilla(cloud_mask).squeeze()
     ax3.imshow(cloud_mask, cmap = 'gray', vmin=0, vmax=1)
     ax3.set_title('cloud_mask')
     ax3.axis('off')
