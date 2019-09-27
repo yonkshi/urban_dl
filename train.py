@@ -81,15 +81,18 @@ def train_net(net,
         datasize = dataset.length
         benchmark('Dataset Setup')
 
-        for i, (imgs, true_masks) in enumerate(dataloader):
+        for i, (imgs, y_label, cloud_mask) in enumerate(dataloader):
 
             optimizer.zero_grad()
             global_step = epoch * datasize + i
             imgs = imgs.to(device)
-            true_masks = true_masks.to(device)
+            y_label = y_label.to(device)
+            cloud_mask = cloud_mask.to(device)
 
-            masks_pred = net(imgs)
-            loss = criterion(masks_pred, true_masks)
+            y_pred = net(imgs)
+            masked_y_pred = y_pred * cloud_mask
+
+            loss = criterion(masked_y_pred, y_label)
             epoch_loss += loss.item()
 
             print('loss', loss.item())
@@ -101,11 +104,11 @@ def train_net(net,
                 if global_step % 100 == 0:
                     print(f'\n======== COMPLETED epoch{epoch}, global step{global_step} ')
                 if global_step % 60 == 0:
-                    writer.add_histogram('output_categories', masks_pred.detach())
+                    writer.add_histogram('output_categories', masked_y_pred.detach())
 
                 writer.add_scalar('loss', loss.item(), global_step)
                 benchmark('LossWriter')
-                visualize_image(imgs, masks_pred, true_masks, writer, global_step)
+                visualize_image(imgs, masked_y_pred, y_label, cloud_mask, writer, global_step)
                 benchmark('Img Writer')
 
             # torch.cuda.empty_cache()
@@ -133,11 +136,11 @@ class LULC(enum.Enum):
 
 lulc_cmap = ListedColormap([entry.color for entry in LULC])
 
-def visualize_image(input_image, output_segmentation, gt_segmentation, writer:SummaryWriter, global_step):
+def visualize_image(input_image, output_segmentation, gt_segmentation, cloud_mask,  writer:SummaryWriter, global_step):
 
     # TODO This is slow, consider making this working in a background thread. Or making the entire tensorboardx work in a background thread
 
-    fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
+    fig, (ax0, ax1, ax2, ax3) = plt.subplots(1, 4)
     fig.tight_layout()
     plt.tight_layout()
     fig.set_figheight(5)
@@ -145,6 +148,7 @@ def visualize_image(input_image, output_segmentation, gt_segmentation, writer:Su
 
     # Plot image
     img = toNp(input_image)[...,3]  # first item, B channel only
+    img = img[...,[2,1,0]] * 4.5 # BGR -> RGB and brighten
     ax0.imshow(img)
     ax0.axis('off')
 
@@ -155,6 +159,11 @@ def visualize_image(input_image, output_segmentation, gt_segmentation, writer:Su
     ax1.imshow(out_seg_argmax.squeeze(), cmap = lulc_cmap)
     ax1.set_title('output')
     ax1.axis('off')
+
+    cloud_mask = toNp_vanilla(cloud_mask)
+    ax3.imshow(cloud_mask, cmap = 'gray', vmin=0, vmax=1)
+    ax3.set_title('cloud_mask')
+    ax3.axis('off')
 
     # plot ground truth
     gt = toNp_vanilla(gt_segmentation)
@@ -169,7 +178,7 @@ def toNp_vanilla(t:torch.Tensor):
     return t[0,...].cpu().detach().numpy()
 
 def toNp(t:torch.Tensor):
-    # Pick the first item
+    # Pick the first item in batch
     return to_H_W_C(t)[0,...].cpu().detach().numpy()
 
 def to_C_H_W(t:torch.Tensor):
@@ -212,7 +221,7 @@ def get_args():
 if __name__ == '__main__':
     args = get_args()
     # torch.set_default_dtype(torch.float16)
-    net = UNet(n_channels=6, n_classes=2)
+    net = UNet(n_channels=6, n_classes=10)
 
     if args.load:
         net.load_state_dict(torch.load(args.load))

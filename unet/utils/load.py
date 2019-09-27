@@ -27,15 +27,20 @@ class SloveniaDataset(torch.utils.data.Dataset):
         subset = self.dataset[subset_name]
         dset = subset['data_bands']
         dset.refresh()
-        idx = self.timeidx % self.length
-        obs = dset[idx]
+        timeidx = self.timeidx % self.length # circular time step
+        obs = dset[timeidx]
         # move from (x, y, c) to (c, x, y) PyTorch style
         obs = np.moveaxis(obs, -1, 0)
+        # sometimes data can exceed [0, 1], clip em!
+        obs = np.clip(obs, 0,1)
+
+        cloud_mask = subset['mask/valid_data'][timeidx].squeeze().astype(np.float32)
+
         # TODO For now, only pick the first image of each pixel
 
         label = subset['mask_timeless']['lulc'][...,0]
         # TODO REMOVE ME Testing three class classification
-        label = label % 2
+        # label = label % 2
         label = label.astype(np.long)
 
 
@@ -44,7 +49,7 @@ class SloveniaDataset(torch.utils.data.Dataset):
         # label = label1.value
         # label = np.moveaxis(label, -1, 0).squeeze().astype(np.long)
         # label = np.argmax(label, axis=0)
-        return obs, label
+        return obs, label, cloud_mask
 
     def __len__(self):
 
