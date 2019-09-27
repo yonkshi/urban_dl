@@ -34,7 +34,7 @@ class SloveniaDataset(torch.utils.data.Dataset):
         # sometimes data can exceed [0, 1], clip em!
         obs = np.clip(obs, 0,1)
 
-        cloud_mask = subset['mask/valid_data'][timeidx].squeeze().astype(np.float32)
+        cloud_mask = subset['mask/valid_data'][timeidx].squeeze(-1).astype(np.float32)
 
         # TODO For now, only pick the first image of each pixel
 
