@@ -90,6 +90,8 @@ def train_net(net,
             cloud_mask = cloud_mask.to(device)
 
             y_pred = net(imgs)
+            print(y_pred.shape)
+            print(cloud_mask.shape)
             masked_y_pred = y_pred * cloud_mask
 
             loss = criterion(masked_y_pred, y_label)
