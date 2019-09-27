@@ -117,17 +117,17 @@ def train_net(net,
 
 
 class LULC(enum.Enum):
-    # NO_DATA = (0, 'No Data', 'white')
-    CULTIVATED_LAND = (0, 'Cultivated Land', 'xkcd:lime')
-    FOREST = (1, 'Forest', 'xkcd:darkgreen')
-    GRASSLAND = (2, 'Grassland', 'orange')
-    SHRUBLAND = (3, 'Shrubland', 'xkcd:tan')
-    WATER = (4, 'Water', 'xkcd:azure')
-    WETLAND = (5, 'Wetlands', 'xkcd:lightblue')
-    TUNDRA = (6, 'Tundra', 'xkcd:lavender')
-    ARTIFICIAL_SURFACE = (7, 'Artificial Surface', 'crimson')
-    BARELAND = (8, 'Bareland', 'xkcd:beige')
-    SNOW_AND_ICE = (9, 'Snow and Ice', 'black')
+    NO_DATA = (0, 'No Data', 'white')
+    CULTIVATED_LAND = (1, 'Cultivated Land', 'xkcd:lime')
+    FOREST = (2, 'Forest', 'xkcd:darkgreen')
+    GRASSLAND = (3, 'Grassland', 'orange')
+    SHRUBLAND = (4, 'Shrubland', 'xkcd:tan')
+    WATER = (5, 'Water', 'xkcd:azure')
+    WETLAND = (6, 'Wetlands', 'xkcd:lightblue')
+    TUNDRA = (7, 'Tundra', 'xkcd:lavender')
+    ARTIFICIAL_SURFACE = (8, 'Artificial Surface', 'crimson')
+    BARELAND = (9, 'Bareland', 'xkcd:beige')
+    SNOW_AND_ICE = (10, 'Snow and Ice', 'black')
 
     def __init__(self, val1, val2, val3):
         self.id = val1
@@ -173,7 +173,6 @@ def visualize_image(input_image, output_segmentation, gt_segmentation, cloud_mas
     ax3.set_title('cloud_mask')
     ax3.axis('off')
 
-    plt.show()
     writer.add_figure('output_image',fig,global_step)
 
 
