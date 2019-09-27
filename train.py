@@ -13,7 +13,7 @@ from torch.utils import data as torch_data
 from tensorboardX import SummaryWriter
 from coolname import generate_slug
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
+from matplotlib.colors import ListedColormap, BoundaryNorm
 from tabulate import tabulate
 
 from debug_tools import __benchmark_init, benchmark
@@ -135,6 +135,7 @@ class LULC(enum.Enum):
         self.color = val3
 
 lulc_cmap = ListedColormap([entry.color for entry in LULC])
+lulc_norm = BoundaryNorm(np.arange(-0.5, 11, 1), lulc_cmap.N)
 
 def visualize_image(input_image, output_segmentation, gt_segmentation, cloud_mask,  writer:SummaryWriter, global_step):
 
@@ -148,7 +149,7 @@ def visualize_image(input_image, output_segmentation, gt_segmentation, cloud_mas
     fig.set_figwidth(20)
 
     # Plot image
-    img = toNp(input_image)[...,3]  # first item, B channel only
+    img = toNp(input_image)
     img = img[...,[2,1,0]] * 4.5 # BGR -> RGB and brighten
     ax0.imshow(img)
     ax0.axis('off')
@@ -157,21 +158,22 @@ def visualize_image(input_image, output_segmentation, gt_segmentation, cloud_mas
     out_seg = toNp(output_segmentation)
     out_seg_argmax = np.argmax(out_seg, axis=-1)
 
-    ax1.imshow(out_seg_argmax.squeeze(), cmap = lulc_cmap)
+    ax1.imshow(out_seg_argmax.squeeze(), cmap = lulc_cmap, norm=lulc_norm,)
     ax1.set_title('output')
     ax1.axis('off')
+
+    # plot ground truth
+    gt = toNp_vanilla(gt_segmentation)
+    ax2.imshow(gt.squeeze(), cmap=lulc_cmap, norm=lulc_norm,)
+    ax2.set_title('ground_truth')
+    ax2.axis('off')
 
     cloud_mask = toNp_vanilla(cloud_mask).squeeze()
     ax3.imshow(cloud_mask, cmap = 'gray', vmin=0, vmax=1)
     ax3.set_title('cloud_mask')
     ax3.axis('off')
 
-    # plot ground truth
-    gt = toNp_vanilla(gt_segmentation)
-    ax2.imshow(gt.squeeze(), cmap=lulc_cmap)
-    ax2.set_title('ground_truth')
-    ax2.axis('off')
-
+    plt.show()
     writer.add_figure('output_image',fig,global_step)
 
 
