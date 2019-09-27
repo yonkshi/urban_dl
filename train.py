@@ -151,6 +151,7 @@ def visualize_image(input_image, output_segmentation, gt_segmentation, cloud_mas
     # Plot image
     img = toNp(input_image)
     img = img[...,[2,1,0]] * 4.5 # BGR -> RGB and brighten
+    img = np.clip(img, 0, 1)
     ax0.imshow(img)
     ax0.axis('off')
 
