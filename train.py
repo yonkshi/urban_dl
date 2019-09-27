@@ -142,9 +142,10 @@ def visualize_image(input_image, output_segmentation, gt_segmentation, cloud_mas
 
     fig, (ax0, ax1, ax2, ax3) = plt.subplots(1, 4)
     fig.tight_layout()
+    fig.subplots_adjust(wspace=0, hspace=0)
     plt.tight_layout()
     fig.set_figheight(5)
-    fig.set_figwidth(15)
+    fig.set_figwidth(20)
 
     # Plot image
     img = toNp(input_image)[...,3]  # first item, B channel only
