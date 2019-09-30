@@ -49,7 +49,7 @@ class SloveniaDataset(torch.utils.data.Dataset):
 
         # check if label no datamask has been cached
         if subset_name not in self.label_mask_cache.keys():
-            mask = (label == 0).astype(np.float32)
+            mask = (label != 0).astype(np.float32)
             self.label_mask_cache[subset_name] = mask
         label_nodata_mask = self.label_mask_cache[subset_name]
 

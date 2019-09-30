@@ -13,6 +13,7 @@ from torch.utils import data as torch_data
 from tensorboardX import SummaryWriter
 from coolname import generate_slug
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from tabulate import tabulate
 
@@ -110,7 +111,7 @@ def train_net(net,
 
                 writer.add_scalar('loss', loss.item(), global_step)
                 benchmark('LossWriter')
-                visualize_image(imgs, masked_y_pred, y_label, cloud_mask, sample_name, writer, global_step)
+                visualize_image(imgs, masked_y_pred, y_label, cloud_mask, label_nodata_mask, sample_name, writer, global_step)
                 benchmark('Img Writer')
 
             # torch.cuda.empty_cache()
@@ -139,44 +140,53 @@ class LULC(enum.Enum):
 lulc_cmap = ListedColormap([entry.color for entry in LULC])
 lulc_norm = BoundaryNorm(np.arange(-0.5, 11, 1), lulc_cmap.N)
 
-def visualize_image(input_image, output_segmentation, gt_segmentation, cloud_mask, sample_name, writer:SummaryWriter, global_step):
+def visualize_image(input_image, output_segmentation, gt_segmentation, cloud_mask,label_nodata_mask, sample_name, writer:SummaryWriter, global_step):
 
     # TODO This is slow, consider making this working in a background thread. Or making the entire tensorboardx work in a background thread
-
-    fig, (ax0, ax1, ax2, ax3) = plt.subplots(1, 4)
-    fig.tight_layout()
+    gs = gridspec.GridSpec(nrows=3, ncols=2)
+    fig = plt.figure(figsize=(5, 7))
     fig.subplots_adjust(wspace=0, hspace=0)
-    plt.tight_layout()
-    fig.set_figheight(5)
-    fig.set_figwidth(20)
 
-    # Plot image
+    # input image
     img = toNp(input_image)
     img = img[...,[2,1,0]] * 4.5 # BGR -> RGB and brighten
     img = np.clip(img, 0, 1)
-    ax0.set_title(sample_name)
+    ax0 = fig.add_subplot(gs[0,0])
+    ax0.set_title(sample_name[0])
     ax0.imshow(img)
     ax0.axis('off')
 
-    # Plot segments
+    # output segments
     out_seg = toNp(output_segmentation)
     out_seg_argmax = np.argmax(out_seg, axis=-1)
-
+    ax1 = fig.add_subplot(gs[1, 0])
     ax1.imshow(out_seg_argmax.squeeze(), cmap = lulc_cmap, norm=lulc_norm,)
     ax1.set_title('output')
     ax1.axis('off')
 
-    # plot ground truth
+    # ground truth
     gt = toNp_vanilla(gt_segmentation)
+    ax2 = fig.add_subplot(gs[1, 1])
     ax2.imshow(gt.squeeze(), cmap=lulc_cmap, norm=lulc_norm,)
     ax2.set_title('ground_truth')
     ax2.axis('off')
 
+    #
     cloud_mask = toNp_vanilla(cloud_mask).squeeze()
+    ax3 = fig.add_subplot(gs[2, 0])
     ax3.imshow(cloud_mask, cmap = 'gray', vmin=0, vmax=1)
     ax3.set_title('cloud_mask')
     ax3.axis('off')
 
+    label_nodata_mask = toNp_vanilla(label_nodata_mask).squeeze()
+    ax4 = fig.add_subplot(gs[2, 1])
+    ax4.imshow(label_nodata_mask, cmap = 'gray', vmin=0, vmax=1)
+    ax4.set_title('label no_data mask')
+    ax4.axis('off')
+
+    fig.tight_layout()
+    plt.tight_layout()
+    plt.show()
     writer.add_figure('output_image',fig,global_step)
 
 
