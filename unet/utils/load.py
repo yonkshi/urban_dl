@@ -24,6 +24,8 @@ class SloveniaDataset(torch.utils.data.Dataset):
         self.timeidx = timeidx
         self._precompute_comp()
 
+        self.label_mask_cache = {}
+
     def __getitem__(self, index):
 
         dset_idx, time_idx = self.random_dset_indices[index]
@@ -40,17 +42,24 @@ class SloveniaDataset(torch.utils.data.Dataset):
 
         cloud_mask = subset['mask/valid_data'][time_idx].astype(np.float32)
         cloud_mask = np.moveaxis(cloud_mask, -1, 0)
+
+
         label = subset['mask_timeless']['lulc'][...,0]
         label = label.astype(np.long)
+
+        # check if label no datamask has been cached
+        if subset_name not in self.label_mask_cache.keys():
+            mask = (label == 0).astype(np.float32)
+            self.label_mask_cache[subset_name] = mask
+        label_nodata_mask = self.label_mask_cache[subset_name]
+
         sample_name = f'{subset_name}, t={time_idx}'
-
-
 
         # label.refresh()
         # label = label1.value
         # label = np.moveaxis(label, -1, 0).squeeze().astype(np.long)
         # label = np.argmax(label, axis=0)
-        return obs, label, cloud_mask, sample_name
+        return obs, label, cloud_mask, label_nodata_mask, sample_name
 
     def _precompute_comp(self):
 

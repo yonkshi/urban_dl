@@ -81,16 +81,18 @@ def train_net(net,
         datasize = dataset.length
         benchmark('Dataset Setup')
 
-        for i, (imgs, y_label, cloud_mask, sample_name) in enumerate(dataloader):
+        for i, (imgs, y_label, cloud_mask, label_nodata_mask, sample_name) in enumerate(dataloader):
 
             optimizer.zero_grad()
             global_step = epoch * datasize + i
             imgs = imgs.to(device)
             y_label = y_label.to(device)
             cloud_mask = cloud_mask.to(device)
+            label_nodata_mask = label_nodata_mask.to(device)
 
             y_pred = net(imgs)
             masked_y_pred = y_pred * cloud_mask
+            masked_y_pred = masked_y_pred * label_nodata_mask
 
             loss = criterion(masked_y_pred, y_label)
             epoch_loss += loss.item()
