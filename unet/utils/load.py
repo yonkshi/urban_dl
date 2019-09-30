@@ -25,6 +25,7 @@ class SloveniaDataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         subset_name = self.dataset_indices[index]
         subset = self.dataset[subset_name]
+        print(subset_name, 'shape', subset.shape)
         dset = subset['data_bands']
         dset.refresh()
         timeidx = self.timeidx % self.length # circular time step
