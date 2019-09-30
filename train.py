@@ -81,7 +81,7 @@ def train_net(net,
         datasize = dataset.length
         benchmark('Dataset Setup')
 
-        for i, (imgs, y_label, cloud_mask) in enumerate(dataloader):
+        for i, (imgs, y_label, cloud_mask, sample_name) in enumerate(dataloader):
 
             optimizer.zero_grad()
             global_step = epoch * datasize + i
@@ -108,7 +108,7 @@ def train_net(net,
 
                 writer.add_scalar('loss', loss.item(), global_step)
                 benchmark('LossWriter')
-                visualize_image(imgs, masked_y_pred, y_label, cloud_mask, writer, global_step)
+                visualize_image(imgs, masked_y_pred, y_label, cloud_mask, sample_name, writer, global_step)
                 benchmark('Img Writer')
 
             # torch.cuda.empty_cache()
@@ -137,7 +137,7 @@ class LULC(enum.Enum):
 lulc_cmap = ListedColormap([entry.color for entry in LULC])
 lulc_norm = BoundaryNorm(np.arange(-0.5, 11, 1), lulc_cmap.N)
 
-def visualize_image(input_image, output_segmentation, gt_segmentation, cloud_mask,  writer:SummaryWriter, global_step):
+def visualize_image(input_image, output_segmentation, gt_segmentation, cloud_mask, sample_name, writer:SummaryWriter, global_step):
 
     # TODO This is slow, consider making this working in a background thread. Or making the entire tensorboardx work in a background thread
 
@@ -152,6 +152,7 @@ def visualize_image(input_image, output_segmentation, gt_segmentation, cloud_mas
     img = toNp(input_image)
     img = img[...,[2,1,0]] * 4.5 # BGR -> RGB and brighten
     img = np.clip(img, 0, 1)
+    ax0.set_title(sample_name)
     ax0.imshow(img)
     ax0.axis('off')
 

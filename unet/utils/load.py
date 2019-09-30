@@ -43,6 +43,7 @@ class SloveniaDataset(torch.utils.data.Dataset):
         # TODO REMOVE ME Testing three class classification
         # label = label % 2
         label = label.astype(np.long)
+        sample_name = f'{subset_name}, t={self.timeidx}'
 
 
 
@@ -50,7 +51,7 @@ class SloveniaDataset(torch.utils.data.Dataset):
         # label = label1.value
         # label = np.moveaxis(label, -1, 0).squeeze().astype(np.long)
         # label = np.argmax(label, axis=0)
-        return obs, label, cloud_mask
+        return obs, label, cloud_mask, sample_name
 
     def __len__(self):
 
