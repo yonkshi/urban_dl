@@ -19,31 +19,30 @@ class SloveniaDataset(torch.utils.data.Dataset):
         self.dataset = h5py.File(file_path, 'r', libver='latest', swmr=True)
         self.dataset_indices = list(self.dataset.keys())
         self.episode = None
-        self.length = len(list(self.dataset.keys()))
+
+        self.length = 0 #len(list(self.dataset.keys()))
         self.timeidx = timeidx
+        self._precompute_comp()
 
     def __getitem__(self, index):
-        subset_name = self.dataset_indices[index]
+
+        dset_idx, time_idx = self.random_dset_indices[index]
+        subset_name = self.dataset_indices[dset_idx]
         subset = self.dataset[subset_name]
         dset = subset['data_bands']
         dset.refresh()
-        timeidx = self.timeidx % self.length # circular time step
-        obs = dset[timeidx]
+        # timeidx = self.timeidx % self.length # circular time step
+        obs = dset[time_idx]
         # move from (x, y, c) to (c, x, y) PyTorch style
         obs = np.moveaxis(obs, -1, 0)
         # sometimes data can exceed [0, 1], clip em!
         obs = np.clip(obs, 0,1)
 
-        cloud_mask = subset['mask/valid_data'][timeidx].astype(np.float32)
+        cloud_mask = subset['mask/valid_data'][time_idx].astype(np.float32)
         cloud_mask = np.moveaxis(cloud_mask, -1, 0)
-
-        # TODO For now, only pick the first image of each pixel
-
         label = subset['mask_timeless']['lulc'][...,0]
-        # TODO REMOVE ME Testing three class classification
-        # label = label % 2
         label = label.astype(np.long)
-        sample_name = f'{subset_name}, t={timeidx}'
+        sample_name = f'{subset_name}, t={time_idx}'
 
 
 
@@ -52,6 +51,28 @@ class SloveniaDataset(torch.utils.data.Dataset):
         # label = np.moveaxis(label, -1, 0).squeeze().astype(np.long)
         # label = np.argmax(label, axis=0)
         return obs, label, cloud_mask, sample_name
+
+    def _precompute_comp(self):
+
+        print('precomputing...')
+        # computing total length of the data
+        dset_indices = []
+        for dset_index, key in enumerate(self.dataset_indices):
+            ts = self.dataset[f'{key}/timestamp']
+            n_time_steps = ts.shape[0]
+            self.length += n_time_steps
+
+            #
+            arange_timesteps = np.arange(n_time_steps)
+            arange_index = [dset_index] * n_time_steps
+            tuples = np.vstack((arange_index, arange_timesteps))
+            dset_indices.append(tuples)
+
+        self.random_dset_indices = np.concatenate(dset_indices, axis=-1).T
+        np.random.shuffle(self.random_dset_indices)
+
+        print('precompute complete')
+
 
     def __len__(self):
 
