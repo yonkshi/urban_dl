@@ -144,7 +144,7 @@ def visualize_image(input_image, output_segmentation, gt_segmentation, cloud_mas
 
     # TODO This is slow, consider making this working in a background thread. Or making the entire tensorboardx work in a background thread
     gs = gridspec.GridSpec(nrows=3, ncols=2)
-    fig = plt.figure(figsize=(5, 7))
+    fig = plt.figure(figsize=(5, 8))
     fig.subplots_adjust(wspace=0, hspace=0)
 
     # input image
