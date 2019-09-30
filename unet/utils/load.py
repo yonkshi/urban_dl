@@ -43,7 +43,7 @@ class SloveniaDataset(torch.utils.data.Dataset):
         # TODO REMOVE ME Testing three class classification
         # label = label % 2
         label = label.astype(np.long)
-        sample_name = f'{subset_name}, t={self.timeidx}'
+        sample_name = f'{subset_name}, t={timeidx}'
 
 
 
