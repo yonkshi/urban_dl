@@ -52,6 +52,7 @@ class SloveniaDataset(torch.utils.data.Dataset):
             mask = (label != 0).astype(np.float32)
             self.label_mask_cache[subset_name] = mask
         label_nodata_mask = self.label_mask_cache[subset_name]
+        label_nodata_mask = label_nodata_mask[None,...] # add a dim to match obs
 
         sample_name = f'{subset_name}, t={time_idx}'
 
