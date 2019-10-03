@@ -139,7 +139,7 @@ def visualize_image(input_image, output_segmentation, gt_segmentation, sample_na
 
     # input image
     img = toNp(input_image)
-    img = img[...,[2,1,0]] * 4.5 # BGR -> RGB and brighten
+    # img = img[...,[2,1,0]] * 4.5 # BGR -> RGB and brighten
     img = np.clip(img, 0, 1)
     ax0 = fig.add_subplot(gs[0,0])
     ax0.set_title(sample_name[0])
