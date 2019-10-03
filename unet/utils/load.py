@@ -88,6 +88,62 @@ class SloveniaDataset(torch.utils.data.Dataset):
 
         return self.length
 
+class Xview2Dataset(torch.utils.data.Dataset):
+    def __init__(self, file_path, timeidx):
+        super().__init__()
+        self.dataset = h5py.File(file_path, 'r', libver='latest', swmr=True)
+        self.dataset_indices = list(self.dataset.keys())
+        self.episode = None
+
+        self.length = 0 #len(list(self.dataset.keys()))
+        self.timeidx = timeidx
+        self._precompute_comp()
+
+        self.label_mask_cache = {}
+
+    def __getitem__(self, index):
+
+        dset_idx, img_idx = self.random_dset_indices[index]
+        subset_name = self.dataset_indices[dset_idx]
+        subset = self.dataset[subset_name]
+        dset = subset['post']
+        obs = dset[img_idx].astype(np.float32) / 255.
+        # move from (x, y, c) to (c, x, y) PyTorch style
+        obs = np.moveaxis(obs, -1, 0)
+
+        label_raw = subset['labels'][img_idx]
+        label = np.argmax(label_raw, axis=0)
+        label = label.astype(np.long)
+
+        sample_name = f'{subset_name}, t={img_idx}'
+
+        return obs, label, sample_name
+
+    def _precompute_comp(self):
+
+        print('precomputing...')
+        # computing total length of the data
+        dset_indices = []
+        for dset_index, key in enumerate(self.dataset_indices):
+            ts = self.dataset[f'{key}/pre']
+            n_images = ts.shape[0]
+            self.length += n_images
+
+            #
+            arange_images = np.arange(n_images)
+            arange_index = [dset_index] * n_images
+            tuples = np.vstack((arange_index, arange_images))
+            dset_indices.append(tuples)
+
+        self.random_dset_indices = np.concatenate(dset_indices, axis=-1).T
+        np.random.shuffle(self.random_dset_indices)
+
+        print('precompute complete')
+
+
+    def __len__(self):
+
+        return self.length
 
 def get_ids(dir):
     """Returns a list of the ids in the directory"""
