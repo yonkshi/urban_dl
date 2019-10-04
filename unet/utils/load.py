@@ -43,7 +43,6 @@ class SloveniaDataset(torch.utils.data.Dataset):
         cloud_mask = subset['mask/valid_data'][time_idx].astype(np.float32)
         cloud_mask = np.moveaxis(cloud_mask, -1, 0)
 
-
         label = subset['mask_timeless']['lulc'][...,0]
         label = label.astype(np.long)
 
@@ -112,6 +111,8 @@ class Xview2Dataset(torch.utils.data.Dataset):
         obs = np.moveaxis(obs, -1, 0)
 
         label_raw = subset['labels'][img_idx]
+        background_layer = np.ones_like(label_raw[0])[None, ...] * 0.5
+        label_raw = np.vstack([background_layer, label_raw])
         label = np.argmax(label_raw, axis=0)
         label = label.astype(np.long)
 

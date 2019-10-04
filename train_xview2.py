@@ -116,11 +116,12 @@ def train_net(net,
 
 
 class LULC(enum.Enum):
-    NO_DATA = (0, 'No Data', 'white')
-    NO_DAMAGE = (1, 'No damage', 'xkcd:lime')
-    MINOR_DAMAGE = (2, 'Minor Damage', 'yellow')
-    MAJOR_DAMAGE = (3, 'Major Damage', 'orange')
-    DESTROYED = (4, 'Destroyed', 'red')
+    BACKGROUND = (0, 'Background', 'black')
+    NO_DATA = (1, 'No Data', 'white')
+    NO_DAMAGE = (2, 'No damage', 'xkcd:lime')
+    MINOR_DAMAGE = (3, 'Minor Damage', 'yellow')
+    MAJOR_DAMAGE = (4, 'Major Damage', 'orange')
+    DESTROYED = (5, 'Destroyed', 'red')
 
     def __init__(self, val1, val2, val3):
         self.id = val1
@@ -128,7 +129,7 @@ class LULC(enum.Enum):
         self.color = val3
 
 lulc_cmap = ListedColormap([entry.color for entry in LULC])
-lulc_norm = BoundaryNorm(np.arange(-0.5, 11, 1), lulc_cmap.N)
+lulc_norm = BoundaryNorm(np.arange(-0.5, 6, 1), lulc_cmap.N)
 
 def visualize_image(input_image, output_segmentation, gt_segmentation, sample_name, writer:SummaryWriter, global_step):
 
