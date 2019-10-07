@@ -105,7 +105,7 @@ class Xview2Dataset(torch.utils.data.Dataset):
         dset_idx, img_idx = self.random_dset_indices[index]
         subset_name = self.dataset_indices[dset_idx]
         subset = self.dataset[subset_name]
-        dset = subset['post']
+        dset = subset['pre']
         obs = dset[img_idx].astype(np.float32) / 255.
         # move from (x, y, c) to (c, x, y) PyTorch style
         obs = np.moveaxis(obs, -1, 0)
