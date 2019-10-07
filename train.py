@@ -237,7 +237,7 @@ def get_args():
 if __name__ == '__main__':
     args = get_args()
     # torch.set_default_dtype(torch.float16)
-    net = UNet(n_channels=6, n_classes=10)
+    net = UNet(n_channels=6, n_classes=2)
 
     if args.load:
         net.load_state_dict(torch.load(args.load))

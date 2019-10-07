@@ -111,6 +111,7 @@ class Xview2Dataset(torch.utils.data.Dataset):
         obs = np.moveaxis(obs, -1, 0)
 
         label_raw = subset['labels'][img_idx]
+        label_raw = label_raw.sum(axis=0, keepdims=True, )
         background_layer = np.ones_like(label_raw[0])[None, ...] * 0.5
         label_raw = np.vstack([background_layer, label_raw])
         label = np.argmax(label_raw, axis=0)
