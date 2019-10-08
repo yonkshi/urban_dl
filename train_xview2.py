@@ -20,6 +20,7 @@ from tabulate import tabulate
 from debug_tools import __benchmark_init, benchmark
 from unet import UNet
 from unet.utils import SloveniaDataset, Xview2Dataset
+from experiment_manager.metrics import f1_score
 # import hp
 
 def train_net(net,
@@ -106,9 +107,14 @@ def train_net(net,
                     writer.add_histogram('output_categories', y_pred.detach())
 
                 writer.add_scalar('loss', loss.item(), global_step)
-                benchmark('LossWriter')
                 visualize_image(imgs, y_pred, y_label, sample_name, writer, global_step)
-                benchmark('Img Writer')
+
+                y_pred_binary = torch.argmax(y_pred, dim=1)
+                print('y_pred_binary', y_pred_binary.shape)
+                print('y_label', y_label.shape)
+                f1 = f1_score(y_pred_binary, y_label)
+                print('f1', f1)
+                writer.add_scalar('f1', f1, global_step)
 
             # torch.cuda.empty_cache()
             __benchmark_init()
@@ -190,7 +196,7 @@ def get_args():
     parser = ArgumentParser()
     parser.add_argument('-e', '--epochs', dest='epochs', default=5, type=int,
                       help='number of epochs')
-    parser.add_argument('-b', '--batch_size', dest='batchsize', default=10,
+    parser.add_argument('-b', '--batch_size', dest='batchsize', default=1,
                       type=int, help='batch size')
     parser.add_argument('-l', '--learning-rate', dest='lr', default=0.001,
                       type=float, help='learning rate')
@@ -215,7 +221,7 @@ def get_args():
 if __name__ == '__main__':
     args = get_args()
     # torch.set_default_dtype(torch.float16)
-    net = UNet(n_channels=3, n_classes=6)
+    net = UNet(n_channels=3, n_classes=2)
 
     if args.load:
         net.load_state_dict(torch.load(args.load))
