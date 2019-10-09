@@ -119,7 +119,7 @@ def train_net(net,
                 f1 = f1_score(y_pred_binary, y_label)
                 if global_step % 1000 == 0 and global_step > 0:
                     figure_name = f'{run_name}_{global_step}.png'
-                    save_path = os.path.join(log_path, 'sample_images', figure_name)
+                    save_path = os.path.join(log_path, figure_name)
                     plt.savefig(save_path)
                 writer.add_scalar('f1/train', f1, global_step)
 
