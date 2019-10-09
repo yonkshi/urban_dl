@@ -105,6 +105,11 @@ def train_net(net,
                     print(f'\n======== COMPLETED epoch{epoch}, global step{global_step} ')
                 if global_step % 60 == 0:
                     writer.add_histogram('output_categories', y_pred.detach())
+                # Save checkpoints
+                if global_step % 5000 == 0 and global_step > 0:
+                    check_point_name = f'{run_name}_{global_step}'
+                    save_path = os.path.join(log_path, 'checkpoints', check_point_name)
+                    torch.save(net.state_dict(), save_path)
 
                 writer.add_scalar('loss', loss.item(), global_step)
                 visualize_image(imgs, y_pred, y_label, sample_name, writer, global_step)
@@ -114,6 +119,8 @@ def train_net(net,
                 print('y_label', y_label.shape)
                 f1 = f1_score(y_pred_binary, y_label)
                 print('f1', f1)
+
+
                 writer.add_scalar('f1', f1, global_step)
 
             # torch.cuda.empty_cache()

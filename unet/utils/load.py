@@ -139,7 +139,7 @@ class Xview2Dataset(torch.utils.data.Dataset):
 
         self.random_dset_indices = np.concatenate(dset_indices, axis=-1).T
         np.random.shuffle(self.random_dset_indices)
-
+        print('dataset size:', self.length)
         print('precompute complete')
 
 
