@@ -116,13 +116,14 @@ class Xview2Dataset(torch.utils.data.Dataset):
 
         # test set
         val_idx = index % len(self.random_valset_indices)
-        subset_name = self.dataset_indices[val_idx]
-        input_val = subset['pre'][img_idx]
+        val_dset_idx, val_img_idx = self.random_valset_indices[val_idx]
+        subset_name = self.dataset_indices[val_dset_idx]
+        input_val = subset['pre'][val_img_idx]
         input_val = self._process_input(input_val)
 
-        label_val = subset['labels'][img_idx]
+        label_val = subset['labels'][val_img_idx]
         label_val = self._process_label(label_val)
-        sample_name_val = f'{subset_name}, t={img_idx}'
+        sample_name_val = f'{subset_name}, t={val_img_idx}'
 
         return input, label, sample_name, input_val, label_val, sample_name_val
 
