@@ -123,6 +123,7 @@ def train_net(net,
                     plt.savefig(save_path)
                 writer.add_scalar('f1/train', f1, global_step)
 
+                optimizer.zero_grad()
                 # Test set
                 input_val = input_val.to(device)
                 label_val = label_val.to(device)
