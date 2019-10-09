@@ -130,7 +130,7 @@ def train_net(net,
                 y_pred_validation = net(input_val)
                 f1 = f1_score(y_pred_validation, label_val)
                 writer.add_scalar('f1/test', f1, global_step)
-                figure, plt = visualize_image(imgs, y_pred, y_label, sample_name)
+                figure, plt = visualize_image(input_val, y_pred_validation, label_val, sample_name_val)
                 writer.add_figure('output_image/test', figure, global_step)
 
 
