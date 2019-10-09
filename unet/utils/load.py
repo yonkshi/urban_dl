@@ -118,6 +118,8 @@ class Xview2Dataset(torch.utils.data.Dataset):
         val_idx = index % len(self.random_valset_indices)
         val_dset_idx, val_img_idx = self.random_valset_indices[val_idx]
         subset_name = self.dataset_indices[val_dset_idx]
+        subset = self.dataset[subset_name]
+
         input_val = subset['pre'][val_img_idx]
         input_val = self._process_input(input_val)
 
