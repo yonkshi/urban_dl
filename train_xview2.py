@@ -65,6 +65,7 @@ def train_net(net,
     net.to(device)
 
     __benchmark_init()
+    global_step = 0
     for epoch in range(epochs):
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
 
@@ -80,13 +81,12 @@ def train_net(net,
                                            )
 
         epoch_loss = 0
-        datasize = dataset.length
         benchmark('Dataset Setup')
 
         for i, (imgs, y_label, sample_name) in enumerate(dataloader):
 
             optimizer.zero_grad()
-            global_step = epoch * datasize + i
+
             imgs = imgs.to(device)
             y_label = y_label.to(device)
 
@@ -115,16 +115,12 @@ def train_net(net,
                 visualize_image(imgs, y_pred, y_label, sample_name, writer, global_step)
 
                 y_pred_binary = torch.argmax(y_pred, dim=1)
-                print('y_pred_binary', y_pred_binary.shape)
-                print('y_label', y_label.shape)
                 f1 = f1_score(y_pred_binary, y_label)
-                print('f1', f1)
-
-
                 writer.add_scalar('f1', f1, global_step)
 
             # torch.cuda.empty_cache()
             __benchmark_init()
+            global_step += 1
 
 
 
