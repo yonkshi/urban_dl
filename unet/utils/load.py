@@ -168,7 +168,7 @@ class Xview2Dataset(torch.utils.data.Dataset):
             # validation set
             arange_images_val = np.arange(n_train, n_images)
             arange_index_val = [dset_index] * n_val
-            tuples = np.vstack((arange_images_val, arange_index_val))
+            tuples = np.vstack((arange_index_val, arange_images_val))
             dset_val_indices.append(tuples)
 
 
