@@ -83,7 +83,7 @@ def train_net(net,
         epoch_loss = 0
         benchmark('Dataset Setup')
 
-        for i, (imgs, y_label, sample_name) in enumerate(dataloader):
+        for i, (imgs, y_label, sample_name, input_val, label_val, sample_name_val) in enumerate(dataloader):
 
             optimizer.zero_grad()
 
@@ -107,16 +107,32 @@ def train_net(net,
                     writer.add_histogram('output_categories', y_pred.detach())
                 # Save checkpoints
                 if global_step % 5000 == 0 and global_step > 0:
-                    check_point_name = f'{run_name}_{global_step}'
+                    check_point_name = f'{run_name}_{global_step}.pkl'
                     save_path = os.path.join(log_path, 'checkpoints', check_point_name)
                     torch.save(net.state_dict(), save_path)
 
-                writer.add_scalar('loss', loss.item(), global_step)
-                visualize_image(imgs, y_pred, y_label, sample_name, writer, global_step)
+                writer.add_scalar('loss/train', loss.item(), global_step)
+                figure, plt = visualize_image(imgs, y_pred, y_label, sample_name)
+                writer.add_figure('output_image/train', figure, global_step)
 
                 y_pred_binary = torch.argmax(y_pred, dim=1)
                 f1 = f1_score(y_pred_binary, y_label)
-                writer.add_scalar('f1', f1, global_step)
+                if global_step % 1000 == 0 and global_step > 0:
+                    figure_name = f'{run_name}_{global_step}.png'
+                    save_path = os.path.join(log_path, 'sample_images', figure_name)
+                    plt.savefig(save_path)
+                writer.add_scalar('f1/train', f1, global_step)
+
+                # Test set
+                input_val = input_val.to(device)
+                label_val = label_val.to(device)
+                y_pred_validation = net(input_val)
+                f1 = f1_score(y_pred_validation, label_val)
+                writer.add_scalar('f1/test', f1, global_step)
+                figure, plt = visualize_image(imgs, y_pred, y_label, sample_name)
+                writer.add_figure('output_image/test', figure, global_step)
+
+
 
             # torch.cuda.empty_cache()
             __benchmark_init()
@@ -140,11 +156,11 @@ class LULC(enum.Enum):
 lulc_cmap = ListedColormap([entry.color for entry in LULC])
 lulc_norm = BoundaryNorm(np.arange(-0.5, 6, 1), lulc_cmap.N)
 
-def visualize_image(input_image, output_segmentation, gt_segmentation, sample_name, writer:SummaryWriter, global_step):
+def visualize_image(input_image, output_segmentation, gt_segmentation, sample_name):
 
     # TODO This is slow, consider making this working in a background thread. Or making the entire tensorboardx work in a background thread
     gs = gridspec.GridSpec(nrows=2, ncols=2)
-    fig = plt.figure(figsize=(5, 8))
+    fig = plt.figure(figsize=(5, 5))
     fig.subplots_adjust(wspace=0, hspace=0)
 
     # input image
@@ -173,8 +189,7 @@ def visualize_image(input_image, output_segmentation, gt_segmentation, sample_na
 
     fig.tight_layout()
     plt.tight_layout()
-    plt.show()
-    writer.add_figure('output_image',fig,global_step)
+    return fig, plt
 
 
 def toNp_vanilla(t:torch.Tensor):

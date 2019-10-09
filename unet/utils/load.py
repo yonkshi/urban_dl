@@ -105,40 +105,77 @@ class Xview2Dataset(torch.utils.data.Dataset):
         dset_idx, img_idx = self.random_dset_indices[index]
         subset_name = self.dataset_indices[dset_idx]
         subset = self.dataset[subset_name]
-        dset = subset['pre']
-        obs = dset[img_idx].astype(np.float32) / 255.
-        # move from (x, y, c) to (c, x, y) PyTorch style
-        obs = np.moveaxis(obs, -1, 0)
 
-        label_raw = subset['labels'][img_idx]
-        label_raw = label_raw.sum(axis=0, keepdims=True, )
-        background_layer = np.ones_like(label_raw[0])[None, ...] * 0.5
-        label_raw = np.vstack([background_layer, label_raw])
-        label = np.argmax(label_raw, axis=0)
-        label = label.astype(np.long)
+        input = subset['pre'][img_idx]
+        input = self._process_input(input)
+
+        label = subset['labels'][img_idx]
+        label = self._process_label(label)
 
         sample_name = f'{subset_name}, t={img_idx}'
 
-        return obs, label, sample_name
+        # test set
+        val_idx = index % len(self.random_valset_indices)
+        subset_name = self.dataset_indices[val_idx]
+        input_val = subset['pre'][img_idx]
+        input_val = self._process_input(input_val)
+
+        label_val = subset['labels'][img_idx]
+        label_val = self._process_label(label_val)
+        sample_name_val = f'{subset_name}, t={img_idx}'
+
+        return input, label, sample_name, input_val, label_val, sample_name_val
+
+    def _process_label(self, label):
+        label = label.sum(axis=0, keepdims=True, )
+        background_layer = np.ones_like(label[0])[None, ...] * 0.5
+        label = np.vstack([background_layer, label])
+        label = np.argmax(label, axis=0)
+        label = label.astype(np.long)
+        return label
+
+    def _process_input(self, input):
+        input = input.astype(np.float32) / 255.
+        # move from (x, y, c) to (c, x, y) PyTorch style
+        input = np.moveaxis(input, -1, 0)
+        return input
+
+    def get_fixed_validation_data(self,):
+        pass
 
     def _precompute_comp(self):
 
         print('precomputing...')
         # computing total length of the data
         dset_indices = []
+        dset_val_indices = []
         for dset_index, key in enumerate(self.dataset_indices):
             ts = self.dataset[f'{key}/pre']
             n_images = ts.shape[0]
-            self.length += n_images
 
-            #
-            arange_images = np.arange(n_images)
-            arange_index = [dset_index] * n_images
+            # splitting training with validation set
+            n_train = int(np.floor(n_images * .9))
+            n_val = n_images - n_train
+            self.length += n_train
+
+            # training set
+            arange_images = np.arange(n_train)
+            arange_index = [dset_index] * n_train
             tuples = np.vstack((arange_index, arange_images))
             dset_indices.append(tuples)
 
+            # validation set
+            arange_images_val = np.arange(n_train, n_images)
+            arange_index_val = [dset_index] * n_val
+            tuples = np.vstack((arange_images_val, arange_index_val))
+            dset_val_indices.append(tuples)
+
+
+
         self.random_dset_indices = np.concatenate(dset_indices, axis=-1).T
+        self.random_valset_indices = np.concatenate(dset_val_indices, axis=-1).T
         np.random.shuffle(self.random_dset_indices)
+        np.random.shuffle(self.random_valset_indices)
         print('dataset size:', self.length)
         print('precompute complete')
 
