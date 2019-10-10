@@ -108,7 +108,7 @@ def train_net(net,
                 # Save checkpoints
                 if global_step % 5000 == 0 and global_step > 0:
                     check_point_name = f'{run_name}_{global_step}.pkl'
-                    save_path = os.path.join(log_path, 'checkpoints', check_point_name)
+                    save_path = os.path.join(log_path, check_point_name)
                     torch.save(net.state_dict(), save_path)
 
                 writer.add_scalar('loss/train', loss.item(), global_step)
