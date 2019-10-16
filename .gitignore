@@ -3,8 +3,10 @@ data/
 __pycache__/
 checkpoints/
 logs/
+output/
 *.pth
 *.jpg
 SUBMISSION*
+
 
 .idea

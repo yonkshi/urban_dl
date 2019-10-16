@@ -101,6 +101,8 @@ def get_args():
     parser = ArgumentParser()
     parser.add_argument('-d', '--data-dir', dest='data_dir', type=str,
                       default='/datasets/xview2/detectron2_train/', help='dataset directory')
+    parser.add_argument('-o', '--log-dir', dest='log_dir', type=str,
+                      default='/logs/', help='logging directory')
 
     (options, args) = parser.parse_known_args()
     return options
@@ -115,7 +117,8 @@ def main():
 
     cfg = get_cfg()
     cfg.merge_from_file("configs/mask_rcnn_R_50_FPN_3x.yaml")
-    cfg.DATASETS.TRAIN = ("data/xview2/",)
+    cfg.DATASETS.TRAIN = (DATASET_LOCATION,)
+    cfg.OUTPUT_DIR = args.log_dir
     cfg.DATASETS.TEST = ()   # no metrics implemented for this dataset
     cfg.DATALOADER.NUM_WORKERS = 2
     # cfg.MODEL.WEIGHTS = "detectron2://COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x/137849600/model_final_f10217.pkl"  # initialize from model zoo
