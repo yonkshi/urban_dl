@@ -102,7 +102,7 @@ def get_args():
     parser.add_argument('-d', '--data-dir', dest='data_dir', type=str,
                       default='/datasets/xview2/detectron2_train/', help='dataset directory')
     parser.add_argument('-o', '--log-dir', dest='log_dir', type=str,
-                      default='/logs/', help='logging directory')
+                      default='/logs/detectron/', help='logging directory')
 
     (options, args) = parser.parse_known_args()
     return options
