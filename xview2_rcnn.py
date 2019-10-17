@@ -111,6 +111,7 @@ def main():
 
     args = get_args()
     DATASET_LOCATION = args.data_dir
+    print('dataset location', DATASET_LOCATION)
     DatasetCatalog.register(DATASET_LOCATION , lambda : get_building_dicts(DATASET_LOCATION))
     MetadataCatalog.get(DATASET_LOCATION).set(thing_classes=["buildings"])
 
