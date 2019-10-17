@@ -121,7 +121,7 @@ def main():
     cfg.DATASETS.TRAIN = (DATASET_LOCATION,)
     cfg.OUTPUT_DIR = args.log_dir
     cfg.DATASETS.TEST = ()   # no metrics implemented for this dataset
-    cfg.DATALOADER.NUM_WORKERS = 2
+    cfg.DATALOADER.NUM_WORKERS = 4
     # cfg.MODEL.WEIGHTS = "detectron2://COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x/137849600/model_final_f10217.pkl"  # initialize from model zoo
     cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     cfg.SOLVER.IMS_PER_BATCH = 2
