@@ -102,7 +102,7 @@ def get_args():
     parser.add_argument('-d', '--data-dir', dest='data_dir', type=str,
                       default='/datasets/xview2/detectron2_train/', help='dataset directory')
     parser.add_argument('-o', '--log-dir', dest='log_dir', type=str,
-                      default='/logs/detectron/', help='logging directory')
+                      default='/logs/detectron/overfit_test_run/', help='logging directory')
 
     (options, args) = parser.parse_known_args()
     return options
@@ -122,13 +122,15 @@ def main():
     cfg.OUTPUT_DIR = args.log_dir
     cfg.DATASETS.TEST = ()   # no metrics implemented for this dataset
     cfg.DATALOADER.NUM_WORKERS = 2
+    cfg.DATALOADER.FILTER_EMPTY_ANNOTATIONS = False
     cfg.MODEL.WEIGHTS = os.path.join(args.log_dir, 'model_final.pth')  # initialize from model zoo
     cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     cfg.SOLVER.IMS_PER_BATCH = 2
-    cfg.SOLVER.BASE_LR = 0.00025
+    cfg.SOLVER.BASE_LR = 0.025
     cfg.SOLVER.MAX_ITER = 200000    # 300 iterations seems good enough, but you can certainly train longer
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 256   # faster, and good enough for this toy dataset
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon)
+
 
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     trainer = DefaultTrainer(cfg)
