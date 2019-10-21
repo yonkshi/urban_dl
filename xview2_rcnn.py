@@ -123,7 +123,7 @@ def main():
     cfg.DATASETS.TEST = ()   # no metrics implemented for this dataset
     cfg.DATALOADER.NUM_WORKERS = 2
     cfg.DATALOADER.FILTER_EMPTY_ANNOTATIONS = False
-    cfg.MODEL.WEIGHTS = os.path.join(args.log_dir, 'model_final.pth')  # initialize from model zoo
+    # cfg.MODEL.WEIGHTS = os.path.join(args.log_dir, 'model_final.pth')  # initialize from model zoo
     cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     cfg.SOLVER.IMS_PER_BATCH = 2
     cfg.SOLVER.BASE_LR = 0.025
@@ -134,7 +134,7 @@ def main():
 
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     trainer = DefaultTrainer(cfg)
-    # trainer.resume_or_load(resume=False)
+    trainer.resume_or_load(resume=False)
     trainer.train()
 
 
