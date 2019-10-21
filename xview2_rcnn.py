@@ -100,7 +100,7 @@ def get_building_dicts(img_dir):
 def get_args():
     parser = ArgumentParser()
     parser.add_argument('-d', '--data-dir', dest='data_dir', type=str,
-                      default='/datasets/xview2/detectron2_train/', help='dataset directory')
+                      default='/datasets/xview2/small_detectron2_train/', help='dataset directory')
     parser.add_argument('-o', '--log-dir', dest='log_dir', type=str,
                       default='/logs/detectron/overfit_test_run/', help='logging directory')
 
