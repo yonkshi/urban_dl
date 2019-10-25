@@ -102,7 +102,7 @@ def get_args():
     parser.add_argument('-d', '--data-dir', dest='data_dir', type=str,
                       default='/datasets/xview2/small_detectron2_train/', help='dataset directory')
     parser.add_argument('-o', '--log-dir', dest='log_dir', type=str,
-                      default='/logs/detectron/overfitter_mask_rcnn_resnext_101_fpn_1x/', help='logging directory')
+                      default='/logs/detectron/overfitter_mask_rcnn_r_50_fpn_3x_small_anchor/', help='logging directory')
 
     (options, args) = parser.parse_known_args()
     return options
@@ -117,7 +117,7 @@ def main():
 
 
     cfg = get_cfg()
-    cfg.merge_from_file("configs/overfitter_mask_rcnn_resnext_101_fpn_1x.yaml")
+    cfg.merge_from_file("configs/overfitter_mask_rcnn_r_50_fpn_3x_small_anchor.yaml")
     cfg.DATASETS.TRAIN = (DATASET_LOCATION,)
     cfg.OUTPUT_DIR = args.log_dir
     cfg.DATASETS.TEST = ()   # no metrics implemented for this dataset
@@ -129,7 +129,7 @@ def main():
 
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     trainer = DefaultTrainer(cfg)
-    trainer.resume_or_load(resume=False)
+    trainer.resume_or_load(resume=True)
     trainer.train()
 
 
