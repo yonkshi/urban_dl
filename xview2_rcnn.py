@@ -104,6 +104,9 @@ def get_args():
     parser.add_argument('-o', '--log-dir', dest='log_dir', type=str,
                       default='/logs/detectron/overfitter_mask_rcnn_r_50_fpn_3x_small_anchor/', help='logging directory')
 
+    parser.add_argument('-c', '--config', dest='config_file', type=str,
+                      default='overfitter_mask_rcnn_r_50_fpn_3x_small_anchor', help='logging directory')
+
     (options, args) = parser.parse_known_args()
     return options
 
@@ -117,9 +120,9 @@ def main():
 
 
     cfg = get_cfg()
-    cfg.merge_from_file("configs/overfitter_mask_rcnn_r_50_fpn_3x_small_anchor.yaml")
+    cfg.merge_from_file(f"configs/{args.config_file}.yaml")
     cfg.DATASETS.TRAIN = (DATASET_LOCATION,)
-    cfg.OUTPUT_DIR = args.log_dir
+    cfg.OUTPUT_DIR = os.path.join(args.log_dir, args.config_file)
     cfg.DATASETS.TEST = ()   # no metrics implemented for this dataset
     cfg.DATALOADER.NUM_WORKERS = 2
     cfg.DATALOADER.FILTER_EMPTY_ANNOTATIONS = False
