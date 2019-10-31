@@ -1,6 +1,3 @@
-
-
-
 # import some common libraries
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,64 +5,60 @@ import cv2
 import random
 import torch
 from argparse import ArgumentParser
-
-import detectron2
-from detectron2.utils.logger import setup_logger
-from detectron2.engine import DefaultPredictor, DefaultTrainer
-from detectron2.config import get_cfg
-from detectron2.utils.visualizer import Visualizer, ColorMode
 from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.structures import BoxMode
 
-setup_logger()
+
 
 import os
-import numpy as np
+from os import path
+
 import json
 
 import itertools
 
+import numpy as np
+
+import detectron2.utils.comm as comm
+from detectron2.checkpoint import DetectionCheckpointer
+from detectron2.config import get_cfg
+from detectron2.data import build_detection_test_loader, build_detection_train_loader
+from detectron2.engine import DefaultTrainer, default_argument_parser, default_setup, launch
+from detectron2.evaluation import COCOEvaluator, DatasetEvaluators, verify_results
+from detectron2.utils.logger import setup_logger
+
+class Trainer(DefaultTrainer):
+    @classmethod
+    def build_evaluator(cls, cfg, dataset_name):
+        output_folder = os.path.join(cfg.OUTPUT_DIR, "inference")
+        evaluators = [COCOEvaluator(dataset_name, cfg, True, output_folder)]
+        return DatasetEvaluators(evaluators)
+
+def setup(args):
+    cfg = get_cfg()
+    cfg.merge_from_file(f'configs/{args.config_file}.yaml')
+    cfg.merge_from_list(args.opts)
+
+    if args.log_dir:
+        cfg.OUTPUT_DIR = args.log_dir
+    if args.data_dir:
+        cfg.DATASETS.TRAIN = args.data_dir
+
+    cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    cfg.OUTPUT_DIR = path.join(cfg.OUTPUT_DIR, args.config_file)
+    cfg.freeze()
+
+    DatasetCatalog.register(cfg.DATASETS.TRAIN , lambda : get_building_dicts(cfg.DATASETS.TRAIN))
+    DatasetCatalog.register(cfg.DATASETS.TEST, lambda: get_building_dicts(cfg.DATASETS.TEST))
+    MetadataCatalog.get(cfg.DATASETS.TRAIN).set(thing_classes=["buildings"])
+
+    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
+    default_setup(cfg, args)
+    # Setup logger for "densepose" module
+    setup_logger()
 
 
-# write a function that loads the dataset into detectron2's standard format
-def get_balloon_dicts(img_dir):
-    json_file = os.path.join(img_dir, "via_region_data.json")
-    with open(json_file) as f:
-        imgs_anns = json.load(f)
-
-    dataset_dicts = []
-    for _, v in imgs_anns.items():
-        record = {}
-
-        filename = os.path.join(img_dir, v["filename"])
-        height, width = cv2.imread(filename).shape[:2]
-
-        record["file_name"] = filename
-        record["height"] = height
-        record["width"] = width
-
-        annos = v["regions"]
-        objs = []
-        for _, anno in annos.items():
-            assert not anno["region_attributes"]
-            anno = anno["shape_attributes"]
-            px = anno["all_points_x"]
-            py = anno["all_points_y"]
-            poly = [(x + 0.5, y + 0.5) for x, y in zip(px, py)]
-            poly = list(itertools.chain.from_iterable(poly))
-
-            obj = {
-                "bbox": [np.min(px), np.min(py), np.max(px), np.max(py)],
-                "bbox_mode": BoxMode.XYXY_ABS,
-                "segmentation": [poly],
-                "category_id": 0,
-                "iscrowd": 0
-            }
-            objs.append(obj)
-        record["annotations"] = objs
-        dataset_dicts.append(record)
-
-    return dataset_dicts
+    return cfg
 
 def get_building_dicts(img_dir):
     json_file = os.path.join(img_dir, "labels.json")
@@ -98,6 +91,38 @@ def get_building_dicts(img_dir):
         dataset_dicts.append(record)
     print('metadata loading complete!')
     return dataset_dicts
+
+def main(args):
+    cfg = setup(args)
+
+    if args.eval_only:
+        model = Trainer.build_model(cfg)
+        DetectionCheckpointer(model, save_dir=cfg.OUTPUT_DIR).resume_or_load(
+            cfg.MODEL.WEIGHTS, resume=args.resume
+        )
+        res = Trainer.test(cfg, model)
+        if comm.is_main_process():
+            verify_results(cfg, res)
+        return res
+
+    trainer = Trainer(cfg)
+    trainer.resume_or_load(resume=args.resume)
+    return trainer.train()
+
+
+if __name__ == "__main__":
+    args = default_argument_parser().parse_args()
+    print("Command Line Args:", args)
+    launch(
+        main,
+        args.num_gpus,
+        num_machines=args.num_machines,
+        machine_rank=args.machine_rank,
+        dist_url=args.dist_url,
+        args=(args,),
+    )
+
+
 def get_args():
     parser = ArgumentParser()
     parser.add_argument('-d', '--data-dir', dest='data_dir', type=str,
@@ -136,7 +161,3 @@ def main():
     trainer.resume_or_load(resume=True)
     trainer.train()
 
-
-
-if __name__ == '__main__':
-    main()
