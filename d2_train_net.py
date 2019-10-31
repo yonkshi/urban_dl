@@ -61,7 +61,6 @@ def setup(args):
     # default_setup(cfg, args)
     # Setup logger for "densepose" module
     setup_logger()
-    import ipdb; ipdb.set_trace()
     return cfg
 
 
