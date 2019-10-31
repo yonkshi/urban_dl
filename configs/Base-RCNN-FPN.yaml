@@ -31,8 +31,8 @@ MODEL:
     NUM_CONV: 4
     POOLER_RESOLUTION: 14
 DATASETS:
-  TRAIN: ("/local_storage/datasets/xview2/small_detectron2_train/",)
-  TEST: ("/local_storage/datasets/xview2/small_detectron2_test/",)
+  TRAIN: ("/local_storage/datasets/xview2/small/train/",)
+  TEST: ("/local_storage/datasets/xview2/small/test/",)
 DATALOADER:
   FILTER_EMPTY_ANNOTATIONS: False
 SOLVER:
