@@ -1,4 +1,4 @@
-_BASE_: "Base-RCNN-FPN.yaml"
+_BASE_: "overfitter_base.yaml"
 MODEL:
   MASK_ON: True
   RESNETS:
