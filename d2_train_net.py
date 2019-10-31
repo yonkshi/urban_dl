@@ -34,6 +34,12 @@ class Trainer(DefaultTrainer):
         evaluators = [COCOEvaluator(dataset_name, cfg, True, output_folder)]
         return DatasetEvaluators(evaluators)
 
+def register_datasets(dsets):
+    for dset_name in dsets:
+        DatasetCatalog.register(dset_name, lambda: get_building_dicts(dset_name))
+        MetadataCatalog.get(dset_name).set(thing_classes=["buildings"])
+
+
 def setup(args):
     cfg = get_cfg()
     cfg.merge_from_file(f'configs/{args.config_file}.yaml')
@@ -48,17 +54,17 @@ def setup(args):
     cfg.OUTPUT_DIR = path.join(cfg.OUTPUT_DIR, args.config_file)
     cfg.freeze()
 
-    DatasetCatalog.register(cfg.DATASETS.TRAIN , lambda : get_building_dicts(cfg.DATASETS.TRAIN))
-    DatasetCatalog.register(cfg.DATASETS.TEST, lambda: get_building_dicts(cfg.DATASETS.TEST))
-    MetadataCatalog.get(cfg.DATASETS.TRAIN).set(thing_classes=["buildings"])
+    register_datasets(cfg.DATASETS.TRAIN)
+    register_datasets(cfg.DATASETS.TEST)
 
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
-    default_setup(cfg, args)
+    # default_setup(cfg, args)
     # Setup logger for "densepose" module
     setup_logger()
 
 
     return cfg
+
 
 def get_building_dicts(img_dir):
     json_file = os.path.join(img_dir, "labels.json")
