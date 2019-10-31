@@ -51,6 +51,7 @@ def setup(args):
         cfg.DATASETS.TRAIN = (args.data_dir,)
 
     cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    print('device:', cfg.MODEL.DEVICE)
     cfg.OUTPUT_DIR = path.join(cfg.OUTPUT_DIR, args.config_file)
     cfg.freeze()
 
