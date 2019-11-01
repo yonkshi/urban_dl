@@ -101,9 +101,9 @@ def get_building_dicts(img_dir):
 def get_args():
     parser = ArgumentParser()
     parser.add_argument('-d', '--data-dir', dest='data_dir', type=str,
-                      default='/local_storage/datasets/xview2/full/train/', help='dataset directory')
+                      default='datasets/xview2/full/train/', help='dataset directory')
     parser.add_argument('-o', '--log-dir', dest='log_dir', type=str,
-                      default='/local_storage/pshi/logs/detectron/', help='logging directory')
+                      default='logs/detectron/', help='logging directory')
 
     parser.add_argument('-c', '--config', dest='config_file', type=str,
                       default='overfitter_mask_rcnn_r_50_fpn_3x_small_anchor', help='logging directory')
