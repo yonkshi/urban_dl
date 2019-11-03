@@ -37,7 +37,7 @@ class Trainer(DefaultTrainer):
 def register_datasets(dsets):
     for dset_name in dsets:
         DatasetCatalog.register(dset_name, lambda: get_building_dicts(dset_name))
-        MetadataCatalog.get(dset_name).set(thing_classes=["buildings"])
+        MetadataCatalog.get(dset_name).set(thing_classes=["buildings"], json_file=path.join(dset_name, 'labels.json'))
 
 
 def setup(args):
@@ -112,6 +112,7 @@ def main(args):
 
     trainer = Trainer(cfg)
     trainer.resume_or_load(resume=args.resume)
+
     return trainer.train()
 
 
@@ -141,7 +142,7 @@ def get_args():
     (options, args) = parser.parse_known_args()
     return options
 
-def main():
+def main2():
 
     args = get_args()
     DATASET_LOCATION = args.data_dir
