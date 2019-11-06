@@ -69,35 +69,19 @@ def get_building_dicts(img_dir, transform=False):
     json_file = os.path.join(img_dir, "labels.json")
     with open(json_file) as f:
         imgs_anns = json.load(f)
-    if not transform:
-        return json_file
     dataset_dicts = []
     for v in imgs_anns:
         record = {}
         filename = os.path.join(img_dir, v["file_name"])
-        record["file_name"] = filename
-        record["height"] = v['height']
-        record["width"] = v['width']
-        record['image_id'] = v["file_name"]
 
-        annos = v["annotations"]
-        objs = []
-        for polygon_pairs in annos:
+        # Convert relative file name to absolute filename
+        v["file_name"] = filename
+        # Convert bbox mode to objects
+        for anno in v['annotations']:
+            anno['bbox_mode'] = BoxMode.XYXY_ABS
 
-            poly = list(itertools.chain.from_iterable(polygon_pairs))
-            px, py = np.array(polygon_pairs).T
-            obj = {
-                "bbox": [np.min(px), np.min(py), np.max(px), np.max(py)],
-                "bbox_mode": BoxMode.XYXY_ABS,
-                "segmentation": [poly],
-                "category_id": 0,
-                "iscrowd": 0
-            }
-            objs.append(obj)
-        record["annotations"] = objs
-        dataset_dicts.append(record)
     print('metadata loading complete!')
-    return dataset_dicts
+    return imgs_anns
 
 def main(args):
     cfg = setup(args)
