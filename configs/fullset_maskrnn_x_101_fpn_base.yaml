@@ -21,7 +21,7 @@ MODEL:
     BATCH_SIZE_PER_IMAGE: 256
     NUM_CLASSES: 1
 DATASETS:
-  TRAIN: ("/local_storage/datasets/xview2/large/train/",)
+  TRAIN: ("/datasets/xview2/large/train/",)
 SOLVER:
   STEPS: (210000, 250000)
   IMS_PER_BATCH: 2
