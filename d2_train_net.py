@@ -65,11 +65,12 @@ def setup(args):
     return cfg
 
 
-def get_building_dicts(img_dir):
+def get_building_dicts(img_dir, transform=False):
     json_file = os.path.join(img_dir, "labels.json")
     with open(json_file) as f:
         imgs_anns = json.load(f)
-
+    if not transform:
+        return json_file
     dataset_dicts = []
     for v in imgs_anns:
         record = {}
