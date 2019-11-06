@@ -37,7 +37,7 @@ class Trainer(DefaultTrainer):
 def register_datasets(dsets):
     for dset_name in dsets:
         DatasetCatalog.register(dset_name, lambda: get_building_dicts(dset_name))
-        MetadataCatalog.get(dset_name).set(thing_classes=["buildings"], json_file=path.join(dset_name, 'labels.json'))
+        MetadataCatalog.get(dset_name).set(thing_classes=["buildings"])
 
 
 def setup(args):
@@ -77,6 +77,7 @@ def get_building_dicts(img_dir):
         record["file_name"] = filename
         record["height"] = v['height']
         record["width"] = v['width']
+        record['image_id'] = v["file_name"]
 
         annos = v["annotations"]
         objs = []
