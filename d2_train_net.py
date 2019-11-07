@@ -77,6 +77,7 @@ def get_building_dicts(img_dir, transform=False):
         # Convert relative file name to absolute filename
         v["file_name"] = filename
         # Convert bbox mode to objects
+        v['image_id'] = v['img_id']
         for anno in v['annotations']:
             anno['bbox_mode'] = BoxMode.XYXY_ABS
 
@@ -114,42 +115,4 @@ if __name__ == "__main__":
         args=(args,),
     )
 
-
-def get_args():
-    parser = ArgumentParser()
-    parser.add_argument('-d', '--data-dir', dest='data_dir', type=str,
-                      default='/datasets/xview2/small_detectron2_train/', help='dataset directory')
-    parser.add_argument('-o', '--log-dir', dest='log_dir', type=str,
-                      default='/logs/detectron/', help='logging directory')
-
-    parser.add_argument('-c', '--config', dest='config_file', type=str,
-                      default='overfitter_mask_rcnn_r_50_fpn_3x_small_anchor', help='logging directory')
-
-    (options, args) = parser.parse_known_args()
-    return options
-
-def main2():
-
-    args = get_args()
-    DATASET_LOCATION = args.data_dir
-    print('dataset location', DATASET_LOCATION)
-    DatasetCatalog.register(DATASET_LOCATION , lambda : get_building_dicts(DATASET_LOCATION))
-    MetadataCatalog.get(DATASET_LOCATION).set(thing_classes=["buildings"])
-
-
-    cfg = get_cfg()
-    cfg.merge_from_file(f"configs/{args.config_file}.yaml")
-    cfg.DATASETS.TRAIN = (DATASET_LOCATION,)
-    cfg.OUTPUT_DIR = os.path.join(args.log_dir, args.config_file)
-    cfg.DATASETS.TEST = ()   # no metrics implemented for this dataset
-    cfg.DATALOADER.NUM_WORKERS = 2
-    cfg.DATALOADER.FILTER_EMPTY_ANNOTATIONS = False
-    # cfg.MODEL.WEIGHTS = os.path.join(args.log_dir, 'model_final.pth')  # initialize from model zoo
-    cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
-
-    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
-    trainer = DefaultTrainer(cfg)
-    trainer.resume_or_load(resume=True)
-    trainer.train()
 
