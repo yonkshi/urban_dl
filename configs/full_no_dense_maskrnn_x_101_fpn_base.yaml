@@ -1,0 +1,31 @@
+_BASE_: "base.yaml"
+MODEL:
+  MASK_ON: True
+  RESNETS:
+    DEPTH: 101
+    NUM_GROUPS: 32
+    WIDTH_PER_GROUP: 8
+  ANCHOR_GENERATOR:
+    SIZES: [[16], [32], [64], [128], [256]]  # One size for each in feature map
+    ASPECT_RATIOS: [[0.25, 0.5, 1.0, 2.0, 4.0]]  # Three aspect ratios (same for all in feature maps)
+  RPN:
+    IN_FEATURES: ["p2", "p3", "p4", "p5", "p6"]
+    PRE_NMS_TOPK_TRAIN: 12000  # Per FPN level
+    PRE_NMS_TOPK_TEST: 6000  # Per FPN level
+    # Detectron1 uses 2000 proposals per-batch,
+    # (See "modeling/rpn/rpn_outputs.py" for details of this legacy issue)
+    # which is approximately 1000 proposals per-image since the default batch size for FPN is 2.
+    POST_NMS_TOPK_TRAIN: 2000
+    POST_NMS_TOPK_TEST: 1000
+  ROI_HEADS:
+    BATCH_SIZE_PER_IMAGE: 256
+    NUM_CLASSES: 1
+DATASETS:
+  TRAIN: ("/datasets/xview2/full_no_dense/train/",)
+  TEST: ("/datasets/xview2/full_no_dense/test/",)
+  #/datasets/xview2/large/train/
+SOLVER:
+  STEPS: (210000, 250000)
+  IMS_PER_BATCH: 1
+  BASE_LR: 0.0025
+  MAX_ITER: 400000
