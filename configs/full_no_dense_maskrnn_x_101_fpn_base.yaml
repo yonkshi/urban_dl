@@ -25,8 +25,8 @@ DATASETS:
   TEST: ("/datasets/xview2/full_no_dense/test/",)
   #/datasets/xview2/large/train/
 SOLVER:
-  STEPS: (210000, 250000)
+  STEPS: (800000, 1000000)
   IMS_PER_BATCH: 1
   BASE_LR: 0.0025
-  MAX_ITER: 800000
+  MAX_ITER: 1200000
   WARMUP_ITERS: 10000
