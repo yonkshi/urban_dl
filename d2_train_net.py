@@ -26,12 +26,13 @@ from detectron2.data import build_detection_test_loader, build_detection_train_l
 from detectron2.engine import DefaultTrainer, default_argument_parser, default_setup, launch
 from detectron2.evaluation import COCOEvaluator, DatasetEvaluators, verify_results
 from detectron2.utils.logger import setup_logger
+from eval_util.xview2_cocoeval import Xview2COCOEvaluator
 
 class Trainer(DefaultTrainer):
     @classmethod
     def build_evaluator(cls, cfg, dataset_name):
         output_folder = os.path.join(cfg.OUTPUT_DIR, "inference")
-        evaluators = [COCOEvaluator(dataset_name, cfg, True, output_folder)]
+        evaluators = [Xview2COCOEvaluator(dataset_name, cfg, True, output_folder)]
         return DatasetEvaluators(evaluators)
 
 def register_datasets(dsets):
