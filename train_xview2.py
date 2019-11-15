@@ -208,7 +208,7 @@ def to_H_W_C(t:torch.Tensor):
 
 def get_args():
     parser = ArgumentParser()
-    parser.add_argument('-e', '--epochs', dest='epochs', default=5, type=int,
+    parser.add_argument('-e', '--epochs', dest='epochs', default=100, type=int,
                       help='number of epochs')
     parser.add_argument('-b', '--batch_size', dest='batchsize', default=1,
                       type=int, help='batch size')
