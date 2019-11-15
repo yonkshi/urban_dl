@@ -19,7 +19,7 @@ from tabulate import tabulate
 
 from debug_tools import __benchmark_init, benchmark
 from unet import UNet
-from unet.utils import SloveniaDataset, Xview2Dataset
+from unet.utils import SloveniaDataset, Xview2Dataset, Xview2Detectron2Dataset
 from experiment_manager.metrics import f1_score
 # import hp
 
@@ -72,10 +72,9 @@ def train_net(net,
         net.train()
 
         # reset the generators
-        dataset = Xview2Dataset(data_dir, epoch)
+        dataset = Xview2Detectron2Dataset(data_dir, epoch)
         dataloader = torch_data.DataLoader(dataset,
                                            batch_size=batch_size,
-                                           pin_memory=True,
                                            num_workers=num_dataloaders,
                                            drop_last=True,
                                            )
@@ -84,6 +83,8 @@ def train_net(net,
         benchmark('Dataset Setup')
 
         for i, (imgs, y_label, sample_name, input_val, label_val, sample_name_val) in enumerate(dataloader):
+
+            # visualize_image(imgs, y_label, y_label, sample_name)
 
             optimizer.zero_grad()
 

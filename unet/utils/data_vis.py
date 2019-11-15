@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
 def plot_img_and_mask(img, mask):
+    img = np.moveaxis(img, 0, -1)
     fig = plt.figure()
     a = fig.add_subplot(1, 2, 1)
     a.set_title('Input image')

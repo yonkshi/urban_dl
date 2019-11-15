@@ -8,10 +8,11 @@ import numpy as np
 from PIL import Image
 import torch
 import h5py
-
+import json
+import cv2
 from unet.utils import *
 from debug_tools import __benchmark_init, benchmark
-
+import pycocotools.mask as mask_utils
 
 class SloveniaDataset(torch.utils.data.Dataset):
     def __init__(self, file_path, timeidx):
@@ -182,6 +183,89 @@ class Xview2Dataset(torch.utils.data.Dataset):
         print('dataset size:', self.length)
         print('precompute complete')
 
+
+    def __len__(self):
+
+        return self.length
+
+class Xview2Detectron2Dataset(torch.utils.data.Dataset):
+    '''
+    Dataset for Detectron2 style labelled Dataset
+    '''
+    def __init__(self, file_path, timeidx):
+        super().__init__()
+
+        ds_path = os.path.join(file_path,'labels.json')
+        with open(ds_path) as f:
+            ds = json.load(f)
+        self.dataset = ds
+        self.dataset_path = file_path
+
+        self.length = len(ds)
+        self.timeidx = timeidx
+
+
+        self.label_mask_cache = {}
+
+    def __getitem__(self, index):
+        data_sample = self.dataset[index]
+        input, image_shape =self._process_input(data_sample['file_name'])
+        label = self._extract_label(data_sample['annotations'], image_shape)
+        print('label shape', label.shape)
+        # label = label[None, ...] # C x H x W
+
+        sample_name = data_sample['file_name']
+        sample_name_val = f'{sample_name}'
+
+        input_val = np.copy(input)
+        label_val = np.copy(label)
+
+        return input, label, sample_name, input_val, label_val, sample_name_val
+
+    def polygons_to_bitmask(self, polygons, height, width) -> np.ndarray:
+        """
+        Args:
+            polygons (list[ndarray]): each array has shape (Nx2,)
+            height, width (int)
+        Returns:
+            ndarray: a bool mask of shape (height, width)
+        """
+        assert len(polygons) > 0, "COCOAPI does not support empty polygons"
+        rles = mask_utils.frPyObjects(polygons, height, width)
+        rle = mask_utils.merge(rles)
+        return mask_utils.decode(rle).astype(np.bool)
+
+
+    def _extract_label(self, annotations_set, image_size):
+        masks = []
+        print('annotation_set shape', len(annotations_set))
+        for anno in annotations_set:
+            segm_instances = anno['segmentation'][0]
+
+            # Converting from XYXY to [[x,y],[x,y]
+            num_polygon_points = len(segm_instances) / 2
+            assert num_polygon_points.is_integer(), 'The polygon array must be in XYXY format'
+            polygon_pts = np.reshape(segm_instances, (int(num_polygon_points), 2))
+            mask = self.polygons_to_bitmask(polygon_pts, image_size[0], image_size[1])
+            masks.append(mask)
+
+        if masks:
+            composite_mask = np.any(masks, axis=0).astype(np.long)
+        else:
+            composite_mask = np.zeros(image_size, dtype=np.long)
+        return composite_mask
+
+    def _process_input(self, image_filename):
+        img_path = os.path.join(self.dataset_path, image_filename)
+        img = cv2.imread(img_path)
+        # BGR to RGB
+        img = img[...,::-1]
+
+        input = img.astype(np.float32) / 255.
+        # move from (x, y, c) to (c, x, y) PyTorch style
+        input = np.moveaxis(input, -1, 0)
+        image_shape = input.shape[1:]
+        return input, image_shape
 
     def __len__(self):
 
