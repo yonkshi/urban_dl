@@ -76,6 +76,7 @@ def train_net(net,
         dataloader = torch_data.DataLoader(dataset,
                                            batch_size=batch_size,
                                            num_workers=num_dataloaders,
+                                           shuffle = True,
                                            drop_last=True,
                                            )
 

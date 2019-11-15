@@ -232,7 +232,6 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
 
     def _extract_label(self, annotations_set, image_size):
         masks = []
-        print('annotation_set shape', len(annotations_set))
         for anno in annotations_set:
             segm_instances = anno['segmentation'][0]
 
