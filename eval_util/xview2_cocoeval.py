@@ -94,17 +94,28 @@ class Xview2COCOEvaluator(DatasetEvaluator):
             outputs: the outputs of a COCO model. It is a list of dicts with key
                 "instances" that contains :class:`Instances`.
         """
+        print('output_len', len(outputs))
         for input, output in zip(inputs, outputs):
+
             prediction = {"image_id": input["image_id"]}
 
             # TODO this is ugly
             if "instances" in output:
                 instances = output["instances"].to(self._cpu_device)
 
+                THRESHOLD = 0.5
+                # Searching in negative because np only takes ascending order
+                thrs_pos = np.searchsorted(-instances.scores.numpy(), -THRESHOLD, side='right')
+                masks = np.array(instances.pred_masks[:thrs_pos])
+                # combine masks into a single image
+                mask_merged = np.any(masks, axis=0)
+                prediction['merged_mask'] = mask_merged
+
                 if instances.has("pred_masks"):
                     # use RLE to encode the masks, because they are too large and takes memory
                     # since this evaluator stores outputs of the entire dataset
                     # Our model may predict bool array, but cocoapi expects uint8
+
                     rles = [
                         mask_util.encode(np.array(mask[:, :, None], order="F", dtype="uint8"))[0]
                         for mask in instances.pred_masks
