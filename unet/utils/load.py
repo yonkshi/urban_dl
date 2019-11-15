@@ -213,14 +213,9 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         label = self._extract_label(data_sample['annotations'], image_shape)
         print('label shape', label.shape)
         # label = label[None, ...] # C x H x W
-
         sample_name = data_sample['file_name']
-        sample_name_val = f'{sample_name}'
 
-        input_val = np.copy(input)
-        label_val = np.copy(label)
-
-        return input, label, sample_name, input_val, label_val, sample_name_val
+        return input, label, sample_name
 
     def polygons_to_bitmask(self, polygons, height, width) -> np.ndarray:
         """

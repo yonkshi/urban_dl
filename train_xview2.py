@@ -82,7 +82,7 @@ def train_net(net,
         epoch_loss = 0
         benchmark('Dataset Setup')
 
-        for i, (imgs, y_label, sample_name, input_val, label_val, sample_name_val) in enumerate(dataloader):
+        for i, (imgs, y_label, sample_name) in enumerate(dataloader):
 
             # visualize_image(imgs, y_label, y_label, sample_name)
 
@@ -125,16 +125,9 @@ def train_net(net,
                 writer.add_scalar('f1/train', f1, global_step)
 
                 optimizer.zero_grad()
-                # Test set
-                input_val = input_val.to(device)
-                label_val = label_val.to(device)
-                y_pred_validation = net(input_val)
-                f1 = f1_score(y_pred_validation, label_val)
+                # F1 score
+                f1 = f1_score(y_pred, y_label)
                 writer.add_scalar('f1/test', f1, global_step)
-                figure, plt = visualize_image(input_val, y_pred_validation, label_val, sample_name_val)
-                writer.add_figure('output_image/test', figure, global_step)
-
-
 
             # torch.cuda.empty_cache()
             __benchmark_init()
