@@ -211,7 +211,6 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         data_sample = self.dataset[index]
         input, image_shape =self._process_input(data_sample['file_name'])
         label = self._extract_label(data_sample['annotations'], image_shape)
-        print('label shape', label.shape)
         # label = label[None, ...] # C x H x W
         sample_name = data_sample['file_name']
 
