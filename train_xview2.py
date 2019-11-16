@@ -86,7 +86,7 @@ def train_net(net,
         for i, (imgs, y_label, sample_name) in enumerate(dataloader):
 
             # visualize_image(imgs, y_label, y_label, sample_name)
-
+            print('max_gpu_usage',torch.cuda.max_memory_allocated() / 10e9, ', max_GPU_cache_isage', torch.cuda.max_memory_cached()/10e9)
             optimizer.zero_grad()
 
             imgs = imgs.to(device)

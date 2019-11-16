@@ -9,6 +9,7 @@ from PIL import Image
 import torch
 import h5py
 import json
+from PIL import Image, ImageDraw
 import cv2
 from unet.utils import *
 from debug_tools import __benchmark_init, benchmark
@@ -232,21 +233,20 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
 
     def _extract_label(self, annotations_set, image_size):
         masks = []
+        mask = Image.new('L', (1024, 1024), 0)
         for anno in annotations_set:
-            segm_instances = anno['segmentation'][0]
+            building_polygon = anno['segmentation'][0]
 
             # Converting from XYXY to [[x,y],[x,y]
-            num_polygon_points = len(segm_instances) / 2
-            assert num_polygon_points.is_integer(), 'The polygon array must be in XYXY format'
-            polygon_pts = np.reshape(segm_instances, (int(num_polygon_points), 2))
-            mask = self.polygons_to_bitmask(polygon_pts, image_size[0], image_size[1])
-            masks.append(mask)
+            # num_polygon_points = len(segm_instances) / 2
+            # assert num_polygon_points.is_integer(), 'The polygon array must be in XYXY format'
+            # polygon_pts = np.reshape(segm_instances, (int(num_polygon_points), 2))
+            # mask = self.polygons_to_bitmask(polygon_pts, image_size[0], image_size[1])
 
-        if masks:
-            composite_mask = np.any(masks, axis=0).astype(np.long)
-        else:
-            composite_mask = np.zeros(image_size, dtype=np.long)
-        return composite_mask
+            ImageDraw.Draw(mask).polygon(building_polygon, outline=1, fill=1)
+
+        mask = np.asarray(mask).astype(np.long)
+        return mask
 
     def _process_input(self, image_filename):
         img_path = os.path.join(self.dataset_path, image_filename)
