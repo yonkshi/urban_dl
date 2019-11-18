@@ -87,6 +87,7 @@ def train_net(net,
 
             # visualize_image(imgs, y_label, y_label, sample_name)
             # print('max_gpu_usage',torch.cuda.max_memory_allocated() / 10e9, ', max_GPU_cache_isage', torch.cuda.max_memory_cached()/10e9)
+            print('batch_number',i)
             optimizer.zero_grad()
 
             imgs = imgs.to(device)
@@ -102,7 +103,7 @@ def train_net(net,
             optimizer.step()
 
             # Write things in
-            if global_step % 10 == 0 or global_step < 5:
+            if global_step % 10 == 0 and global_step > 5:
                 if global_step % 100 == 0:
                     print(f'\n======== COMPLETED epoch{epoch}, global step{global_step} ')
                 if global_step % 60 == 0:
