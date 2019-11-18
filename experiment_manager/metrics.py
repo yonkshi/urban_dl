@@ -30,7 +30,9 @@ def f1_score(preds:torch.Tensor, gts:torch.Tensor):
     with torch.no_grad():
         recall_val = recall(gts, preds)
         precision_val = precision(gts, preds)
-        f1 = 2. * recall_val * precision_val / (recall_val + precision_val)
+        denom = torch.clamp( (recall_val + precision_val), 10e-5)
+
+        f1 = 2. * recall_val * precision_val / denom
 
     return f1
 
