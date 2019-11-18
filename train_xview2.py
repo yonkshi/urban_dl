@@ -126,9 +126,9 @@ def train_net(net,
                 writer.add_scalar('f1/train', f1, global_step)
 
                 optimizer.zero_grad()
-                # F1 score
-                f1 = f1_score(y_pred, y_label)
-                writer.add_scalar('f1/test', f1, global_step)
+                # # F1 score
+                # f1 = f1_score(y_pred, y_label)
+                # writer.add_scalar('f1/test', f1, global_step)
 
             # torch.cuda.empty_cache()
             __benchmark_init()
