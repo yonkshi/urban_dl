@@ -86,7 +86,7 @@ def train_net(net,
         for i, (imgs, y_label, sample_name) in enumerate(dataloader):
 
             # visualize_image(imgs, y_label, y_label, sample_name)
-            print('max_gpu_usage',torch.cuda.max_memory_allocated() / 10e9, ', max_GPU_cache_isage', torch.cuda.max_memory_cached()/10e9)
+            # print('max_gpu_usage',torch.cuda.max_memory_allocated() / 10e9, ', max_GPU_cache_isage', torch.cuda.max_memory_cached()/10e9)
             optimizer.zero_grad()
 
             imgs = imgs.to(device)
@@ -97,7 +97,7 @@ def train_net(net,
             loss = criterion(y_pred, y_label)
             epoch_loss += loss.item()
 
-            print('loss', loss.item())
+            print('step', i, ', loss', loss.item())
             loss.backward()
             optimizer.step()
 
