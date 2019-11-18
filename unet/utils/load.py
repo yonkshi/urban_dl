@@ -203,6 +203,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         self.dataset_path = file_path
 
         self.length = len(ds)
+        print('dataset length', self.length)
         self.timeidx = timeidx
 
 
