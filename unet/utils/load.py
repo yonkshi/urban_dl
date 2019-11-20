@@ -246,7 +246,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
 
             ImageDraw.Draw(mask).polygon(building_polygon, outline=1, fill=1)
 
-        mask = np.asarray(mask).astype(np.long)
+        mask = np.asarray(mask).astype(np.float32)
         return mask
 
     def _process_input(self, image_filename):

@@ -60,7 +60,7 @@ def train_net(net,
                           lr=lr,
                           weight_decay=0.0005)
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.BCEWithLogitsLoss()
 
     net.to(device)
 
@@ -92,10 +92,13 @@ def train_net(net,
 
             imgs = imgs.to(device)
             y_label = y_label.to(device)
-
             y_pred = net(imgs)
 
+            y_pred = y_pred.squeeze()
+            y_label = y_label.squeeze()
+            print(y_pred.shape, y_label.shape)
             loss = criterion(y_pred, y_label)
+            print(loss)
             epoch_loss += loss.item()
 
             print('step', i, ', loss', loss.item())
@@ -238,7 +241,7 @@ def get_args():
 if __name__ == '__main__':
     args = get_args()
     # torch.set_default_dtype(torch.float16)
-    net = UNet(n_channels=3, n_classes=2)
+    net = UNet(n_channels=3, n_classes=1)
 
     if args.load:
         net.load_state_dict(torch.load(args.load))

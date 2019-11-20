@@ -112,7 +112,7 @@ def get_args():
 if __name__ == '__main__':
     args = get_args()
     # torch.set_default_dtype(torch.float16)
-    net = UNet(n_channels=3, n_classes=2)
+    net = UNet(n_channels=3, n_classes=1)
 
     if args.model_path:
         full_model_path = os.path.join(args.log_dir, args.model_path)
