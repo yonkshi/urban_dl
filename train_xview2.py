@@ -94,8 +94,8 @@ def train_net(net,
             y_label = y_label.to(device)
             y_pred = net(imgs)
 
-            y_pred = y_pred.squeeze()
-            y_label = y_label.squeeze()
+            # y_pred = y_pred.squeeze(1)
+            y_label = y_label.unsqueeze(1)
             loss = criterion(y_pred, y_label)
             epoch_loss += loss.item()
 
@@ -104,7 +104,7 @@ def train_net(net,
             optimizer.step()
 
             # Write things in
-            if global_step % 10 == 0 and global_step > 5:
+            if global_step % 10 == 0 and global_step == 0:
                 if global_step % 100 == 0:
                     print(f'\n======== COMPLETED epoch{epoch}, global step{global_step} ')
                 # if global_step % 60 == 0:
@@ -174,6 +174,7 @@ def visualize_image(input_image, output_segmentation, gt_segmentation, sample_na
     out_seg = toNp(output_segmentation)
     out_seg_argmax = np.argmax(out_seg, axis=-1)
     ax1 = fig.add_subplot(gs[1, 0])
+    print(out_seg_argmax.shape)
     ax1.imshow(out_seg_argmax.squeeze(), cmap = lulc_cmap, norm=lulc_norm,)
     ax1.set_title('output')
     ax1.axis('off')
