@@ -72,7 +72,6 @@ def train_net(net,
             y_softmaxed = y_softmaxed[:,None,...] # [B, Thresh, H, W]
             y_softmaxed = torch.clamp(y_softmaxed - F1_THRESH + 0.5, 0, 1.0)
             f1 = f1_score(y_softmaxed, y_label, multi_threashold_mode=True)
-            print('F1 Score')
             if i % 100 == 0 or i == dataset_length-1:
                 print(f'Processed {i+1}/{dataset_length}')
 
