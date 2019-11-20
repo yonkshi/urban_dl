@@ -96,9 +96,7 @@ def train_net(net,
 
             y_pred = y_pred.squeeze()
             y_label = y_label.squeeze()
-            print(y_pred.shape, y_label.shape)
             loss = criterion(y_pred, y_label)
-            print(loss)
             epoch_loss += loss.item()
 
             print('step', i, ', loss', loss.item())
@@ -201,11 +199,13 @@ def toNp(t:torch.Tensor):
 
 def to_C_H_W(t:torch.Tensor):
     # From [B, H, W, C] to [B, C, H, W]
+    if len(t.shape) == 3: return t # if [B, H. W] then do nothing
     assert t.shape[1] == t.shape[2] and t.shape[3] != t.shape[2], 'are you sure this tensor is in [B, H, W, C] format?'
     return t.permute(0,3,1,2)
 
 def to_H_W_C(t:torch.Tensor):
     # From [B, C, H, W] to [B, H, W, C]
+    if len(t.shape) == 3: return t # if [B, H. W] then do nothing
     assert t.shape[1] != t.shape[2], 'are you sure this tensor is in [B, C, H, W] format?'
     return t.permute(0,2,3,1)
 
