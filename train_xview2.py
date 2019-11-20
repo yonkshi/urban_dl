@@ -104,7 +104,7 @@ def train_net(net,
             optimizer.step()
 
             # Write things in
-            if global_step % 10 == 0 and global_step == 0:
+            if global_step % 10 == 0 and global_step > 0:
                 if global_step % 100 == 0:
                     print(f'\n======== COMPLETED epoch{epoch}, global step{global_step} ')
                 # if global_step % 60 == 0:
