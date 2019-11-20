@@ -44,6 +44,7 @@ def train_net(net,
     net.eval()
 
     # reset the generators
+    print('loading dataset')
     dataset = Xview2Detectron2Dataset(data_dir, 0)
     dataloader = torch_data.DataLoader(dataset,
                                        batch_size=1,
@@ -56,17 +57,16 @@ def train_net(net,
     benchmark('Dataset Setup')
     f1s = []
     dataset_length = len(dataset)
+    print('dataset loaded')
     with torch.no_grad():
         for i, (imgs, y_label, sample_name) in enumerate(dataloader):
             # visualize_image(imgs, y_label, y_label, sample_name)
             # print('max_gpu_usage',torch.cuda.max_memory_allocated() / 10e9, ', max_GPU_cache_isage', torch.cuda.max_memory_cached()/10e9)
             imgs = imgs.to(device)
             y_label = y_label.to(device)
-            print('prepping inference')
             y_pred = net(imgs)
 
             y_softmaxed = nn.Softmax2d()(y_pred)[:,1] # 1 = only positive labels
-            print('Done inference')
             # Todo compute multiple F1 scores
 
             y_softmaxed = y_softmaxed[:,None,...] # [B, Thresh, H, W]
