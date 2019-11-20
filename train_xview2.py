@@ -106,8 +106,8 @@ def train_net(net,
             if global_step % 10 == 0 and global_step > 5:
                 if global_step % 100 == 0:
                     print(f'\n======== COMPLETED epoch{epoch}, global step{global_step} ')
-                if global_step % 60 == 0:
-                    writer.add_histogram('output_categories', y_pred.detach())
+                # if global_step % 60 == 0:
+                #     writer.add_histogram('output_categories', y_pred.detach())
                 # Save checkpoints
                 if global_step % 5000 == 0 and global_step > 0:
                     check_point_name = f'{run_name}_{global_step}.pkl'
@@ -229,6 +229,8 @@ def get_args():
     parser.add_argument('-o', '--log-dir', dest='log_dir', type=str,
                       default='logs', help='logging directory')
 
+    parser.add_argument( '--eval-only', dest='log_dir', type=str,
+                      default='logs', help='logging directory')
     (options, args) = parser.parse_known_args()
     return options
 

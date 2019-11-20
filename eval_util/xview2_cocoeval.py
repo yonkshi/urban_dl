@@ -134,6 +134,7 @@ class Xview2COCOEvaluator(DatasetEvaluator):
                 prediction["proposals"] = output["proposals"].to(self._cpu_device)
             self._predictions.append(prediction)
 
+
     def evaluate(self):
         if self._distributed:
             comm.synchronize()
