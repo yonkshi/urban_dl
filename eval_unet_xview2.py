@@ -62,17 +62,17 @@ def train_net(net,
             # print('max_gpu_usage',torch.cuda.max_memory_allocated() / 10e9, ', max_GPU_cache_isage', torch.cuda.max_memory_cached()/10e9)
             imgs = imgs.to(device)
             y_label = y_label.to(device)
-
+            print('prepping inference')
             y_pred = net(imgs)
 
             y_softmaxed = nn.Softmax2d()(y_pred)[:,1] # 1 = only positive labels
-
+            print('Done inference')
             # Todo compute multiple F1 scores
 
             y_softmaxed = y_softmaxed[:,None,...] # [B, Thresh, H, W]
             y_softmaxed = torch.clamp(y_softmaxed - F1_THRESH + 0.5, 0, 1.0)
             f1 = f1_score(y_softmaxed, y_label, multi_threashold_mode=True)
-
+            print('F1 Score')
             if i % 100 == 0 or i == dataset_length-1:
                 print(f'Processed {i+1}/{dataset_length}')
 
