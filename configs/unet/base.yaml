@@ -1,0 +1,15 @@
+MODEL:
+  BINARY_CLASSIFICATION: True
+  OUT_CHANNELS: 1
+  IN_CHANNELS: 3
+DATASETS:
+  TRAIN: ("/local_storage/datasets/xview2/full/train/",)
+  TEST: ("/local_storage/datasets/xview2/small/test/",)
+TRAINER:
+  LR: 0.001
+  BATCH_SIZE: 1
+  EPOCHS: 100
+DATALOADER:
+  NUM_WORKER: 1
+  SHUFFLE: True
+

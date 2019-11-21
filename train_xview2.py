@@ -21,35 +21,27 @@ from debug_tools import __benchmark_init, benchmark
 from unet import UNet
 from unet.utils import SloveniaDataset, Xview2Dataset, Xview2Detectron2Dataset
 from experiment_manager.metrics import f1_score
+from experiment_manager.args import default_argument_parser
+from experiment_manager.config import new_config
 # import hp
 
 def train_net(net,
-              epochs=5,
-              batch_size=1,
-              lr=0.001,
-              val_percent=0.05,
-              save_cp=True,
-              num_dataloaders = 1,
-              device=torch.device('cpu'),
-              data_dir = 'data/xview2/xview2_sample.hdf5',
-              log_dir = 'logs/',
-              img_scale=0.5):
+              cfg):
 
-    run_name = datetime.datetime.today().strftime('%b-%d') + '-' + generate_slug(2)
-    #log_path = 'logs/%s' % run_name
-    log_path = path.join(log_dir, run_name)
+    log_path = cfg.OUTPUT_DIR
     writer = SummaryWriter(log_path)
 
     # TODO Save Run Config in Pandas
 
     run_config = {}
-    run_config['run_name'] = run_name
+    run_config['CONFIG_NAME'] = cfg.NAME
     run_config['device'] = device
-    run_config['log_path'] = log_path
-    run_config['data_dir'] = data_dir
-    run_config['epochs'] = epochs
-    run_config['learning rate'] = lr
-    run_config['batch size'] = batch_size
+    run_config['log_path'] = cfg.OUTPUT_DIR
+    run_config['training_set'] = cfg.DATASETS.TRAIN
+    run_config['test set'] = cfg.DATASETS.TEST
+    run_config['epochs'] = cfg.TRAINER.EPOCHS
+    run_config['learning rate'] = cfg.TRAINER.LR
+    run_config['batch size'] = cfg.TRAINER.BATCH_SIZE
     table = {'run config name': run_config.keys(),
              ' ': run_config.values(),
              }
@@ -57,7 +49,7 @@ def train_net(net,
 
 
     optimizer = optim.Adam(net.parameters(),
-                          lr=lr,
+                          lr=cfg.TRAINER.LR,
                           weight_decay=0.0005)
 
     criterion = nn.BCEWithLogitsLoss()
@@ -66,17 +58,18 @@ def train_net(net,
 
     __benchmark_init()
     global_step = 0
+    epochs = cfg.TRAINER.EPOCHS
     for epoch in range(epochs):
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
 
         net.train()
 
         # reset the generators
-        dataset = Xview2Detectron2Dataset(data_dir, epoch)
+        dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0], epoch)
         dataloader = torch_data.DataLoader(dataset,
-                                           batch_size=batch_size,
-                                           num_workers=num_dataloaders,
-                                           shuffle = True,
+                                           batch_size=cfg.TRAINER.BATCH_SIZE,
+                                           num_workers=cfg.DATALOADER.NUM_WORKER,
+                                           shuffle = cfg.DATALOADER.SHUFFLE,
                                            drop_last=True,
                                            )
 
@@ -111,7 +104,7 @@ def train_net(net,
                 #     writer.add_histogram('output_categories', y_pred.detach())
                 # Save checkpoints
                 if global_step % 5000 == 0 and global_step > 0:
-                    check_point_name = f'{run_name}_{global_step}.pkl'
+                    check_point_name = f'{iter}_{global_step}.pkl'
                     save_path = os.path.join(log_path, check_point_name)
                     torch.save(net.state_dict(), save_path)
 
@@ -121,10 +114,6 @@ def train_net(net,
 
                 y_pred_binary = torch.argmax(y_pred, dim=1)
                 f1 = f1_score(y_pred_binary, y_label)
-                if global_step % 1000 == 0 and global_step > 0:
-                    figure_name = f'{run_name}_{global_step}.png'
-                    save_path = os.path.join(log_path, figure_name)
-                    plt.savefig(save_path)
                 writer.add_scalar('f1/train', f1, global_step)
 
                 optimizer.zero_grad()
@@ -190,7 +179,6 @@ def visualize_image(input_image, output_segmentation, gt_segmentation, sample_na
     plt.tight_layout()
     return fig, plt
 
-
 def toNp_vanilla(t:torch.Tensor):
     return t[0,...].cpu().detach().numpy()
 
@@ -210,60 +198,39 @@ def to_H_W_C(t:torch.Tensor):
     assert t.shape[1] != t.shape[2], 'are you sure this tensor is in [B, C, H, W] format?'
     return t.permute(0,2,3,1)
 
+def setup(args):
+    cfg = new_config()
+    cfg.merge_from_file(f'configs/unet/{args.config_file}.yaml')
+    cfg.merge_from_list(args.opts)
+    cfg.NAME = args.config_file
 
-def get_args():
-    parser = ArgumentParser()
-    parser.add_argument('-e', '--epochs', dest='epochs', default=100, type=int,
-                      help='number of epochs')
-    parser.add_argument('-b', '--batch_size', dest='batchsize', default=1,
-                      type=int, help='batch size')
-    parser.add_argument('-l', '--learning-rate', dest='lr', default=0.001,
-                      type=float, help='learning rate')
-    parser.add_argument('-w', '--num-worker', dest='num_dataloaders', default=1,
-                      type=int, help='number of dataloader workers')
-    parser.add_argument('-g', '--gpu', action='store_true', dest='gpu',
-                      default=False, help='use cuda')
-    parser.add_argument('-c', '--load', dest='load',
-                      default=False, help='load file model')
-    parser.add_argument('-s', '--scale', dest='scale', type=float,
-                      default=0.5, help='downscaling factor of the images')
+    if args.log_dir: # Override Output dir
+        cfg.OUTPUT_DIR = path.join(args.log_dir, args.config_file)
+    else:
+        cfg.OUTPUT_DIR = path.join(cfg.OUTPUT_BASE_DIR, args.config_file)
+    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
 
-    parser.add_argument('-d', '--data-dir', dest='data_dir', type=str,
-                      default='data/xview2/xview2_sample.hdf5', help='dataset directory')
-    parser.add_argument('-o', '--log-dir', dest='log_dir', type=str,
-                      default='logs', help='logging directory')
-
-    parser.add_argument( '--eval-only', dest='log_dir', type=str,
-                      default='logs', help='logging directory')
-    (options, args) = parser.parse_known_args()
-    return options
-
+    if args.data_dir:
+        cfg.DATASETS.TRAIN = (args.data_dir,)
+    return cfg
 
 if __name__ == '__main__':
-    args = get_args()
-    # torch.set_default_dtype(torch.float16)
-    net = UNet(n_channels=3, n_classes=1)
+    args = default_argument_parser().parse_known_args()[0]
+    cfg = setup(args)
 
-    if args.load:
-        net.load_state_dict(torch.load(args.load))
-        print('Model loaded from {}'.format(args.load))
+    out_channels = 1 if cfg.MODEL.BINARY_CLASSIFICATION else cfg.MODEL.OUT_CHANNELS
+    net = UNet(n_channels=cfg.MODEL.IN_CHANNELS, n_classes=out_channels)
 
-    if args.gpu:
-        device = torch.device("cuda" if (torch.cuda.is_available() and args.gpu) else "cpu")
-    else:
-        device = torch.device('cpu')
-        # cudnn.benchmark = True # faster convolutions, but more memory
+    if args.resume and args.resume_from:
+        full_model_path = path.join(cfg.OUTPUT_DIR, args.model_path)
+        net.load_state_dict(torch.load(full_model_path))
+        print('Model loaded from {}'.format(full_model_path))
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # cudnn.benchmark = True # faster convolutions, but more memory
 
     try:
-        train_net(net=net,
-                  epochs=args.epochs,
-                  batch_size=args.batchsize,
-                  lr=args.lr,
-                  device=device,
-                  num_dataloaders = args.num_dataloaders,
-                  data_dir = args.data_dir,
-                  log_dir = args.log_dir,
-                  img_scale=args.scale)
+        train_net(net, cfg)
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
         print('Saved interrupt')

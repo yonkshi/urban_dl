@@ -1,4 +1,4 @@
-from experiment_manager import cfg
+from experiment_manager.config import cfg
 
 # Retrivign the hyperparameters
 hyperparams = cfg.config()

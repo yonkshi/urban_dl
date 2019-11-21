@@ -1,5 +1,6 @@
 import sys
 import os
+from os import path
 from argparse import ArgumentParser
 
 import numpy as np
@@ -13,43 +14,37 @@ from debug_tools import __benchmark_init, benchmark
 from unet import UNet
 from unet.utils import Xview2Detectron2Dataset
 from experiment_manager.metrics import f1_score
+from experiment_manager.args import default_argument_parser
+from experiment_manager.config import new_config
 # import hp
 
-def train_net(net,
-              num_dataloaders = 1,
-              device=torch.device('cpu'),
-              args = None,
-              data_dir = 'data/xview2/xview2_sample.hdf5',
-              log_dir = 'logs/',
+def train_net(net, cfg
               ):
 
-    run_name = f'Inference on {args.model_path}'
-
-
-    # TODO Save Run Config in Pandas
 
     run_config = {}
-    run_config['run_name'] = run_name
+    run_config['run_name'] = cfg.NAME
     run_config['device'] = device
-    run_config['log_path'] = log_dir
-    run_config['data_dir'] = data_dir
+    run_config['log_path'] = cfg.OUTPUT_DIR
+    run_config['data_dir'] = cfg.DATASETS.TRAIN
     table = {'run config name': run_config.keys(),
              ' ': run_config.values(),
              }
     print(tabulate(table, headers='keys', tablefmt="fancy_grid", ))
 
     net.to(device)
+
     F1_THRESH = torch.linspace(0, 1, 100)[None, :, None, None].to(device)  # 1d vec to [ B, Thresh, H, W ]
     __benchmark_init()
     net.eval()
 
     # reset the generators
     print('loading dataset')
-    dataset = Xview2Detectron2Dataset(data_dir, 0)
+    dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0], 0)
     dataloader = torch_data.DataLoader(dataset,
                                        batch_size=1,
-                                       num_workers=num_dataloaders,
-                                       shuffle = True,
+                                       num_workers=cfg.DATALOADER.NUM_WORKER,
+                                       shuffle = cfg.DATALOADER.SHUFFLE,
                                        drop_last=True,
                                        )
 
@@ -65,11 +60,11 @@ def train_net(net,
             imgs = imgs.to(device)
             y_label = y_label.to(device)
             y_pred = net(imgs)
+            print(y_pred.shape)
+            y_softmaxed = y_pred #nn.Softmax2d()(y_pred)[:,1] # 1 = only positive labels
 
-            y_softmaxed = nn.Softmax2d()(y_pred)[:,1] # 1 = only positive labels
             # Todo compute multiple F1 scores
-
-            y_softmaxed = y_softmaxed[:,None,...] # [B, Thresh, H, W]
+            # y_softmaxed = y_softmaxed[:,None,...] # [B, Thresh, H, W]
             y_softmaxed = torch.clamp(y_softmaxed - F1_THRESH + 0.5, 0, 1.0)
             f1 = f1_score(y_softmaxed, y_label, multi_threashold_mode=True)
             if i % 100 == 0 or i == dataset_length-1:
@@ -81,58 +76,45 @@ def train_net(net,
     mF1 = torch.mean(mF1, dim=0)
 
     # Writing to TB
-    write_path = os.path.join(args.log_dir, 'inference', args.model_path)
+    write_path = os.path.join(cfg.OUTPUT_DIR, 'inference', args.resume_from)
     writer = SummaryWriter(write_path)
 
     for i, val in enumerate(mF1):
         writer.add_scalar('Threshold vs F1', val, global_step=i)
 
-def get_args():
-    parser = ArgumentParser()
-    parser.add_argument('-w', '--num-worker', dest='num_dataloaders', default=1,
-                      type=int, help='number of dataloader workers')
-    parser.add_argument('-g', '--gpu', action='store_true', dest='gpu',
-                      default=False, help='use cuda')
-    parser.add_argument('-m', '--model-path', dest='model_path',
-                      default=False, help='load file model')
-    parser.add_argument('-s', '--scale', dest='scale', type=float,
-                      default=0.5, help='downscaling factor of the images')
+def setup(args):
+    cfg = new_config()
+    cfg.merge_from_file(f'configs/unet/{args.config_file}.yaml')
+    cfg.merge_from_list(args.opts)
+    cfg.NAME = args.config_file
 
-    parser.add_argument('-d', '--data-dir', dest='data_dir', type=str,
-                      default='data/xview2/xview2_sample.hdf5', help='dataset directory')
-    parser.add_argument('-o', '--log-dir', dest='log_dir', type=str,
-                      default='logs', help='logging directory')
+    if args.log_dir: # Override Output dir
+        cfg.OUTPUT_DIR = path.join(args.log_dir, args.config_file)
+    else:
+        cfg.OUTPUT_DIR = path.join(cfg.OUTPUT_BASE_DIR, args.config_file)
+    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
 
-    parser.add_argument( '--eval-only', dest='log_dir', type=str,
-                      default='logs', help='logging directory')
-    (options, args) = parser.parse_known_args()
-    return options
-
+    if args.data_dir:
+        cfg.DATASETS.TRAIN = (args.data_dir,)
+    return cfg
 
 if __name__ == '__main__':
-    args = get_args()
-    # torch.set_default_dtype(torch.float16)
-    net = UNet(n_channels=3, n_classes=1)
+    args = default_argument_parser().parse_known_args()[0]
+    cfg = setup(args)
 
-    if args.model_path:
-        full_model_path = os.path.join(args.log_dir, args.model_path)
+    # torch.set_default_dtype(torch.float16)f
+    out_channels = 1 if cfg.MODEL.BINARY_CLASSIFICATION else cfg.MODEL.OUT_CHANNELS
+    net = UNet(n_channels=cfg.MODEL.IN_CHANNELS, n_classes=out_channels)
+
+    if args.resume and args.resume_from: # TODO Remove this
+        full_model_path = os.path.join(cfg.OUTPUT_DIR, args.resume_from)
         net.load_state_dict(torch.load(full_model_path))
         print('Model loaded from {}'.format(full_model_path))
 
-    if args.gpu:
-        device = torch.device("cuda" if (torch.cuda.is_available() and args.gpu) else "cpu")
-    else:
-        device = torch.device('cpu')
-        # cudnn.benchmark = True # faster convolutions, but more memory
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     try:
-        train_net(net=net,
-                  device=device,
-                  args = args,
-                  num_dataloaders = args.num_dataloaders,
-                  data_dir = args.data_dir,
-                  log_dir = args.log_dir,
-                  )
+        train_net(net,cfg)
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
         print('Saved interrupt')
