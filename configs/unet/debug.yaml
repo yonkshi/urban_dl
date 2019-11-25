@@ -2,3 +2,6 @@ OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
   TRAIN: ("/storage/yonk/debug/train/",)
   TEST: ("/storage/yonk/debug/train/",)
+
+DATALOADER:
+  NUM_WORKER: 0

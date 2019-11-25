@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from tabulate import tabulate
+import wandb
 
 from debug_tools import __benchmark_init, benchmark
 from unet import UNet
@@ -23,6 +24,8 @@ from unet.utils import SloveniaDataset, Xview2Dataset, Xview2Detectron2Dataset
 from experiment_manager.metrics import f1_score
 from experiment_manager.args import default_argument_parser
 from experiment_manager.config import new_config
+from eval_unet_xview2 import model_eval
+
 # import hp
 
 def train_net(net,
@@ -76,54 +79,74 @@ def train_net(net,
         epoch_loss = 0
         benchmark('Dataset Setup')
 
-        for i, (imgs, y_label, sample_name) in enumerate(dataloader):
+        # mean AP, mean AUC, max F1
+        mAP_set_train, mAUC_set_train, maxF1_train = [],[],[]
+        loss_set, f1_set = [], []
+        for i, (x, y_gts, sample_name) in enumerate(dataloader):
 
             # visualize_image(imgs, y_label, y_label, sample_name)
             # print('max_gpu_usage',torch.cuda.max_memory_allocated() / 10e9, ', max_GPU_cache_isage', torch.cuda.max_memory_cached()/10e9)
             print('batch_number',i)
             optimizer.zero_grad()
 
-            imgs = imgs.to(device)
-            y_label = y_label.to(device)
-            y_pred = net(imgs)
+            x = x.to(device)
+            y_gts = y_gts.to(device)
+            y_pred = net(x)
 
             # y_pred = y_pred.squeeze(1)
-            y_label = y_label.unsqueeze(1)
-            loss = criterion(y_pred, y_label)
+            y_gts = y_gts.unsqueeze(1)
+            loss = criterion(y_pred, y_gts)
             epoch_loss += loss.item()
 
-            print('step', i, ', loss', loss.item())
+
             loss.backward()
             optimizer.step()
 
+
+            loss_set.append(loss.item())
+
+            f1 = f1_score(y_gts, y_pred)
+            f1_set.append(f1.item())
+
+            # f1_set.append(f1)
             # Write things in
-            if global_step % 10 == 0 and global_step > 0:
+            if global_step % 100 == 0 and global_step > 0:
                 if global_step % 100 == 0:
                     print(f'\n======== COMPLETED epoch{epoch}, global step{global_step} ')
                 # if global_step % 60 == 0:
                 #     writer.add_histogram('output_categories', y_pred.detach())
                 # Save checkpoints
                 if global_step % 5000 == 0 and global_step > 0:
-                    check_point_name = f'{iter}_{global_step}.pkl'
+                    check_point_name = f'cp_{global_step}.pkl'
                     save_path = os.path.join(log_path, check_point_name)
                     torch.save(net.state_dict(), save_path)
 
-                writer.add_scalar('loss/train', loss.item(), global_step)
-                figure, plt = visualize_image(imgs, y_pred, y_label, sample_name)
+                # Averaged loss and f1 writer
+                writer.add_scalar('loss/train', np.mean(loss_set), global_step)
+                writer.add_scalar('f1/train', np.mean(f1_set), global_step)
+
+                print('step', i, ', avg loss', np.mean(loss_set))
+
+                loss_set = []
+                f1_set = []
+
+                figure, plt = visualize_image(x, y_pred, y_gts, sample_name)
                 writer.add_figure('output_image/train', figure, global_step)
 
-                y_pred_binary = torch.argmax(y_pred, dim=1)
-                f1 = f1_score(y_pred_binary, y_label)
-                writer.add_scalar('f1/train', f1, global_step)
-
                 optimizer.zero_grad()
-                # # F1 score
-                # f1 = f1_score(y_pred, y_label)
-                # writer.add_scalar('f1/test', f1, global_step)
 
             # torch.cuda.empty_cache()
             __benchmark_init()
             global_step += 1
+
+        # Evaluation after each epoch
+        maxF1, mAUC, mAP = model_eval(net, cfg, device, )
+        wandb.log({'test_set max F1': maxF1,
+                   'test_set mean AUC score': mAUC,
+                   'test_set mean Average Precision': mAP,
+                   'epoch': epoch
+                   })
+
 
 
 
@@ -217,7 +240,10 @@ def setup(args):
 if __name__ == '__main__':
     args = default_argument_parser().parse_known_args()[0]
     cfg = setup(args)
-
+    wandb.init(
+        name=cfg.NAME,
+        project='urban_dl'
+    )
     out_channels = 1 if cfg.MODEL.BINARY_CLASSIFICATION else cfg.MODEL.OUT_CHANNELS
     net = UNet(n_channels=cfg.MODEL.IN_CHANNELS, n_classes=out_channels)
 
