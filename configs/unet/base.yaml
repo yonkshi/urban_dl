@@ -3,8 +3,8 @@ MODEL:
   OUT_CHANNELS: 1
   IN_CHANNELS: 3
 DATASETS:
-  TRAIN: ("/datasets/xview2/full/train/",)
-  TEST: ("/datasets/xview2/small/test/",)
+  TRAIN: ("/datasets/xview2/full_no_dense/train/",)
+  TEST: ("/datasets/xview2/full_no_dense/test/",)
 TRAINER:
   LR: 0.001
   BATCH_SIZE: 1
