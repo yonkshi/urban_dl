@@ -225,22 +225,25 @@ if __name__ == '__main__':
 
     args = default_argument_parser().parse_known_args()[0]
     cfg = setup(args)
+    print('ready to run 0')
     wandb.init(
         name=cfg.NAME,
         project='urban_dl',
         tags=['inference']
     )
-
+    print('ready to run 1')
     # torch.set_default_dtype(torch.float16)f
     out_channels = 1 if cfg.MODEL.BINARY_CLASSIFICATION else cfg.MODEL.OUT_CHANNELS
     net = UNet(n_channels=cfg.MODEL.IN_CHANNELS, n_classes=out_channels)
-    print('ready to run')
+    print('ready to run 2')
     if args.resume_from: # TODO Remove this
         full_model_path = os.path.join(cfg.OUTPUT_DIR, args.resume_from)
         net.load_state_dict(torch.load(full_model_path))
         print('Model loaded from {}'.format(full_model_path))
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    print('DEVICE', device)
 
     try:
         if args.eval_training:
