@@ -233,7 +233,7 @@ if __name__ == '__main__':
     # torch.set_default_dtype(torch.float16)f
     out_channels = 1 if cfg.MODEL.BINARY_CLASSIFICATION else cfg.MODEL.OUT_CHANNELS
     net = UNet(n_channels=cfg.MODEL.IN_CHANNELS, n_classes=out_channels)
-
+    print('ready to run')
     if args.resume_from: # TODO Remove this
         full_model_path = os.path.join(cfg.OUTPUT_DIR, args.resume_from)
         net.load_state_dict(torch.load(full_model_path))
