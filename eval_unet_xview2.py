@@ -226,7 +226,8 @@ if __name__ == '__main__':
     cfg = setup(args)
     wandb.init(
         name=cfg.NAME,
-        project='urban_dl'
+        project='urban_dl',
+        tags=['inference']
     )
 
     # torch.set_default_dtype(torch.float16)f

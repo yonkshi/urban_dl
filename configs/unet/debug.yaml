@@ -1,3 +1,4 @@
+_BASE_: "base.yaml"
 OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
   TRAIN: ("/storage/yonk/debug/train/",)
