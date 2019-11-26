@@ -86,6 +86,7 @@ def model_checkpoints_eval_runner(net, cfg):
     checkpoint_files = list_and_sort_checkpoint_files()
 
     for cp_num,cp_file in checkpoint_files:
+        print('checkpoint', cp_file)
         full_model_path = os.path.join(cfg.OUTPUT_DIR, cp_file)
         net.load_state_dict(torch.load(full_model_path))
 
