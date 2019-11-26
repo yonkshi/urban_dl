@@ -1,4 +1,4 @@
 _BASE_: "base.yaml"
-OUTPUT_BASE_DIR: ('/logs/unet/')
+OUTPUT_BASE_DIR: ('/local_storage/users/pshi/logs/unet/')
 DATALOADER:
   NUM_WORKER: 0
