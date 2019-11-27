@@ -15,6 +15,7 @@ from fvcore.common.file_io import PathManager
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 from tabulate import tabulate
+from torchvision.transforms.functional import to_pil_image
 
 import detectron2.utils.comm as comm
 from detectron2.data import MetadataCatalog
@@ -71,6 +72,7 @@ class Xview2COCOEvaluator(DatasetEvaluator):
 
     def reset(self):
         self._predictions = []
+        self._inputs = []
         self._coco_results = []
 
     def _tasks_from_config(self, cfg):
@@ -94,7 +96,8 @@ class Xview2COCOEvaluator(DatasetEvaluator):
             outputs: the outputs of a COCO model. It is a list of dicts with key
                 "instances" that contains :class:`Instances`.
         """
-        print('output_len', len(outputs))
+        #  self._inputs = inputs
+        self._inputs.append(inputs[0])
         for input, output in zip(inputs, outputs):
 
             prediction = {"image_id": input["image_id"]}
@@ -135,6 +138,7 @@ class Xview2COCOEvaluator(DatasetEvaluator):
             self._predictions.append(prediction)
 
 
+
     def evaluate(self):
         if self._distributed:
             comm.synchronize()
@@ -170,6 +174,19 @@ class Xview2COCOEvaluator(DatasetEvaluator):
         self._logger.info("Preparing results for COCO format ...")
         self._coco_results = list(itertools.chain(*[x["instances"] for x in self._predictions]))
 
+        import matplotlib
+        import matplotlib.pyplot as plt
+        matplotlib.use('Agg')
+        test_mask = self._predictions[0]['merged_mask']
+        plt.imshow(test_mask)
+        plt.savefig('mask.png')
+
+        input_img = to_pil_image(self._inputs[0]['image'])
+        plt.imshow(input_img)
+        plt.savefig('input_image.png')
+
+        plt.show()
+
         # unmap the category ids for COCO
         if hasattr(self._metadata, "thing_dataset_id_to_contiguous_id"):
             reverse_id_mapping = {
@@ -201,6 +218,7 @@ class Xview2COCOEvaluator(DatasetEvaluator):
                 else None  # cocoapi does not handle empty results very well
             )
 
+            # TODO YONK Add my own eval here
             res = self._derive_coco_results(
                 coco_eval, task, class_names=self._metadata.get("thing_classes")
             )

@@ -3,6 +3,7 @@ OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
   TRAIN: ("/storage/yonk/debug/train/",)
   TEST: ("/storage/yonk/debug/train/",)
-
+EVAL:
+  WTF: "123"
 DATALOADER:
   NUM_WORKER: 0

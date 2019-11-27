@@ -54,8 +54,8 @@ def train_net(net,
     optimizer = optim.Adam(net.parameters(),
                           lr=cfg.TRAINER.LR,
                           weight_decay=0.0005)
-
-    criterion = nn.BCEWithLogitsLoss()
+    if cfg.MODEL.LOSS_TYPE == 'BCEWithLogitsLoss':
+        criterion = nn.BCEWithLogitsLoss()
 
     net.to(device)
 

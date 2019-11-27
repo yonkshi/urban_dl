@@ -18,7 +18,7 @@ class MultiThresholdMetric():
         B, C, H, W = y_pred.shape
         self.numel = C * H * W # total number of pixels per image
         self._thresholds = threshold
-        self._data_dims = (-1, -2, -3) # For a B/W image, it should be [B, ...,
+        self._data_dims = (-1, -2, -3, -4) # For a B/W image, it should be [Thresh, B, C, H, W],
 
         self._normalize_dimensions()
         self._build_threshold_for_computation()
@@ -27,9 +27,9 @@ class MultiThresholdMetric():
     def _normalize_dimensions(self):
         ''' Converts y_truth, y_label and threshold to [B, Thres, C, H, W]'''
         # Naively assume that all of existing shapes of tensors, we transform [B, H, W] -> [B, Thresh, C, H, W]
-        self._thresholds = self._thresholds[None, :, None, None, None] # [B, T, C]
-        self._y_pred = self._y_pred[:, None, ...]  # [B, Thresh, C, ...]
-        self._y_true = self._y_true[:, None, None, ...] # [B, Thresh, C, ...]
+        self._thresholds = self._thresholds[ :, None, None, None, None] # [Tresh, B, C, H, W]
+        self._y_pred = self._y_pred[None, ...]  # [B, Thresh, C, ...]
+        self._y_true = self._y_true[None,:, None, ...] # [Thresh, B,  C, ...]
 
     def _build_threshold_for_computation(self):
         ''' Vectorize y_pred so that it contains N_THRESH aligned dimension'''
@@ -40,6 +40,13 @@ class MultiThresholdMetric():
         if hasattr(self, '_TP'): return self._TP
         self._TP = (self._y_true * torch.round(self._y_pred)).sum(dim=self._data_dims)
         return self._TP
+    @property
+    def TN(self):
+        # True Negative
+        if hasattr(self, '_TN'): return self._TN
+        self._TN = ((1. - self._y_true) * (1 - torch.round(self._y_pred))).sum(dim=self._data_dims)
+        return self._TN
+
     @property
     def FP(self):
         if hasattr(self, '_FP'): return self._FP
@@ -72,6 +79,16 @@ class MultiThresholdMetric():
         self._recall = self.TP / denom
         return self._recall
 
+    def compute_basic_metrics(self):
+        '''
+        Computes False Negative Rate and False Positive rate
+        :return:
+        '''
+
+        false_pos_rate = self.FP/(self.FP + self.TN)
+        false_neg_rate = self.FN / (self.FN + self.TP)
+
+        return false_pos_rate, false_neg_rate
 
     def compute_f1(self):
         denom = (self.precision + self.recall).clamp(10e-05)

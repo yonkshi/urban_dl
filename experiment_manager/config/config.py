@@ -19,6 +19,11 @@ class CfgNode(_CfgNode):
       When attempting to merge an old config, it will convert the old config automatically.
 
     """
+    def __init__(self, init_dict=None, key_list=None, new_allowed=False):
+
+        # Always allow merging new configs
+        self.__dict__[CfgNode.NEW_ALLOWED] = True
+        super(CfgNode, self).__init__(init_dict, key_list, True)
 
 
     # Note that the default value of allow_unsafe is changed to True

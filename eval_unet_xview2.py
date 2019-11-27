@@ -20,7 +20,7 @@ from experiment_manager.metrics import roc_score, f1_score, MultiThresholdMetric
 from experiment_manager.args import default_argument_parser
 from experiment_manager.config import new_config
 from experiment_manager.utils import to_numpy
-from sklearn.metrics import roc_auc_score, average_precision_score
+from sklearn.metrics import roc_auc_score, average_precision_score, roc_curve
 # import hp
 
 def final_model_evaluation_runner(net, cfg,):
@@ -28,60 +28,63 @@ def final_model_evaluation_runner(net, cfg,):
     Runner that only concerns with only a single model,
     :return:
     '''
-
+    print('=== Evaluating final model ===')
     # Setup
-    F1_THRESH = torch.linspace(0, 1, 100).to(device)
+    F1_THRESH = torch.linspace(0, 1, 100)
     f1_set = []
     fpr_set = [] # False positive rate
     tpr_set = []
 
+    y_true_set = []
+    y_pred_set = []
+
     def evaluate(y_true, y_pred):
-
-        measurer = MultiThresholdMetric(y_true, y_pred, F1_THRESH)
-        # Compute F1 per batch
-        f1 = measurer.compute_f1()
-        f1_set.append(f1)
-
-        # Compute ROC per batch
-        fpr, tpr = measurer.compute_roc_curve()
-        fpr_set.append(fpr)
-        tpr_set.append(tpr)
+        y_true_set.append(y_true.detach().cpu())
+        y_pred_set.append(y_pred.detach().cpu())
 
     inference_loop(net, cfg, device, evaluate)
 
     # ===
     # Collect for summary
+    print('Computing F1 vs thresholds')
+    y_true_set = torch.cat(y_true_set, dim = 0)
+    y_pred_set = torch.cat(y_pred_set, dim = 0)
+    y_true_np = to_numpy(y_true_set.flatten())
+    y_pred_np = to_numpy(y_pred_set.flatten())
+    measurer = MultiThresholdMetric(y_true_set, y_pred_set, F1_THRESH)
 
-    # Mean F1 score
-    mF1 = torch.cat(f1_set, dim = 0)
-    mF1 = to_numpy(torch.mean(mF1, dim=0))
+    # F1 score
+    f1 = measurer.compute_f1()
 
-
-
+    print('computing ROC curve')
     # ROC curve
-    # ROC metrics are already in numpy
-    mFPR = torch.cat(fpr_set, dim=0)
-    mFPR = to_numpy(torch.mean(mFPR, dim=1))
+    fpr, tpr, thresh = roc_curve(y_true_np, y_pred_np)
 
-    mTPR = torch.cat(tpr_set, dim=0)
-    mTPR = to_numpy(torch.mean(mTPR, dim=1))
+    # Down sample roc curve or matplotlib won't like it
+    num_ele = len(fpr)
+    downsample_idx = np.linspace(0, num_ele, 1000, dtype=np.int32, endpoint=False)
+    fpr_downsampled = fpr[downsample_idx]
+    tpr_downsampled = tpr[downsample_idx]
+
 
     import matplotlib.pyplot as plt
-    plt.plot(mFPR, mTPR)
-    plt.ylabel('true_positive')
-    plt.xlabel('false_positive')
+    plt.plot(fpr_downsampled, tpr_downsampled)
+    plt.plot([0, 1], [0, 1], color='navy', linestyle='--')
+    plt.ylabel('true_positive rate')
+    plt.xlabel('false_positive rate')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
     plt.title('ROC curve')
+
     wandb.log({'roc': plt})
 
     # Log to wandb
-    for thresh, (f1_thresh, true_pos, false_pos) in enumerate(zip(mF1, mTPR, mFPR)):
+    for thresh, f1_thresh in enumerate(f1):
         wandb.log({'f1': f1_thresh, 'thresholds':thresh})
-        wandb.log({'True positive rate': true_pos, 'False Positive rate': false_pos})
 
     print('done')
 
 def model_checkpoints_eval_runner(net, cfg):
-    # TODO Limit to how much inference loop can sample from training set (So we don't end up training the entire training set)
 
     checkpoint_files = list_and_sort_checkpoint_files()
 
@@ -91,10 +94,10 @@ def model_checkpoints_eval_runner(net, cfg):
         net.load_state_dict(torch.load(full_model_path))
 
         # TRAINING EVALUATION
-        maxF1, mAUC, mAP = model_eval(net, cfg, device, run_type='TRAIN')
+        maxF1, best_fpr, best_fnr,  mAUC, mAP = model_eval(net, cfg, device, run_type='TRAIN')
         wandb.log({'training_set max F1': maxF1,
-                   'training_set mean AUC score': mAUC,
-                   'training_set mean Average Precision': mAP,
+                   'training_set AUC score': mAUC,
+                   'training_set Average Precision': mAP,
                    'step': cp_num
                    })
 
@@ -102,13 +105,10 @@ def model_checkpoints_eval_runner(net, cfg):
         # TEST SET EVALUATION
         maxF1, mAUC, mAP = model_eval(net, cfg, device, run_type='TEST')
         wandb.log({'test_set max F1': maxF1,
-                   'test_set mean AUC score': mAUC,
-                   'test_set mean Average Precision': mAP,
+                   'test_set AUC score': mAUC,
+                   'test_set Average Precision': mAP,
                    'step': cp_num
                    })
-
-
-
 
 def model_eval(net, cfg, device, run_type='TEST'):
     '''
@@ -117,30 +117,15 @@ def model_eval(net, cfg, device, run_type='TEST'):
     :return:
     '''
 
-    F1_THRESH = torch.linspace(0, 1, 100).to(device)
-    auc_set = []
-    f1_set = []
-    ap_set = []
+    F1_THRESH = torch.linspace(0, 1, 100)
+    y_true_set = []
+    y_pred_set = []
+
     def evaluate(y_true, y_pred):
-        # FIXME Naively assuming batch_size = 1
-
-        measurer = MultiThresholdMetric(y_true, y_pred, F1_THRESH)
-        y_true_np = to_numpy(y_true.flatten())
-        y_pred_np = to_numpy(y_pred.flatten())
-
-        # Max F1
-        f1 = measurer.compute_f1()
-        f1_set.append(f1)
+        y_true_set.append(y_true.detach().cpu())
+        y_pred_set.append(y_pred.detach().cpu())
 
 
-        if y_true_np.max() == 1: # Ignore empty images
-            # Area under curve
-            auc_score = roc_auc_score(y_true_np, y_pred_np)
-            auc_set.append(auc_score)
-
-            # Average Precision
-            ap_score = average_precision_score(y_true_np, y_pred_np)
-            ap_set.append(ap_score)
     if run_type == 'TRAIN':
         inference_loop(net, cfg, device, evaluate, 'TRAIN', max_samples=1000)
     elif run_type == 'TEST':
@@ -148,12 +133,33 @@ def model_eval(net, cfg, device, run_type='TEST'):
 
     # Summary gathering ===
 
+    print('Computing F1 score ', end='')
     # Max of the mean F1 score
-    mF1 = torch.cat(f1_set, dim = 0)
-    maxF1 = mF1.mean(dim=0).max()
-    mAUC = np.mean(auc_set)
-    mAP = np.mean(ap_set)
-    return maxF1, mAUC, mAP
+    y_true_set = torch.cat(y_true_set, dim = 0)
+    y_pred_set = torch.cat(y_pred_set, dim=0)
+    measurer = MultiThresholdMetric(y_true_set, y_pred_set, F1_THRESH)
+    # Max F1
+    f1 = measurer.compute_f1()
+    fpr, fnr = measurer.compute_basic_metrics()
+    maxF1 = f1.max()
+    argmaxF1 = f1.argmax()
+    best_fpr = fpr[argmaxF1]
+    best_fnr = fnr[argmaxF1]
+    print(maxF1)
+
+    print('Computing AUC score  ', end='')
+    # Area under curve
+    y_true_np = to_numpy(y_true_set.flatten())
+    y_pred_np = to_numpy(y_pred_set.flatten())
+    auc = roc_auc_score(y_true_np, y_pred_np)
+    print(auc)
+
+    # Average Precision
+    print('Computing AP score ... ', end='')
+    ap = average_precision_score(y_true_np, y_pred_np)
+    print(ap)
+
+    return maxF1, best_fpr, best_fnr, auc, ap
 
 def inference_loop(net, cfg, device, callback = None, run_type = 'TEST', max_samples = None,
               ):
@@ -248,8 +254,9 @@ if __name__ == '__main__':
     try:
         if args.eval_training:
             model_checkpoints_eval_runner(net, cfg)
+            final_model_evaluation_runner(net, cfg)
         else:
-            final_model_evaluation_runner(net, cfg, device)
+            final_model_evaluation_runner(net, cfg)
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
         print('Saved interrupt')

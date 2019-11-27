@@ -2,6 +2,7 @@ MODEL:
   BINARY_CLASSIFICATION: True
   OUT_CHANNELS: 1
   IN_CHANNELS: 3
+  LOSS_TYPE: 'BCEWithLogitsLoss'
 DATASETS:
   TRAIN: ("/local_storage/datasets/xview2/full_no_dense/train/",)
   TEST: ("/local_storage/datasets/xview2/full_no_dense/test/",)
