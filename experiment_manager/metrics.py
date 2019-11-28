@@ -3,7 +3,7 @@ from sklearn.metrics import roc_auc_score, roc_curve
 
 
 class MultiThresholdMetric():
-    def __init__(self, y_true, y_pred, threshold):
+    def __init__(self, y_true:torch.Tensor, y_pred, threshold):
 
         # FIXME Does not operate properly
 
@@ -13,51 +13,35 @@ class MultiThresholdMetric():
         :param y_pred: [B, C, H, W]
         :param threshold: [Thresh]
         '''
-        self._y_true = y_true
-        self._y_pred = y_pred
+        self._y_true = y_true.bool()
+        self._y_pred = y_pred.squeeze()
         B, C, H, W = y_pred.shape
         self.numel = C * H * W # total number of pixels per image
         self._thresholds = threshold
         self._data_dims = (-1, -2, -3, -4) # For a B/W image, it should be [Thresh, B, C, H, W],
 
-        self._normalize_dimensions()
-        self._build_threshold_for_computation()
+        # self._normalize_dimensions()
+        # self._build_threshold_for_computation()
+        self._pre_compute_basic_metrics()
 
+    def _pre_compute_basic_metrics(self):
+        shape = self._thresholds.shape
+        self.TP = torch.empty(*shape)
+        self.TN = torch.empty(*shape)
+        self.FP = torch.empty(*shape)
+        self.FN = torch.empty(*shape)
+        # Running it sequentially because vectorized form is too big to be fit inside the memory.
+        print('precomputing basic metrics..')
+        for i, threshold in enumerate(self._thresholds):
+            y_pred_offset = (self._y_pred - threshold + 0.5).round().bool()
 
-    def _normalize_dimensions(self):
-        ''' Converts y_truth, y_label and threshold to [B, Thres, C, H, W]'''
-        # Naively assume that all of existing shapes of tensors, we transform [B, H, W] -> [B, Thresh, C, H, W]
-        self._thresholds = self._thresholds[ :, None, None, None, None] # [Tresh, B, C, H, W]
-        self._y_pred = self._y_pred[None, ...]  # [B, Thresh, C, ...]
-        self._y_true = self._y_true[None,:, None, ...] # [Thresh, B,  C, ...]
-
-    def _build_threshold_for_computation(self):
-        ''' Vectorize y_pred so that it contains N_THRESH aligned dimension'''
-        self._y_pred = self._y_pred - self._thresholds + 0.5
-
-    @property
-    def TP(self):
-        if hasattr(self, '_TP'): return self._TP
-        self._TP = (self._y_true * torch.round(self._y_pred)).sum(dim=self._data_dims)
-        return self._TP
-    @property
-    def TN(self):
-        # True Negative
-        if hasattr(self, '_TN'): return self._TN
-        self._TN = ((1. - self._y_true) * (1 - torch.round(self._y_pred))).sum(dim=self._data_dims)
-        return self._TN
-
-    @property
-    def FP(self):
-        if hasattr(self, '_FP'): return self._FP
-        self._FP = (self._y_true * (1. - torch.round(self._y_pred))).sum(dim=self._data_dims)
-        return self._FP
-
-    @property
-    def FN(self):
-        if hasattr(self, '_FN'): return self._FN
-        self._FN = ((1. - self._y_true) * torch.round(self._y_pred)).sum(dim=self._data_dims)
-        return self._FN
+            self.TP[i] = (self._y_true & y_pred_offset).sum()
+            self.TN[i] = (~self._y_true & ~y_pred_offset).sum()
+            self.FP[i] = (self._y_true & ~y_pred_offset).sum()
+            self.FN[i] = (~self._y_true & y_pred_offset).sum()
+            print(i, end=' ')
+            # self.TP = (self._y_true * torch.round(self._y_pred)).sum(dim=self._data_dims)
+        print('completed')
 
     @property
     def precision(self):
