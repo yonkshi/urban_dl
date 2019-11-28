@@ -87,7 +87,6 @@ def train_net(net,
 
             # visualize_image(imgs, y_label, y_label, sample_name)
             # print('max_gpu_usage',torch.cuda.max_memory_allocated() / 10e9, ', max_GPU_cache_isage', torch.cuda.max_memory_cached()/10e9)
-            print('batch_number',i)
             optimizer.zero_grad()
 
             x = x.to(device)
@@ -112,8 +111,6 @@ def train_net(net,
             # f1_set.append(f1)
             # Write things in
             if global_step % 100 == 0 and global_step > 0:
-                if global_step % 100 == 0:
-                    print(f'\n======== COMPLETED epoch{epoch}, global step{global_step} ')
                 # if global_step % 60 == 0:
                 #     writer.add_histogram('output_categories', y_pred.detach())
                 # Save checkpoints
