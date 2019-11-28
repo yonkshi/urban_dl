@@ -55,7 +55,7 @@ def train_net(net,
                           lr=cfg.TRAINER.LR,
                           weight_decay=0.0005)
     if cfg.MODEL.LOSS_TYPE == 'BCEWithLogitsLoss':
-        pos_weight = torch.Tensor(cfg.MODEL.POSITIVE_WEIGHT).to(device)
+        pos_weight = torch.tensor(cfg.MODEL.POSITIVE_WEIGHT).to(device)
         criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     net.to(device)
