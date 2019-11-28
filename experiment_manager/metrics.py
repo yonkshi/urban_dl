@@ -51,7 +51,7 @@ class MultiThresholdMetric():
             self.TN[i] = (~self._y_true & ~y_pred_offset).sum()
             self.FP[i] = (self._y_true & ~y_pred_offset).sum()
             self.FN[i] = (~self._y_true & y_pred_offset).sum()
-            progress(i, threshold)
+            progress(i, 100)
             # self.TP = (self._y_true * torch.round(self._y_pred)).sum(dim=self._data_dims)
         print('completed')
 
