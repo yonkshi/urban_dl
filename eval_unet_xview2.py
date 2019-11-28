@@ -47,7 +47,7 @@ def final_model_evaluation_runner(net, cfg):
 
         measurer.add_sample(y_true, y_pred)
 
-    inference_loop(net, cfg, device, evaluate, max_samples=100)
+    inference_loop(net, cfg, device, evaluate)
 
     # ===
     # Collect for summary
@@ -257,7 +257,7 @@ def list_and_sort_checkpoint_files():
                  and f.endswith('.pkl')
                  and len(f.split('_')) == 2 # ignore saved models that aren't checkpoints
                  ]
-
+    print(file_list)
     file_list.sort(key=lambda fname: fname[0])
     return file_list
 if __name__ == '__main__':
