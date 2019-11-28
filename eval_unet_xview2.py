@@ -251,6 +251,8 @@ def list_and_sort_checkpoint_files():
     Iterate through the designated log directory and load all
     :return:
     '''
+    print('entering files', cfg.OUTPUT_DIR)
+
     file_list = [(int(f.split('_')[1].split('.')[0]),f)  # e.g. (123, 'cp_123.pkl')
                  for f in listdir(cfg.OUTPUT_DIR)
                  if isfile(join(cfg.OUTPUT_DIR, f))
