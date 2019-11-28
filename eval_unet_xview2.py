@@ -144,9 +144,9 @@ def model_eval(net, cfg, device, run_type='TEST'):
         measurer.add_sample(y_true, y_pred)
 
     if run_type == 'TRAIN':
-        inference_loop(net, cfg, device, evaluate, 'TRAIN', max_samples=100)
+        inference_loop(net, cfg, device, evaluate, 'TRAIN', max_samples=1000)
     elif run_type == 'TEST':
-        inference_loop(net, cfg, device, evaluate, max_samples=100)
+        inference_loop(net, cfg, device, evaluate)
 
     # Summary gathering ===
 
