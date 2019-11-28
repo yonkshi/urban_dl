@@ -33,7 +33,7 @@ class MultiThresholdMetric():
 
     def _build_threshold_for_computation(self):
         ''' Vectorize y_pred so that it contains N_THRESH aligned dimension'''
-        self._y_pred = (self._y_pred - self._thresholds + 0.5).clamp(0, 1.0)
+        self._y_pred = self._y_pred - self._thresholds + 0.5
 
     @property
     def TP(self):
