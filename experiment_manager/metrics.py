@@ -1,5 +1,17 @@
 import torch
 from sklearn.metrics import roc_auc_score, roc_curve
+import sys
+
+
+def progress(count, total, status=''):
+    bar_len = 60
+    filled_len = int(round(bar_len * count / float(total)))
+
+    percents = round(100.0 * count / float(total), 1)
+    bar = '=' * filled_len + '-' * (bar_len - filled_len)
+
+    sys.stdout.write('[%s] %s%s ...%s\r' % (bar, percents, '%', status))
+    sys.stdout.flush()  # As suggested by Rom Ruben (see: http://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console/27871113#comment50529068_27871113)
 
 
 class MultiThresholdMetric():
@@ -39,7 +51,7 @@ class MultiThresholdMetric():
             self.TN[i] = (~self._y_true & ~y_pred_offset).sum()
             self.FP[i] = (self._y_true & ~y_pred_offset).sum()
             self.FN[i] = (~self._y_true & y_pred_offset).sum()
-            print(i, end=' ')
+            progress(i, threshold)
             # self.TP = (self._y_true * torch.round(self._y_pred)).sum(dim=self._data_dims)
         print('completed')
 
