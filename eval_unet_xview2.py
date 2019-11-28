@@ -23,37 +23,45 @@ from experiment_manager.utils import to_numpy
 from sklearn.metrics import roc_auc_score, average_precision_score, roc_curve
 # import hp
 
-def final_model_evaluation_runner(net, cfg,):
+def final_model_evaluation_runner(net, cfg):
     '''
     Runner that only concerns with only a single model,
     :return:
     '''
     print('=== Evaluating final model ===')
     # Setup
-    F1_THRESH = torch.linspace(0, 1, 100)
+    F1_THRESH = torch.linspace(0, 1, 100).to(device)
     f1_set = []
     fpr_set = [] # False positive rate
     tpr_set = []
 
     y_true_set = []
     y_pred_set = []
+    measurer = MultiThresholdMetric(F1_THRESH)
 
     def evaluate(y_true, y_pred):
-        y_true_set.append(y_true.detach().cpu())
-        y_pred_set.append(y_pred.detach().cpu())
+        y_true = y_true.detach()
+        y_pred = y_pred.detach()
+        y_true_set.append(y_true.cpu())
+        y_pred_set.append(y_pred.cpu())
+
+        measurer.add_sample(y_true, y_pred)
 
     inference_loop(net, cfg, device, evaluate, max_samples=100)
 
     # ===
     # Collect for summary
-    print('Computing F1 vs thresholds')
+
     y_true_set = torch.cat(y_true_set, dim = 0)
-    y_pred_set = torch.cat(y_pred_set, dim = 0)
+    y_pred_set = torch.cat(y_pred_set, dim=0)
+
+    y_true_set, y_pred_set = downsample_dataset_for_eval(y_true_set, y_pred_set)
+
     y_true_np = to_numpy(y_true_set.flatten())
     y_pred_np = to_numpy(y_pred_set.flatten())
-    measurer = MultiThresholdMetric(y_true_set, y_pred_set, F1_THRESH)
 
     # F1 score
+    print('Computing F1 vs thresholds')
     f1 = measurer.compute_f1()
 
     print('computing ROC curve')
@@ -89,7 +97,7 @@ def model_checkpoints_eval_runner(net, cfg):
     checkpoint_files = list_and_sort_checkpoint_files()
 
     for cp_num,cp_file in checkpoint_files:
-        print('checkpoint', cp_file)
+        print(' ==== checkpoint', cp_file)
         full_model_path = os.path.join(cfg.OUTPUT_DIR, cp_file)
         net.load_state_dict(torch.load(full_model_path))
 
@@ -98,15 +106,19 @@ def model_checkpoints_eval_runner(net, cfg):
         wandb.log({'training_set max F1': maxF1,
                    'training_set AUC score': mAUC,
                    'training_set Average Precision': mAP,
+                   'training_set false positive rate':best_fpr,
+                   'training_set false negative rate': best_fnr,
                    'step': cp_num
                    })
 
 
         # TEST SET EVALUATION
-        maxF1, mAUC, mAP = model_eval(net, cfg, device, run_type='TEST')
+        maxF1, best_fpr, best_fnr,   mAUC, mAP = model_eval(net, cfg, device, run_type='TEST')
         wandb.log({'test_set max F1': maxF1,
                    'test_set AUC score': mAUC,
                    'test_set Average Precision': mAP,
+                   'test_set false positive rate': best_fpr,
+                   'test_set false negative rate': best_fnr,
                    'step': cp_num
                    })
 
@@ -117,14 +129,19 @@ def model_eval(net, cfg, device, run_type='TEST'):
     :return:
     '''
 
-    F1_THRESH = torch.linspace(0, 1, 100)
+    F1_THRESH = torch.linspace(0, 1, 100).to(device)
     y_true_set = []
     y_pred_set = []
 
-    def evaluate(y_true, y_pred):
-        y_true_set.append(y_true.detach().cpu())
-        y_pred_set.append(y_pred.detach().cpu())
+    measurer = MultiThresholdMetric(F1_THRESH)
 
+    def evaluate(y_true, y_pred):
+        y_true = y_true.detach()
+        y_pred = y_pred.detach()
+        y_true_set.append(y_true.cpu())
+        y_pred_set.append(y_pred.cpu())
+
+        measurer.add_sample(y_true, y_pred)
 
     if run_type == 'TRAIN':
         inference_loop(net, cfg, device, evaluate, 'TRAIN', max_samples=100)
@@ -133,11 +150,10 @@ def model_eval(net, cfg, device, run_type='TEST'):
 
     # Summary gathering ===
 
-    print('Computing F1 score ', end='')
+    print('Computing F1 score ', end=' ', flush=True)
     # Max of the mean F1 score
-    y_true_set = torch.cat(y_true_set, dim = 0)
-    y_pred_set = torch.cat(y_pred_set, dim=0)
-    measurer = MultiThresholdMetric(y_true_set, y_pred_set, F1_THRESH)
+
+    # measurer = MultiThresholdMetric(y_true_set, y_pred_set, F1_THRESH)
     # Max F1
     f1 = measurer.compute_f1()
     fpr, fnr = measurer.compute_basic_metrics()
@@ -145,12 +161,19 @@ def model_eval(net, cfg, device, run_type='TEST'):
     argmaxF1 = f1.argmax()
     best_fpr = fpr[argmaxF1]
     best_fnr = fnr[argmaxF1]
-    print(maxF1)
+    print(maxF1.item(), flush=True)
 
-    print('Computing AUC score  ', end='', flush=True)
-    # Area under curve
+
+    y_true_set = torch.cat(y_true_set, dim = 0)
+    y_pred_set = torch.cat(y_pred_set, dim=0)
+
+    y_true_set, y_pred_set = downsample_dataset_for_eval(y_true_set, y_pred_set)
+
     y_true_np = to_numpy(y_true_set.flatten())
     y_pred_np = to_numpy(y_pred_set.flatten())
+
+    # Area under curve
+    print('Computing AUC score  ', end='', flush=True)
     auc = roc_auc_score(y_true_np, y_pred_np)
     print(auc)
 
@@ -160,8 +183,18 @@ def model_eval(net, cfg, device, run_type='TEST'):
     print(ap)
 
     return maxF1, best_fpr, best_fnr, auc, ap
+def downsample_dataset_for_eval(y_true, y_pred):
+    # Full dataset is too big to compute for the CPU, so we down sample it
+    num_samples = y_pred.shape[0]
+    downsample_size = 100
+    if num_samples > downsample_size: # only downsample if data size is huge
+        down_idx = np.linspace(0, num_samples, downsample_size, endpoint=False, dtype=np.int)
+        y_pred = y_pred[down_idx]
+        y_true = y_true[down_idx]
 
-def inference_loop(net, cfg, device, callback = None, run_type = 'TEST', max_samples = None,
+    return y_true, y_pred
+
+def inference_loop(net, cfg, device, callback = None, run_type = 'TEST', max_samples = 999999999,
               ):
 
     net.to(device)
@@ -178,8 +211,8 @@ def inference_loop(net, cfg, device, callback = None, run_type = 'TEST', max_sam
                                        drop_last=True,
                                        )
 
-    dataset_length = len(dataset)
-    roc_set = []
+    dlen = len(dataset)
+    dataset_length = np.minimum(len(dataset), max_samples)
     with torch.no_grad():
         for step, (imgs, y_label, sample_name) in enumerate(dataloader):
             imgs = imgs.to(device)

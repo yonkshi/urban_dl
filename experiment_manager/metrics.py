@@ -15,7 +15,7 @@ def progress(count, total, status=''):
 
 
 class MultiThresholdMetric():
-    def __init__(self, y_true:torch.Tensor, y_pred, threshold):
+    def __init__(self, threshold):
 
         # FIXME Does not operate properly
 
@@ -25,16 +25,28 @@ class MultiThresholdMetric():
         :param y_pred: [B, C, H, W]
         :param threshold: [Thresh]
         '''
-        self._y_true = y_true.bool()
-        self._y_pred = y_pred.squeeze()
-        B, C, H, W = y_pred.shape
-        self.numel = C * H * W # total number of pixels per image
-        self._thresholds = threshold
+
+        self._thresholds = threshold[ :, None, None, None, None] # [Tresh, B, C, H, W]
         self._data_dims = (-1, -2, -3, -4) # For a B/W image, it should be [Thresh, B, C, H, W],
 
         # self._normalize_dimensions()
         # self._build_threshold_for_computation()
-        self._pre_compute_basic_metrics()
+        # self._pre_compute_basic_metrics()
+        self.TP = 0
+        self.TN = 0
+        self.FP = 0
+        self.FN = 0
+
+    def _normalize_dimensions(self):
+        ''' Converts y_truth, y_label and threshold to [B, Thres, C, H, W]'''
+        # Naively assume that all of existing shapes of tensors, we transform [B, H, W] -> [B, Thresh, C, H, W]
+        self._thresholds = self._thresholds[ :, None, None, None, None] # [Tresh, B, C, H, W]
+        # self._y_pred = self._y_pred[None, ...]  # [B, Thresh, C, ...]
+        # self._y_true = self._y_true[None,:, None, ...] # [Thresh, B,  C, ...]
+
+    # def _build_threshold_for_computation(self):
+    #     ''' Vectorize y_pred so that it contains N_THRESH aligned dimension'''
+    #     self._y_pred = self._y_pred - self._thresholds + 0.5
 
     def _pre_compute_basic_metrics(self):
         shape = self._thresholds.shape
@@ -42,6 +54,7 @@ class MultiThresholdMetric():
         self.TN = torch.empty(*shape)
         self.FP = torch.empty(*shape)
         self.FN = torch.empty(*shape)
+
         # Running it sequentially because vectorized form is too big to be fit inside the memory.
         print('precomputing basic metrics..')
         for i, threshold in enumerate(self._thresholds):
@@ -54,6 +67,16 @@ class MultiThresholdMetric():
             progress(i, 100)
             # self.TP = (self._y_true * torch.round(self._y_pred)).sum(dim=self._data_dims)
         print('completed')
+
+    def add_sample(self, y_true:torch.Tensor, y_pred):
+        y_true = y_true.bool()[None,:, None, ...] # [Thresh, B,  C, ...]
+        y_pred = y_pred[None, ...]  # [Thresh, B, C, ...]
+        y_pred_offset = (y_pred - self._thresholds + 0.5).round().bool()
+
+        self.TP += (y_true & y_pred_offset).sum(dim=self._data_dims).float()
+        self.TN += (~y_true & ~y_pred_offset).sum(dim=self._data_dims).float()
+        self.FP += (y_true & ~y_pred_offset).sum(dim=self._data_dims).float()
+        self.FN += (~y_true & y_pred_offset).sum(dim=self._data_dims).float()
 
     @property
     def precision(self):
@@ -90,16 +113,6 @@ class MultiThresholdMetric():
         denom = (self.precision + self.recall).clamp(10e-05)
         return 2 * self.precision * self.recall / denom
 
-
-
-    def compute_roc_curve(self):
-        # TODO Not quite right yet. Should be based on all possible thresholds, rather than a predefined thresholds
-        fpr = self.FP / self.numel
-        tpr = self.TP / self.numel
-        sorted_fpr_idx = fpr.argsort()
-        sorted_fpr = tpr[sorted_fpr_idx]
-
-        return sorted_fpr, tpr
 
 def true_pos(y_true, y_pred, dim=0):
     return torch.sum(y_true * torch.round(y_pred), dim=dim) # Only sum along H, W axis, assuming no C
