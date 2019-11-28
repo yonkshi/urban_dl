@@ -42,7 +42,7 @@ def final_model_evaluation_runner(net, cfg,):
         y_true_set.append(y_true.detach().cpu())
         y_pred_set.append(y_pred.detach().cpu())
 
-    inference_loop(net, cfg, device, evaluate)
+    inference_loop(net, cfg, device, evaluate, max_samples=100)
 
     # ===
     # Collect for summary
@@ -127,9 +127,9 @@ def model_eval(net, cfg, device, run_type='TEST'):
 
 
     if run_type == 'TRAIN':
-        inference_loop(net, cfg, device, evaluate, 'TRAIN', max_samples=1000)
+        inference_loop(net, cfg, device, evaluate, 'TRAIN', max_samples=100)
     elif run_type == 'TEST':
-        inference_loop(net, cfg, device, evaluate)
+        inference_loop(net, cfg, device, evaluate, max_samples=100)
 
     # Summary gathering ===
 
@@ -147,7 +147,7 @@ def model_eval(net, cfg, device, run_type='TEST'):
     best_fnr = fnr[argmaxF1]
     print(maxF1)
 
-    print('Computing AUC score  ', end='')
+    print('Computing AUC score  ', end='', flush=True)
     # Area under curve
     y_true_np = to_numpy(y_true_set.flatten())
     y_pred_np = to_numpy(y_pred_set.flatten())
@@ -155,7 +155,7 @@ def model_eval(net, cfg, device, run_type='TEST'):
     print(auc)
 
     # Average Precision
-    print('Computing AP score ... ', end='')
+    print('Computing AP score ... ', end='', flush=True)
     ap = average_precision_score(y_true_np, y_pred_np)
     print(ap)
 
