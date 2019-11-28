@@ -55,7 +55,8 @@ def train_net(net,
                           lr=cfg.TRAINER.LR,
                           weight_decay=0.0005)
     if cfg.MODEL.LOSS_TYPE == 'BCEWithLogitsLoss':
-        criterion = nn.BCEWithLogitsLoss()
+        pos_weight = torch.Tensor(cfg.MODEL.POSITIVE_WEIGHT).to(device)
+        criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     net.to(device)
 
@@ -105,8 +106,8 @@ def train_net(net,
 
             loss_set.append(loss.item())
 
-            f1 = f1_score(y_gts, y_pred)
-            f1_set.append(f1.item())
+            # f1 = f1_score(y_gts, y_pred)
+            # f1_set.append(f1.item())
 
             # f1_set.append(f1)
             # Write things in
@@ -122,13 +123,13 @@ def train_net(net,
                     torch.save(net.state_dict(), save_path)
 
                 # Averaged loss and f1 writer
-                writer.add_scalar('loss/train', np.mean(loss_set), global_step)
-                writer.add_scalar('f1/train', np.mean(f1_set), global_step)
+                # writer.add_scalar('loss/train', np.mean(loss_set), global_step)
+                # writer.add_scalar('f1/train', np.mean(f1_set), global_step)
 
                 print('step', i, ', avg loss', np.mean(loss_set))
 
-                loss_set = []
-                f1_set = []
+                # loss_set = []
+                # f1_set = []
 
                 figure, plt = visualize_image(x, y_pred, y_gts, sample_name)
                 writer.add_figure('output_image/train', figure, global_step)
@@ -140,10 +141,12 @@ def train_net(net,
             global_step += 1
 
         # Evaluation after each epoch
-        maxF1, mAUC, mAP = model_eval(net, cfg, device, )
+        maxF1, best_fpr, best_fnr, mAUC, mAP = model_eval(net, cfg, device, max_samples=50 )
         wandb.log({'test_set max F1': maxF1,
                    'test_set mean AUC score': mAUC,
                    'test_set mean Average Precision': mAP,
+                   'test_set false positive rate': best_fpr,
+                   'test_set false negative rate': best_fnr,
                    'epoch': epoch
                    })
 

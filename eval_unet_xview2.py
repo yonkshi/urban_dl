@@ -122,7 +122,7 @@ def model_checkpoints_eval_runner(net, cfg):
                    'step': cp_num
                    })
 
-def model_eval(net, cfg, device, run_type='TEST'):
+def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000):
     '''
     Runner that is concerned with training changes
     :param run_type: 'train' or 'eval'
@@ -144,9 +144,9 @@ def model_eval(net, cfg, device, run_type='TEST'):
         measurer.add_sample(y_true, y_pred)
 
     if run_type == 'TRAIN':
-        inference_loop(net, cfg, device, evaluate, 'TRAIN', max_samples=1000)
+        inference_loop(net, cfg, device, evaluate, 'TRAIN', max_samples = max_samples)
     elif run_type == 'TEST':
-        inference_loop(net, cfg, device, evaluate)
+        inference_loop(net, cfg, device, evaluate, max_samples = max_samples)
 
     # Summary gathering ===
 
