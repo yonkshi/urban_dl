@@ -1,0 +1,6 @@
+_BASE_: "base.yaml"
+OUTPUT_BASE_DIR: ('/local_storage/users/pshi/logs/unet/')
+MODEL:
+  POSITIVE_WEIGHT: 100
+DATALOADER:
+  NUM_WORKER: 0
