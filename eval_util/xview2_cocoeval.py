@@ -105,7 +105,7 @@ class Xview2COCOEvaluator(DatasetEvaluator):
             # TODO this is ugly
             if "instances" in output:
                 instances = output["instances"].to(self._cpu_device)
-
+                # TODO My code
                 THRESHOLD = 0.5
                 # Searching in negative because np only takes ascending order
                 thrs_pos = np.searchsorted(-instances.scores.numpy(), -THRESHOLD, side='right')
@@ -113,6 +113,16 @@ class Xview2COCOEvaluator(DatasetEvaluator):
                 # combine masks into a single image
                 mask_merged = np.any(masks, axis=0)
                 prediction['merged_mask'] = mask_merged
+
+                img_id = 1
+                anns = self._coco_api.imgToAnns[img_id]
+                masks = []
+                for ann in anns:
+                    mask = self._coco_api.annToMask(ann)
+                    masks.append(mask)
+                composite_mask = np.any(masks, axis=0)
+
+                # TODO End of my code
 
                 if instances.has("pred_masks"):
                     # use RLE to encode the masks, because they are too large and takes memory
@@ -148,6 +158,13 @@ class Xview2COCOEvaluator(DatasetEvaluator):
             if not comm.is_main_process():
                 return {}
 
+
+        # ==== TODO My code
+
+
+
+        # End of my code
+
         if len(self._predictions) == 0:
             self._logger.warning("[XView2COCOEvaluator] Did not receive valid predictions.")
             return {}
@@ -173,19 +190,6 @@ class Xview2COCOEvaluator(DatasetEvaluator):
         """
         self._logger.info("Preparing results for COCO format ...")
         self._coco_results = list(itertools.chain(*[x["instances"] for x in self._predictions]))
-
-        import matplotlib
-        import matplotlib.pyplot as plt
-        matplotlib.use('Agg')
-        test_mask = self._predictions[0]['merged_mask']
-        plt.imshow(test_mask)
-        plt.savefig('mask.png')
-
-        input_img = to_pil_image(self._inputs[0]['image'])
-        plt.imshow(input_img)
-        plt.savefig('input_image.png')
-
-        plt.show()
 
         # unmap the category ids for COCO
         if hasattr(self._metadata, "thing_dataset_id_to_contiguous_id"):

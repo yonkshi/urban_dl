@@ -218,20 +218,6 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
 
         return input, label, sample_name
 
-    def polygons_to_bitmask(self, polygons, height, width) -> np.ndarray:
-        """
-        Args:
-            polygons (list[ndarray]): each array has shape (Nx2,)
-            height, width (int)
-        Returns:
-            ndarray: a bool mask of shape (height, width)
-        """
-        assert len(polygons) > 0, "COCOAPI does not support empty polygons"
-        rles = mask_utils.frPyObjects(polygons, height, width)
-        rle = mask_utils.merge(rles)
-        return mask_utils.decode(rle).astype(np.bool)
-
-
     def _extract_label(self, annotations_set, image_size):
         masks = []
         mask = Image.new('L', (1024, 1024), 0)

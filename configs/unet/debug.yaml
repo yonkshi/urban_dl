@@ -1,4 +1,7 @@
 _BASE_: "base.yaml"
+MODEL:
+  LOSS_TYPE: 'CrossEntropyLoss'
+  OUT_CHANNELS: 2
 OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
   TRAIN: ("/storage/yonk/debug/train/",)

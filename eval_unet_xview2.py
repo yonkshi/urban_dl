@@ -155,6 +155,8 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000):
 
     # measurer = MultiThresholdMetric(y_true_set, y_pred_set, F1_THRESH)
     # Max F1
+
+
     f1 = measurer.compute_f1()
     fpr, fnr = measurer.compute_basic_metrics()
     maxF1 = f1.max()
@@ -223,6 +225,11 @@ def inference_loop(net, cfg, device, callback = None, run_type = 'TEST', max_sam
 
             if step % 100 == 0 or step == dataset_length-1:
                 print(f'Processed {step+1}/{dataset_length}')
+
+            if cfg.MODEL.LOSS_TYPE == 'CrossEntropyLoss':
+                # In Two class Cross entropy mode, positive classes are in Channel #2
+                y_pred = y_pred[:,1 ,...]
+                y_pred = y_pred[:, None, ...]
 
             if callback:
                 callback(y_label, y_pred)

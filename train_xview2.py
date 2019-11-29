@@ -34,8 +34,6 @@ def train_net(net,
     log_path = cfg.OUTPUT_DIR
     writer = SummaryWriter(log_path)
 
-    # TODO Save Run Config in Pandas
-
     run_config = {}
     run_config['CONFIG_NAME'] = cfg.NAME
     run_config['device'] = device
@@ -55,9 +53,11 @@ def train_net(net,
                           lr=cfg.TRAINER.LR,
                           weight_decay=0.0005)
     if cfg.MODEL.LOSS_TYPE == 'BCEWithLogitsLoss':
-        pos_weight = torch.tensor(cfg.MODEL.POSITIVE_WEIGHT).to(device)
-        criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
-
+        criterion = nn.BCEWithLogitsLoss()
+    elif cfg.MODEL.LOSS_TYPE == 'CrossEntropyLoss':
+        balance_weight = [1, cfg.MODEL.POSITIVE_WEIGHT]
+        balance_weight = torch.tensor(balance_weight).float().to(device)
+        criterion = nn.CrossEntropyLoss(weight = balance_weight)
     net.to(device)
 
     __benchmark_init()
@@ -90,11 +90,16 @@ def train_net(net,
             optimizer.zero_grad()
 
             x = x.to(device)
+
             y_gts = y_gts.to(device)
             y_pred = net(x)
 
-            # y_pred = y_pred.squeeze(1)
-            y_gts = y_gts.unsqueeze(1)
+            if cfg.MODEL.LOSS_TYPE == 'CrossEntropyLoss':
+                # y_pred = y_pred # Cross entropy loss doesn't like single channel dimension
+                y_gts = y_gts.long()# Cross entropy loss requires a long as target
+            else:
+                # For BCE loss, label needs to match the dimensions of network output
+                y_gts = y_gts.unsqueeze(1)
             loss = criterion(y_pred, y_gts)
             epoch_loss += loss.item()
 
@@ -102,15 +107,10 @@ def train_net(net,
             loss.backward()
             optimizer.step()
 
-
             loss_set.append(loss.item())
 
-            # f1 = f1_score(y_gts, y_pred)
-            # f1_set.append(f1.item())
 
-            # f1_set.append(f1)
-            # Write things in
-            if global_step % 100 == 0 and global_step > 0:
+            if global_step % 10 == 0 and global_step > 0:
                 # if global_step % 60 == 0:
                 #     writer.add_histogram('output_categories', y_pred.detach())
                 # Save checkpoints
@@ -120,13 +120,13 @@ def train_net(net,
                     torch.save(net.state_dict(), save_path)
 
                 # Averaged loss and f1 writer
-                # writer.add_scalar('loss/train', np.mean(loss_set), global_step)
-                # writer.add_scalar('f1/train', np.mean(f1_set), global_step)
+                writer.add_scalar('loss/train', np.mean(loss_set), global_step)
+                writer.add_scalar('f1/train', np.mean(f1_set), global_step)
 
                 print('step', i, ', avg loss', np.mean(loss_set))
 
-                # loss_set = []
-                # f1_set = []
+                loss_set = []
+                f1_set = []
 
                 figure, plt = visualize_image(x, y_pred, y_gts, sample_name)
                 writer.add_figure('output_image/train', figure, global_step)
@@ -139,12 +139,13 @@ def train_net(net,
 
         # Evaluation after each epoch
         maxF1, best_fpr, best_fnr, mAUC, mAP = model_eval(net, cfg, device, max_samples=50 )
-        wandb.log({'test_set max F1': maxF1,
-                   'test_set mean AUC score': mAUC,
-                   'test_set mean Average Precision': mAP,
+        wandb.log({'test_set F1': maxF1,
+                   'test_set AUC score': mAUC,
+                   'test_set Average Precision': mAP,
                    'test_set false positive rate': best_fpr,
                    'test_set false negative rate': best_fnr,
-                   'epoch': epoch
+                   'epoch': epoch,
+                   'global_step': global_step,
                    })
 
 
@@ -244,7 +245,7 @@ if __name__ == '__main__':
         name=cfg.NAME,
         project='urban_dl'
     )
-    out_channels = 1 if cfg.MODEL.BINARY_CLASSIFICATION else cfg.MODEL.OUT_CHANNELS
+    out_channels = cfg.MODEL.OUT_CHANNELS
     net = UNet(n_channels=cfg.MODEL.IN_CHANNELS, n_classes=out_channels)
 
     if args.resume and args.resume_from:

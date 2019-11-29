@@ -1,6 +1,5 @@
 _BASE_: "base.yaml"
 MODEL:
-  POSITIVE_WEIGHT: 25
   LOSS_TYPE: 'CrossEntropyLoss'
   OUT_CHANNELS: 2
 DATALOADER:
