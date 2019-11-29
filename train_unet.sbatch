@@ -12,5 +12,4 @@ echo "Starting job ${SLURM_JOB_ID} on ${SLURMD_NODENAME}"
 nvidia-smi
 . ~/miniconda3/etc/profile.d/conda.sh
 conda activate gpu2
-cd urban_dl
 python train_xview2.py -c ${CONFIG_NAME}
