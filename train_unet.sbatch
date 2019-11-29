@@ -10,6 +10,3 @@ SBATCH --error  /Midgard/home/%u/run_logs/%J_slurm.err
 
 echo "Starting job ${SLURM_JOB_ID} on ${SLURMD_NODENAME}"
 nvidia-smi
-. ~/miniconda3/etc/profile.d/conda.sh
-conda activate gpu2
-python train_xview2.py -c ${CONFIG_NAME}
