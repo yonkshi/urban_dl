@@ -241,10 +241,7 @@ def setup(args):
 if __name__ == '__main__':
     args = default_argument_parser().parse_known_args()[0]
     cfg = setup(args)
-    wandb.init(
-        name=cfg.NAME,
-        project='urban_dl'
-    )
+
     out_channels = cfg.MODEL.OUT_CHANNELS
     net = UNet(n_channels=cfg.MODEL.IN_CHANNELS, n_classes=out_channels)
 
@@ -255,6 +252,13 @@ if __name__ == '__main__':
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # cudnn.benchmark = True # faster convolutions, but more memory
+
+    print('=== Runnning on device: ', device)
+
+    wandb.init(
+        name=cfg.NAME,
+        project='urban_dl'
+    )
 
     try:
         train_net(net, cfg)
