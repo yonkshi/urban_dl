@@ -108,7 +108,7 @@ def train_net(net,
             optimizer.step()
 
             loss_set.append(loss.item())
-            print(loss.item())
+            print('loss', loss.item())
 
             if global_step % 10 == 0 and global_step > 0:
                 # if global_step % 60 == 0:
