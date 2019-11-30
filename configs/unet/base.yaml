@@ -9,7 +9,7 @@ DATASETS:
   TEST: ("/local_storage/datasets/xview2/full_no_dense/test/",)
 OUTPUT_BASE_DIR: ('/local_storage/users/pshi/logs/unet/')
 TRAINER:
-  LR: 0.0001
+  LR: 0.001
   BATCH_SIZE: 1
   EPOCHS: 100
 DATALOADER:
