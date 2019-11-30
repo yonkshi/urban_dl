@@ -108,25 +108,23 @@ def train_net(net,
             optimizer.step()
 
             loss_set.append(loss.item())
-            print('loss', loss.item(), flush=True)
-
             if global_step % 10 == 0 and global_step > 0:
                 # if global_step % 60 == 0:
                 #     writer.add_histogram('output_categories', y_pred.detach())
                 # Save checkpoints
-                if global_step % 5000 == 0 and global_step > 0:
+                if global_step % 10000 == 0 and global_step > 0:
                     check_point_name = f'cp_{global_step}.pkl'
                     save_path = os.path.join(log_path, check_point_name)
                     torch.save(net.state_dict(), save_path)
 
                 # Averaged loss and f1 writer
                 writer.add_scalar('loss/train', np.mean(loss_set), global_step)
-                writer.add_scalar('f1/train', np.mean(f1_set), global_step)
+                # writer.add_scalar('f1/train', np.mean(f1_set), global_step)
 
                 print('step', i, ', avg loss', np.mean(loss_set))
 
                 loss_set = []
-                f1_set = []
+                # f1_set = []
                 if global_step % 1000 == 0:
                     figure, plt = visualize_image(x, y_pred, y_gts, sample_name)
                     wandb.log({"output_image": plt})
