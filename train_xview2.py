@@ -127,9 +127,10 @@ def train_net(net,
 
                 loss_set = []
                 f1_set = []
-
-                figure, plt = visualize_image(x, y_pred, y_gts, sample_name)
-                writer.add_figure('output_image/train', figure, global_step)
+                if global_step % 1000 == 0:
+                    figure, plt = visualize_image(x, y_pred, y_gts, sample_name)
+                    wandb.log({"output_image": plt})
+                    writer.add_figure('output_image/train', figure, global_step)
 
                 optimizer.zero_grad()
 
