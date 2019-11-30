@@ -1,0 +1,7 @@
+_BASE_: "base.yaml"
+MODEL:
+  RESNETS:
+    OUT_FEATURES: ["res2", "res3", "res4", "res5"]
+    DEPTH: 101
+    NUM_GROUPS: 32
+    WIDTH_PER_GROUP: 8
