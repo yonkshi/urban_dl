@@ -38,7 +38,7 @@ def setup(args):
     cfg.merge_from_list(args.opts)
 
     if args.log_dir:
-        cfg.OUTPUT_DIR = args.log_dir
+        cfg.OUTPUT_DIR_BASE = args.log_dir
     if args.data_dir:
         cfg.DATASETS.TRAIN = (args.data_dir,)
 
@@ -50,7 +50,7 @@ def setup(args):
     register_datasets(cfg.DATASETS.TEST)
 
     # setup up logging directory
-    cfg.OUTPUT_DIR = os.path.join(cfg.OUTPUT_DIR, args.config_file)
+    cfg.OUTPUT_DIR = os.path.join(cfg.OUTPUT_DIR_BASE, args.config_file)
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
 
     default_setup(cfg, args)
