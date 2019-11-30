@@ -1,49 +1,40 @@
-# import some common libraries
-import matplotlib.pyplot as plt
-import numpy as np
-import cv2
-import random
-import torch
-from argparse import ArgumentParser
+# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+"""
+TensorMask Training Script.
 
-
-
+This script is a simplified version of the training script in detectron2/tools.
+"""
 
 import os
-from os import path
-
 import json
 
-import itertools
-
-import numpy as np
-
+import torch
 import detectron2.utils.comm as comm
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import get_cfg
-from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.structures import BoxMode
 from detectron2.engine import DefaultTrainer, default_argument_parser, default_setup, launch
-from detectron2.evaluation import COCOEvaluator, DatasetEvaluators, verify_results
-from detectron2.utils.logger import setup_logger
-from eval_util.xview2_cocoeval import Xview2COCOEvaluator
+from detectron2.evaluation import COCOEvaluator, verify_results
+from detectron2.data import DatasetCatalog, MetadataCatalog
+
+from tensormask import add_tensormask_config
+
 
 class Trainer(DefaultTrainer):
     @classmethod
-    def build_evaluator(cls, cfg, dataset_name):
-        output_folder = os.path.join(cfg.OUTPUT_DIR, "inference")
-        evaluators = [Xview2COCOEvaluator(dataset_name, cfg, True, output_folder)]
-        return DatasetEvaluators(evaluators)
-
-def register_datasets(dsets):
-    for dset_name in dsets:
-        DatasetCatalog.register(dset_name, lambda: get_building_dicts(dset_name))
-        MetadataCatalog.get(dset_name).set(thing_classes=["buildings"])
+    def build_evaluator(cls, cfg, dataset_name, output_folder=None):
+        if output_folder is None:
+            output_folder = os.path.join(cfg.OUTPUT_DIR, "inference")
+        return COCOEvaluator(dataset_name, cfg, True, output_folder)
 
 
 def setup(args):
+    """
+    Create configs and perform basic setups.
+    """
     cfg = get_cfg()
-    cfg.merge_from_file(f'configs/{args.config_file}.yaml')
+    add_tensormask_config(cfg)
+    cfg.merge_from_file(f'tensormask/configs/{args.config_file}.yaml')
     cfg.merge_from_list(args.opts)
 
     if args.log_dir:
@@ -53,18 +44,22 @@ def setup(args):
 
     cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     print('device:', cfg.MODEL.DEVICE)
-    cfg.OUTPUT_DIR = path.join(cfg.OUTPUT_DIR, args.config_file)
     cfg.freeze()
 
     register_datasets(cfg.DATASETS.TRAIN)
     register_datasets(cfg.DATASETS.TEST)
 
+    # setup up logging directory
+    cfg.OUTPUT_DIR = os.path.join(cfg.OUTPUT_DIR, args.config_file)
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
-    # default_setup(cfg, args)
-    # Setup logger for "densepose" module
-    setup_logger()
+
+    default_setup(cfg, args)
     return cfg
 
+def register_datasets(dsets):
+    for dset_name in dsets:
+        DatasetCatalog.register(dset_name, lambda: get_building_dicts(dset_name))
+        MetadataCatalog.get(dset_name).set(thing_classes=["buildings"])
 
 def get_building_dicts(img_dir, transform=False):
     json_file = os.path.join(img_dir, "labels.json")
@@ -100,7 +95,6 @@ def main(args):
 
     trainer = Trainer(cfg)
     trainer.resume_or_load(resume=args.resume)
-
     return trainer.train()
 
 
@@ -115,5 +109,3 @@ if __name__ == "__main__":
         dist_url=args.dist_url,
         args=(args,),
     )
-
-

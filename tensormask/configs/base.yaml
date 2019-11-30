@@ -1,0 +1,27 @@
+MODEL:
+  META_ARCHITECTURE: "TensorMask"
+  MASK_ON: True
+  BACKBONE:
+    NAME: "build_retinanet_resnet_fpn_backbone"
+  RESNETS:
+    OUT_FEATURES: ["res2", "res3", "res4", "res5"]
+  ANCHOR_GENERATOR:
+    SIZES: [[44, 60], [88, 120], [176, 240], [352, 480], [704, 960], [1408, 1920]]
+    ASPECT_RATIOS: [[1.0]]
+  FPN:
+    IN_FEATURES: ["res2", "res3", "res4", "res5"]
+    FUSE_TYPE: "avg"
+  TENSOR_MASK:
+    ALIGNED_ON: True
+    BIPYRAMID_ON: True
+DATASETS:
+  TRAIN: ("/local_storage/datasets/xview2/full_no_dense/train/",)
+  TEST: ("/local_storage/datasets/xview2/full_no_dense/test/",)
+OUTPUT_DIR: "/local_storage/users/pshi/detectron2"
+SOLVER:
+  IMS_PER_BATCH: 1
+  BASE_LR: 0.0025
+  MAX_ITER: 1200000
+  WARMUP_ITERS: 10000
+TEST:
+  DETECTIONS_PER_IMAGE: 1000
