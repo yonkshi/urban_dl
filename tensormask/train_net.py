@@ -44,7 +44,7 @@ def setup(args):
 
     cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     print('device:', cfg.MODEL.DEVICE)
-    cfg.freeze()
+
 
     register_datasets(cfg.DATASETS.TRAIN)
     register_datasets(cfg.DATASETS.TEST)
@@ -52,7 +52,7 @@ def setup(args):
     # setup up logging directory
     cfg.OUTPUT_DIR = os.path.join(cfg.OUTPUT_DIR_BASE, args.config_file)
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
-
+    cfg.freeze()
     default_setup(cfg, args)
     return cfg
 
