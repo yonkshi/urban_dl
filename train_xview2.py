@@ -120,7 +120,7 @@ def train_net(net,
                 writer.add_scalar('loss/train', np.mean(loss_set), global_step)
                 # writer.add_scalar('f1/train', np.mean(f1_set), global_step)
 
-                print('step', i, ', avg loss', np.mean(loss_set))
+                print('step', i, ', avg loss', np.mean(loss_set), flush=True)
 
                 loss_set = []
                 # f1_set = []
