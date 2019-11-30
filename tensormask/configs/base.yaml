@@ -16,6 +16,8 @@ MODEL:
     ALIGNED_ON: True
     BIPYRAMID_ON: True
     NUM_CLASSES: 1
+    FOCAL_LOSS_GAMMA: 1 # Disable focal loss
+    FOCAL_LOSS_ALPHA: 1
 
 DATASETS:
   TRAIN: ("/local_storage/datasets/xview2/full_no_dense/train/",)
