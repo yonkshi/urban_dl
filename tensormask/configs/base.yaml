@@ -6,8 +6,6 @@ MODEL:
   RESNETS:
     OUT_FEATURES: ["res2", "res3", "res4", "res5"]
     DEPTH: 101
-    NUM_GROUPS: 32
-    WIDTH_PER_GROUP: 8
   ANCHOR_GENERATOR:
     SIZES: [[16, 16], [32, 32], [64, 64], [128, 128], [256, 256], [512, 512]]
     ASPECT_RATIOS: [[1.0]]
