@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from tabulate import tabulate
-# import wandb
+import wandb
 
 from debug_tools import __benchmark_init, benchmark
 from unet import UNet
@@ -139,14 +139,14 @@ def train_net(net,
 
         # Evaluation after each epoch
         maxF1, best_fpr, best_fnr, mAUC, mAP = model_eval(net, cfg, device, max_samples=50 )
-        # wandb.log({'test_set F1': maxF1,
-        #            'test_set AUC score': mAUC,
-        #            'test_set Average Precision': mAP,
-        #            'test_set false positive rate': best_fpr,
-        #            'test_set false negative rate': best_fnr,
-        #            'epoch': epoch,
-        #            'global_step': global_step,
-        #            })
+        wandb.log({'test_set F1': maxF1,
+                   'test_set AUC score': mAUC,
+                   'test_set Average Precision': mAP,
+                   'test_set false positive rate': best_fpr,
+                   'test_set false negative rate': best_fnr,
+                   'epoch': epoch,
+                   'global_step': global_step,
+                   })
 
 
 
@@ -253,12 +253,12 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # cudnn.benchmark = True # faster convolutions, but more memory
 
-    print('=== Runnning on device: ', device)
+    print('=== Runnning on device: p', device)
 
-    # wandb.init(
-    #     name=cfg.NAME,
-    #     project='urban_dl'
-    # )
+    wandb.init(
+        name=cfg.NAME,
+        project='urban_dl'
+    )
 
     try:
         train_net(net, cfg)
