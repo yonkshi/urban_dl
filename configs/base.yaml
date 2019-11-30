@@ -32,6 +32,7 @@ MODEL:
     POOLER_RESOLUTION: 14
 DATALOADER:
   FILTER_EMPTY_ANNOTATIONS: False
+  NUM_WORKERS: 4
 DATASETS:
   TRAIN: ("/local_storage/datasets/xview2/full/train/",)
   # TEST: ("/local_storage/datasets/xview2/small/test/",)

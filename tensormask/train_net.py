@@ -35,8 +35,6 @@ def setup(args):
     cfg = get_cfg()
     add_tensormask_config(cfg)
 
-    # Setting this so default_setup() is happy later on
-
     cfg.merge_from_file(f'tensormask/configs/{args.config_file}.yaml')
     cfg.merge_from_list(args.opts)
 

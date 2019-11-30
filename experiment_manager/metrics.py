@@ -113,7 +113,6 @@ class MultiThresholdMetric():
         denom = (self.precision + self.recall).clamp(10e-05)
         return 2 * self.precision * self.recall / denom
 
-
 def true_pos(y_true, y_pred, dim=0):
     return torch.sum(y_true * torch.round(y_pred), dim=dim) # Only sum along H, W axis, assuming no C
 

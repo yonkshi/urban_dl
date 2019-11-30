@@ -26,7 +26,6 @@ from detectron2.utils.logger import create_small_table
 
 from detectron2.evaluation.evaluator import DatasetEvaluator
 
-
 class Xview2COCOEvaluator(DatasetEvaluator):
     """
     Evaluate object proposal, instance detection/segmentation, keypoint detection
@@ -69,6 +68,7 @@ class Xview2COCOEvaluator(DatasetEvaluator):
         # Test set json files do not contain annotations (evaluation must be
         # performed using the COCO evaluation server).
         self._do_evaluation = "annotations" in self._coco_api.dataset
+        self._metrics = Metric()
 
     def reset(self):
         self._predictions = []
@@ -105,29 +105,21 @@ class Xview2COCOEvaluator(DatasetEvaluator):
             # TODO this is ugly
             if "instances" in output:
                 instances = output["instances"].to(self._cpu_device)
-                # TODO My code
-                THRESHOLD = 0.5
-                # Searching in negative because np only takes ascending order
-                thrs_pos = np.searchsorted(-instances.scores.numpy(), -THRESHOLD, side='right')
-                masks = np.array(instances.pred_masks[:thrs_pos])
-                # combine masks into a single image
-                mask_merged = np.any(masks, axis=0)
-                prediction['merged_mask'] = mask_merged
 
-                img_id = 1
-                anns = self._coco_api.imgToAnns[img_id]
-                masks = []
-                for ann in anns:
-                    mask = self._coco_api.annToMask(ann)
-                    masks.append(mask)
-                composite_mask = np.any(masks, axis=0)
-
-                # TODO End of my code
 
                 if instances.has("pred_masks"):
                     # use RLE to encode the masks, because they are too large and takes memory
                     # since this evaluator stores outputs of the entire dataset
                     # Our model may predict bool array, but cocoapi expects uint8
+
+                    # Yonk added this
+                    THRESHOLD = 0.5
+                    # Searching in negative because np only takes ascending order
+                    thrs_pos = np.searchsorted(-instances.scores.numpy(), -THRESHOLD, side='right')
+                    masks = np.array(instances.pred_masks[:thrs_pos])
+                    # combine masks into a single image
+                    predicted_mask = np.any(masks, axis=0)
+                    prediction['merged_mask'] = predicted_mask
 
                     rles = [
                         mask_util.encode(np.array(mask[:, :, None], order="F", dtype="uint8"))[0]
@@ -147,6 +139,20 @@ class Xview2COCOEvaluator(DatasetEvaluator):
                 prediction["proposals"] = output["proposals"].to(self._cpu_device)
             self._predictions.append(prediction)
 
+            # TODO YONK CODE HERE
+
+
+
+            img_id = 1
+            anns = self._coco_api.imgToAnns[img_id]
+            masks = []
+            for ann in anns:
+                mask = self._coco_api.annToMask(ann)
+                masks.append(mask)
+            ground_truth_mask = np.any(masks, axis=0)
+
+            self._metrics.add_sample(ground_truth_mask, predicted_mask)
+
 
 
     def evaluate(self):
@@ -160,8 +166,14 @@ class Xview2COCOEvaluator(DatasetEvaluator):
 
 
         # ==== TODO My code
+        f1 = self._metrics.compute_f1()
+        fpr, fnr = self._metrics.compute_basic_metrics()
 
-
+        print("!!>!>!>!>!>!>!>!>!>>!>!>!>!>!>!>!>!>!>>!>!>!>!>!>!>!>!")
+        print('F1 score: ', f1)
+        print('False Positive Rate: ', fpr)
+        print('False Negative Rate: ', fnr)
+        print("!!>!>!>!>!>!>!>!>!>>!>!>!>!>!>!>!>!>!>>!>!>!>!>!>!>!>!")
 
         # End of my code
 
@@ -336,6 +348,71 @@ class Xview2COCOEvaluator(DatasetEvaluator):
         results.update({"AP-" + name: ap for name, ap in results_per_category})
         return results
 
+
+class Metric():
+    def __init__(self,):
+
+        # FIXME Does not operate properly
+
+        '''
+        Takes in rasterized and batched images
+        :param y_true: [B, H, W]
+        :param y_pred: [B, C, H, W]
+        :param threshold: [Thresh]
+        '''
+
+        self._data_dims = (-1, -2, -3, -4) # For a B/W image, it should be [Thresh, B, C, H, W],
+
+        self.TP = 0.
+        self.TN = 0.
+        self.FP = 0.
+        self.FN = 0.
+
+    def add_sample(self, y_true, y_pred):
+
+        n_y_true = np.bitwise_not(y_true)
+        n_y_pred = np.bitwise_not(y_pred)
+
+        np.bitwise_and(y_true, y_pred)
+        self.TP += np.bitwise_and(y_true, y_pred).sum(dtype='float')
+        self.TN += np.bitwise_and(n_y_true, n_y_pred).sum(dtype='float')
+        self.FP += np.bitwise_and(y_true, n_y_pred).sum(dtype='float')
+        self.FN += np.bitwise_and(n_y_true, y_pred).sum(dtype='float')
+
+    @property
+    def precision(self):
+        if hasattr(self, '_precision'):
+            '''precision previously computed'''
+            return self._precision
+
+        denom = (self.TP + self.FP).clamp(10e-05)
+        self._precision = self.TP / denom
+        return self._precision
+
+    @property
+    def recall(self):
+        if hasattr(self, '_recall'):
+            '''recall previously computed'''
+            return self._recall
+
+        denom = (self.TP + self.FN).clamp(10e-05)
+        self._recall = self.TP / denom
+        return self._recall
+
+    def compute_basic_metrics(self):
+        '''
+        Computes False Negative Rate and False Positive rate
+        :return:
+        '''
+
+        false_pos_rate = self.FP / (self.FP + self.TN)
+        false_neg_rate = self.FN / (self.FN + self.TP)
+
+        return false_pos_rate, false_neg_rate
+
+    def compute_f1(self):
+        denom = (self.precision + self.recall).clamp(10e-05)
+        return 2 * self.precision * self.recall / denom
 
 def instances_to_json(instances, img_id):
     num_instance = len(instances)
