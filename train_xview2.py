@@ -103,7 +103,6 @@ def train_net(net,
             loss = criterion(y_pred, y_gts)
             epoch_loss += loss.item()
 
-
             loss.backward()
             optimizer.step()
 
