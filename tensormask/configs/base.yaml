@@ -22,7 +22,7 @@ MODEL:
 DATASETS:
   TRAIN: ("/local_storage/datasets/xview2/full_no_dense/train/",)
   TEST: ("/local_storage/datasets/xview2/full_no_dense/test/",)
-OUTPUT_DIR_BASE: "/local_storage/users/pshi/detectron2"
+OUTPUT_DIR_BASE: "/local_storage/users/pshi/logs/detectron"
 DATALOADER:
   FILTER_EMPTY_ANNOTATIONS: True
 SOLVER:
