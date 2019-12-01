@@ -169,11 +169,11 @@ class Xview2COCOEvaluator(DatasetEvaluator):
         f1 = self._metrics.compute_f1()
         fpr, fnr = self._metrics.compute_basic_metrics()
 
-        print("!!>!>!>!>!>!>!>!>!>>!>!>!>!>!>!>!>!>!>>!>!>!>!>!>!>!>!")
+        print("\n!!>!>!>!>!>!>!>!>!>>!>!>!>!>!>!>!>!>!>>!>!>!>!>!>!>!>!\n")
         print('F1 score: ', f1)
         print('False Positive Rate: ', fpr)
         print('False Negative Rate: ', fnr)
-        print("!!>!>!>!>!>!>!>!>!>>!>!>!>!>!>!>!>!>!>>!>!>!>!>!>!>!>!")
+        print("\n!!>!>!>!>!>!>!>!>!>>!>!>!>!>!>!>!>!>!>>!>!>!>!>!>!>!>!\n")
 
         # End of my code
 
@@ -385,7 +385,7 @@ class Metric():
             '''precision previously computed'''
             return self._precision
 
-        denom = (self.TP + self.FP).clamp(10e-05)
+        denom = self.TP + self.FP
         self._precision = self.TP / denom
         return self._precision
 
@@ -395,7 +395,7 @@ class Metric():
             '''recall previously computed'''
             return self._recall
 
-        denom = (self.TP + self.FN).clamp(10e-05)
+        denom = self.TP + self.FN
         self._recall = self.TP / denom
         return self._recall
 
@@ -411,7 +411,7 @@ class Metric():
         return false_pos_rate, false_neg_rate
 
     def compute_f1(self):
-        denom = (self.precision + self.recall).clamp(10e-05)
+        denom = self.precision + self.recall
         return 2 * self.precision * self.recall / denom
 
 def instances_to_json(instances, img_id):
