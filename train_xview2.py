@@ -55,9 +55,19 @@ def train_net(net,
     if cfg.MODEL.LOSS_TYPE == 'BCEWithLogitsLoss':
         criterion = nn.BCEWithLogitsLoss()
     elif cfg.MODEL.LOSS_TYPE == 'CrossEntropyLoss':
-        balance_weight = [1, cfg.MODEL.POSITIVE_WEIGHT]
+        balance_weight = [cfg.MODEL.NEGATIVE_WEIGHT, cfg.MODEL.POSITIVE_WEIGHT]
         balance_weight = torch.tensor(balance_weight).float().to(device)
         criterion = nn.CrossEntropyLoss(weight = balance_weight)
+    elif cfg.MODEL.LOSS_TYPE == 'CustomCELoss':
+        def custom_ce(prediction, target):
+            # activated_pred = torch.softmax(prediction, dim=1)
+            activated_pred = torch.sigmoid(prediction)
+            loss = 5 * activated_pred.log() * target + 0.2 * (1 - target) * (1 - activated_pred).log()
+            loss = -loss
+            loss = loss.mean()
+            return loss
+        criterion = custom_ce
+
     net.to(device)
 
     __benchmark_init()
