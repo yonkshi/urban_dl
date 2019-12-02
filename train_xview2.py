@@ -137,13 +137,23 @@ def train_net(net,
 
         # Evaluation after each epoch
         maxF1, best_fpr, best_fnr, mAUC, mAP = model_eval(net, cfg, device, max_samples=50 )
-        wandb.log({'test_set F1': maxF1,
+        wandb.log({'test_set max F1': maxF1,
                    'test_set AUC score': mAUC,
                    'test_set Average Precision': mAP,
                    'test_set false positive rate': best_fpr,
                    'test_set false negative rate': best_fnr,
                    'epoch': epoch,
-                   'global_step': global_step,
+                   'step': global_step,
+                   })
+
+        maxF1, best_fpr, best_fnr,  mAUC, mAP = model_eval(net, cfg, device, run_type='TRAIN')
+        wandb.log({'training_set max F1': maxF1,
+                   'training_set AUC score': mAUC,
+                   'training_set Average Precision': mAP,
+                   'training_set false positive rate':best_fpr,
+                   'training_set false negative rate': best_fnr,
+                   'epoch': epoch,
+                   'step': global_step
                    })
 
 
