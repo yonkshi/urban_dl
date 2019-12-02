@@ -54,7 +54,7 @@ def setup(args):
     cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     print('device:', cfg.MODEL.DEVICE)
     cfg.OUTPUT_DIR = path.join(cfg.OUTPUT_DIR, args.config_file)
-    cfg.freeze()
+
 
     register_datasets(cfg.DATASETS.TRAIN)
     register_datasets(cfg.DATASETS.TEST)
@@ -63,6 +63,7 @@ def setup(args):
     # default_setup(cfg, args)
     # Setup logger for "densepose" module
     setup_logger()
+    cfg.freeze()
     return cfg
 
 
