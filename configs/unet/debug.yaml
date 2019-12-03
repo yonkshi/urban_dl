@@ -9,6 +9,7 @@ OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
   TRAIN: ("/storage/yonk/debug/train/",)
   TEST: ("/storage/yonk/debug/train/",)
+  INFERENCE: ("/local_storage/datasets/xview2/full_no_dense/test/",)
 TRAINER:
   LR: 0.001
   BATCH_SIZE: 8

@@ -20,6 +20,7 @@ from experiment_manager.metrics import roc_score, f1_score, MultiThresholdMetric
 from experiment_manager.args import default_argument_parser
 from experiment_manager.config import new_config
 from experiment_manager.utils import to_numpy
+from experiment_manager.dataset import SimpleInferenceDataset
 from sklearn.metrics import roc_auc_score, average_precision_score, roc_curve
 # import hp
 
@@ -124,10 +125,12 @@ def model_checkpoints_eval_runner(net, cfg):
 
 def model_inference():
     '''
-    This method is for running inference on
+    This method is for running inference on the actual dataset
     :return:
     '''
-    pass
+    dataset = SimpleInferenceDataset
+
+    return
 
 def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000):
     '''
@@ -217,8 +220,8 @@ def inference_loop(net, cfg, device,
     # reset the generators
 
     dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
-    if dataset
-    dataset = Xview2Detectron2Dataset(dset_source, 0, cfg)
+    if dataset is None:
+        dataset = Xview2Detectron2Dataset(dset_source, 0, cfg)
     dataloader = torch_data.DataLoader(dataset,
                                        batch_size=1,
                                        num_workers=cfg.DATALOADER.NUM_WORKER,
