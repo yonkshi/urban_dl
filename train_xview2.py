@@ -64,7 +64,7 @@ def train_net(net,
             activated_pred = torch.sigmoid(prediction)
             loss = 5 * activated_pred.log() * target + 0.2 * (1 - target) * (1 - activated_pred).log()
             loss = -loss
-            loss = loss.mean()
+            loss = loss[~torch.isnan(loss)].mean()
             return loss
         criterion = custom_ce
 
