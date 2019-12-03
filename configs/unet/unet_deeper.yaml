@@ -5,15 +5,12 @@ MODEL:
   OUT_CHANNELS: 2
   TOPOGRAPHY: [64, 128, 256, 512,]
   SIMPLE_INTERPOLATION: False
-OUTPUT_BASE_DIR: ('logs/')
-DATASETS:
-  TRAIN: ("/storage/yonk/debug/train/",)
-  TEST: ("/storage/yonk/debug/train/",)
+OUTPUT_BASE_DIR: ('/local_storage/users/pshi/logs/unet/')
 TRAINER:
   LR: 0.001
   BATCH_SIZE: 8
 DATALOADER:
-  NUM_WORKER: 0
+  NUM_WORKER: 4
 AUGMENTATION:
   # Random cropping of the images
   CROP: True

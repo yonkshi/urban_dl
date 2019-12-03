@@ -15,6 +15,80 @@ from unet.utils import *
 from debug_tools import __benchmark_init, benchmark
 import pycocotools.mask as mask_utils
 
+class Xview2Detectron2Dataset(torch.utils.data.Dataset):
+    '''
+    Dataset for Detectron2 style labelled Dataset
+    '''
+    def __init__(self, file_path, timeidx, cfg):
+        super().__init__()
+
+        ds_path = os.path.join(file_path,'labels.json')
+        with open(ds_path) as f:
+            ds = json.load(f)
+        self.dataset = ds
+        self.dataset_path = file_path
+
+        self.length = len(ds)
+        print('dataset length', self.length)
+        self.timeidx = timeidx
+        self._cfg = cfg
+
+
+        self.label_mask_cache = {}
+
+    def __getitem__(self, index):
+        data_sample = self.dataset[index]
+        input, image_shape =self._process_input(data_sample['file_name'])
+        label = self._extract_label(data_sample['annotations'], image_shape)
+        # label = label[None, ...] # C x H x W
+        sample_name = data_sample['file_name']
+
+        if self._cfg.AUGMENTATION.CROP:
+            input, label = self._random_crop(input, label)
+
+        return input, label, sample_name
+
+    def _extract_label(self, annotations_set, image_size):
+        masks = []
+        mask = Image.new('L', (1024, 1024), 0)
+        for anno in annotations_set:
+            building_polygon = anno['segmentation'][0]
+
+            ImageDraw.Draw(mask).polygon(building_polygon, outline=1, fill=1)
+
+        mask = np.asarray(mask).astype(np.float32)
+        return mask
+
+    def _random_crop(self, input, label):
+
+        assert self._cfg.AUGMENTATION.CROP, "Cropping is not enabled!"
+        assert input.shape[-1] == input.shape[-2], 'Image must be square shaped, or did you rotate the axis wrong? '
+        crop_size = self._cfg.AUGMENTATION.CROP_SIZE
+        image_size = input.shape[-1]
+        crop_limit = image_size - crop_size
+        crop_x, crop_y = np.random.randint(0, crop_size, 2)
+
+        cropped_input = input[:, crop_y:crop_size + crop_y, crop_x:crop_size+crop_x]
+        cropped_label = label[crop_y:crop_size + crop_y, crop_x:crop_size+crop_x]
+
+        return cropped_input, cropped_label
+
+    def _process_input(self, image_filename):
+        img_path = os.path.join(self.dataset_path, image_filename)
+        img = cv2.imread(img_path)
+        # BGR to RGB
+        img = img[...,::-1]
+
+        input = img.astype(np.float32) / 255.
+        # move from (x, y, c) to (c, x, y) PyTorch style
+        input = np.moveaxis(input, -1, 0)
+        image_shape = input.shape[1:]
+        return input, image_shape
+
+    def __len__(self):
+
+        return self.length
+
 class SloveniaDataset(torch.utils.data.Dataset):
     def __init__(self, file_path, timeidx):
         super().__init__()
@@ -184,68 +258,6 @@ class Xview2Dataset(torch.utils.data.Dataset):
         print('dataset size:', self.length)
         print('precompute complete')
 
-
-    def __len__(self):
-
-        return self.length
-
-class Xview2Detectron2Dataset(torch.utils.data.Dataset):
-    '''
-    Dataset for Detectron2 style labelled Dataset
-    '''
-    def __init__(self, file_path, timeidx):
-        super().__init__()
-
-        ds_path = os.path.join(file_path,'labels.json')
-        with open(ds_path) as f:
-            ds = json.load(f)
-        self.dataset = ds
-        self.dataset_path = file_path
-
-        self.length = len(ds)
-        print('dataset length', self.length)
-        self.timeidx = timeidx
-
-
-        self.label_mask_cache = {}
-
-    def __getitem__(self, index):
-        data_sample = self.dataset[index]
-        input, image_shape =self._process_input(data_sample['file_name'])
-        label = self._extract_label(data_sample['annotations'], image_shape)
-        # label = label[None, ...] # C x H x W
-        sample_name = data_sample['file_name']
-
-        return input, label, sample_name
-
-    def _extract_label(self, annotations_set, image_size):
-        masks = []
-        mask = Image.new('L', (1024, 1024), 0)
-        for anno in annotations_set:
-            building_polygon = anno['segmentation'][0]
-
-            # Converting from XYXY to [[x,y],[x,y]
-            # num_polygon_points = len(segm_instances) / 2
-            # assert num_polygon_points.is_integer(), 'The polygon array must be in XYXY format'
-            # polygon_pts = np.reshape(segm_instances, (int(num_polygon_points), 2))
-            # mask = self.polygons_to_bitmask(polygon_pts, image_size[0], image_size[1])
-
-            ImageDraw.Draw(mask).polygon(building_polygon, outline=1, fill=1)
-
-        mask = np.asarray(mask).astype(np.float32)
-        return mask
-
-    def _process_input(self, image_filename):
-        img_path = os.path.join(self.dataset_path, image_filename)
-        img = cv2.imread(img_path)
-        # BGR to RGB
-        img = img[...,::-1]
-
-        input = img.astype(np.float32) / 255.
-        # move from (x, y, c) to (c, x, y) PyTorch style
-        input = np.moveaxis(input, -1, 0)
-        image_shape = input.shape[1:]
-        return input, image_shape
 
     def __len__(self):
 

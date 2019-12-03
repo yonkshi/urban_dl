@@ -205,7 +205,7 @@ def inference_loop(net, cfg, device, callback = None, run_type = 'TEST', max_sam
     # reset the generators
 
     dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
-    dataset = Xview2Detectron2Dataset(dset_source, 0)
+    dataset = Xview2Detectron2Dataset(dset_source, 0, cfg)
     dataloader = torch_data.DataLoader(dataset,
                                        batch_size=1,
                                        num_workers=cfg.DATALOADER.NUM_WORKER,

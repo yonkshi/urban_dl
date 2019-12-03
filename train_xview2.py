@@ -79,7 +79,7 @@ def train_net(net,
         net.train()
 
         # reset the generators
-        dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0], epoch)
+        dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0], epoch, cfg)
         dataloader = torch_data.DataLoader(dataset,
                                            batch_size=cfg.TRAINER.BATCH_SIZE,
                                            num_workers=cfg.DATALOADER.NUM_WORKER,
@@ -117,10 +117,8 @@ def train_net(net,
             optimizer.step()
 
             loss_set.append(loss.item())
-            if global_step % 10 == 0 and global_step > 0:
-                # if global_step % 60 == 0:
-                #     writer.add_histogram('output_categories', y_pred.detach())
-                # Save checkpoints
+            if global_step % 100 == 0 or global_step == 0:
+
                 if global_step % 10000 == 0 and global_step > 0:
                     check_point_name = f'cp_{global_step}.pkl'
                     save_path = os.path.join(log_path, check_point_name)
@@ -130,7 +128,10 @@ def train_net(net,
                 writer.add_scalar('loss/train', np.mean(loss_set), global_step)
                 # writer.add_scalar('f1/train', np.mean(f1_set), global_step)
 
-                print('step', i, ', avg loss', np.mean(loss_set), flush=True)
+                max_mem, max_cache = gpu_stats()
+                print(f'step {i},  avg loss: {np.mean(loss_set):.4f}, cuda mem: {max_mem} MB, cuda cache: {max_cache} MB',
+                      flush=True)
+
 
                 loss_set = []
                 # f1_set = []
@@ -186,6 +187,14 @@ class LULC(enum.Enum):
 
 lulc_cmap = ListedColormap([entry.color for entry in LULC])
 lulc_norm = BoundaryNorm(np.arange(-0.5, 6, 1), lulc_cmap.N)
+
+def gpu_stats():
+    max_memory_allocated = torch.cuda.max_memory_allocated() / 1e6 # bytes to MB
+    max_memory_cached = torch.cuda.max_memory_cached() /1e6
+
+
+    return int(max_memory_allocated), int(max_memory_cached)
+
 
 def visualize_image(input_image, output_segmentation, gt_segmentation, sample_name):
 
@@ -263,7 +272,7 @@ if __name__ == '__main__':
     cfg = setup(args)
 
     out_channels = cfg.MODEL.OUT_CHANNELS
-    net = UNet(n_channels=cfg.MODEL.IN_CHANNELS, n_classes=out_channels)
+    net = UNet(cfg)
 
     if args.resume and args.resume_from:
         full_model_path = path.join(cfg.OUTPUT_DIR, args.model_path)
