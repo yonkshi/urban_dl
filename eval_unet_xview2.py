@@ -122,6 +122,13 @@ def model_checkpoints_eval_runner(net, cfg):
                    'step': cp_num
                    })
 
+def model_inference():
+    '''
+    This method is for running inference on
+    :return:
+    '''
+    pass
+
 def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000):
     '''
     Runner that is concerned with training changes
@@ -185,6 +192,7 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000):
     print(ap)
 
     return maxF1, argmaxF1, best_fpr, best_fnr, auc, ap
+
 def downsample_dataset_for_eval(y_true, y_pred):
     # Full dataset is too big to compute for the CPU, so we down sample it
     num_samples = y_pred.shape[0]
@@ -196,7 +204,11 @@ def downsample_dataset_for_eval(y_true, y_pred):
 
     return y_true, y_pred
 
-def inference_loop(net, cfg, device, callback = None, run_type = 'TEST', max_samples = 999999999,
+def inference_loop(net, cfg, device,
+                   callback = None,
+                   run_type = 'TEST',
+                   max_samples = 999999999,
+                   dataset = None
               ):
 
     net.to(device)
@@ -205,6 +217,7 @@ def inference_loop(net, cfg, device, callback = None, run_type = 'TEST', max_sam
     # reset the generators
 
     dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
+    if dataset
     dataset = Xview2Detectron2Dataset(dset_source, 0, cfg)
     dataloader = torch_data.DataLoader(dataset,
                                        batch_size=1,
