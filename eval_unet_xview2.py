@@ -40,7 +40,7 @@ def final_model_evaluation_runner(net, cfg):
     y_pred_set = []
     measurer = MultiThresholdMetric(F1_THRESH)
 
-    def evaluate(y_true, y_pred):
+    def evaluate(y_true, y_pred, img_filename):
         y_true = y_true.detach()
         y_pred = y_pred.detach()
         y_true_set.append(y_true.cpu())
@@ -123,12 +123,42 @@ def model_checkpoints_eval_runner(net, cfg):
                    'step': cp_num
                    })
 
-def model_inference():
+def model_inference(net, cfg):
     '''
     This method is for running inference on the actual dataset
     :return:
     '''
-    dataset = SimpleInferenceDataset
+    inference_dataset = cfg.DATASETS.INFERENCE[0]
+    dataset = SimpleInferenceDataset(inference_dataset)
+    import scipy.misc
+    import cv2
+    from PIL import Image
+
+    def save_to_png(y_true, y_pred, img_filenames):
+        # Y_pred activation
+
+        y_pred = (y_pred > 0.2).type(torch.uint8)
+
+        y_pred = y_pred.squeeze().cpu().numpy()
+        img_filename = img_filenames[0]
+        inference_dir = os.path.join(cfg.OUTPUT_DIR, 'predictions')
+        os.makedirs(inference_dir, exist_ok=True)
+
+        # TODO image renaming scheme
+        if img_filename.startswith('test'): # for the real dataset
+            test, pre, num_png = str.split(img_filename, '_')
+            num, png = str.split(num_png, '.')
+            test_localization_num_pred = '_'.join([test,'localization', num, 'prediction'])
+            img_filename = test_localization_num_pred + '.png'
+
+        img_save_dir = os.path.join(inference_dir, img_filename)
+
+        im = Image.fromarray(y_pred, mode='L')
+        im.save(img_save_dir)
+
+
+
+    inference_loop(net, cfg, device, save_to_png, dataset=dataset)
 
     return
 
@@ -145,7 +175,7 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000):
 
     measurer = MultiThresholdMetric(F1_THRESH)
 
-    def evaluate(y_true, y_pred):
+    def evaluate(y_true, y_pred, img_filename):
         y_true = y_true.detach()
         y_pred = y_pred.detach()
         y_true_set.append(y_true.cpu())
@@ -248,7 +278,7 @@ def inference_loop(net, cfg, device,
                 y_pred = y_pred[:, None, ...]
 
             if callback:
-                callback(y_label, y_pred)
+                callback(y_label, y_pred, sample_name)
 
             if (max_samples is not None) and step >= max_samples:
                 break
@@ -283,9 +313,25 @@ def list_and_sort_checkpoint_files():
 
     file_list.sort(key=lambda fname: fname[0])
     return file_list
+
+def custom_argparse(parser):
+    """
+    Create a parser with some common arguments used by detectron2 users.
+
+    Returns:
+        argparse.ArgumentParser:
+    """
+    parser.add_argument('-T',"--eval-type",
+                        dest='eval_type',
+                        default="final",
+                        choices=['final', 'checkpoints', 'inference'],
+                        help="select an evaluation type")
+    return parser
+
 if __name__ == '__main__':
 
-    args = default_argument_parser().parse_known_args()[0]
+    parser = default_argument_parser()
+    args = custom_argparse(parser).parse_known_args()[0]
     cfg = setup(args)
     print('ready to run 0')
     wandb.init(
@@ -296,7 +342,7 @@ if __name__ == '__main__':
     print('ready to run 1')
     # torch.set_default_dtype(torch.float16)f
     out_channels = 1 if cfg.MODEL.BINARY_CLASSIFICATION else cfg.MODEL.OUT_CHANNELS
-    net = UNet(n_channels=cfg.MODEL.IN_CHANNELS, n_classes=out_channels)
+    net = UNet(cfg)
     print('ready to run 2')
     if args.resume_from: # TODO Remove this
         full_model_path = os.path.join(cfg.OUTPUT_DIR, args.resume_from)
@@ -308,11 +354,13 @@ if __name__ == '__main__':
     print('DEVICE', device)
 
     try:
-        if args.eval_training:
+        if args.eval_type == 'checkpoints':
             model_checkpoints_eval_runner(net, cfg)
             final_model_evaluation_runner(net, cfg)
-        else:
+        elif args.eval_type == 'final':
             final_model_evaluation_runner(net, cfg)
+        elif args.eval_type == 'inference':
+            model_inference(net, cfg)
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
         print('Saved interrupt')

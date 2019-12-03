@@ -1,15 +1,12 @@
 _BASE_: "base.yaml"
 MODEL:
   POSITIVE_WEIGHT: 250
-  LOSS_TYPE: 'CrossEntropyLoss'
-  OUT_CHANNELS: 2
-  TOPOGRAPHY: [64, 128, 256, 512,]
-  SIMPLE_INTERPOLATION: False
+  LEGACY: True
 OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
   TRAIN: ("/storage/yonk/debug/train/",)
-  TEST: ("/storage/yonk/debug/train/",)
-  INFERENCE: ("/local_storage/datasets/xview2/full_no_dense/test/",)
+  TEST: ("/storage/yonk/debug/test/",)
+  INFERENCE: ("/storage/yonk/debug/test/",)
 TRAINER:
   LR: 0.001
   BATCH_SIZE: 8

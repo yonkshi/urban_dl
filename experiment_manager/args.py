@@ -25,7 +25,7 @@ def default_argument_parser():
     parser.add_argument("--num-gpus", type=int, default=1, help="number of gpus *per machine*")
 
     # Hacky hack
-    parser.add_argument("--eval-training", action="store_true", help="perform evaluation on training set only")
+    # parser.add_argument("--eval-training", action="store_true", help="perform evaluation on training set only")
 
     parser.add_argument(
         "opts",

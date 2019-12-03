@@ -1,16 +1,20 @@
 MODEL:
+
   BINARY_CLASSIFICATION: True
   OUT_CHANNELS: 1
   IN_CHANNELS: 3
   LOSS_TYPE: 'BCEWithLogitsLoss'
   POSITIVE_WEIGHT: 1
   NEGATIVE_WEIGHT: 1
+  LEGACY: False # If True, use the fixed UNet for backwards compatibility
   TOPOGRAPHY: [64, 128, 256, 256,]
   SIMPLE_INTERPOLATION: True  # True: Bilinear interpo, False: Deconv interpo
+
+
 DATASETS:
   TRAIN: ("/local_storage/datasets/xview2/full_no_dense/train/",)
   TEST: ("/local_storage/datasets/xview2/full_no_dense/test/",)
-  INFERENCE: ("/local_storage/datasets/xview2/full_no_dense/test/",)
+  INFERENCE: ("/local_storage/datasets/xview2/full_no_dense/real_test_set/",)
 OUTPUT_BASE_DIR: ('/local_storage/users/pshi/logs/unet/')
 TRAINER:
   LR: 0.001

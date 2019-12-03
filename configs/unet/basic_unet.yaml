@@ -2,3 +2,5 @@ _BASE_: "base.yaml"
 OUTPUT_BASE_DIR: ('/local_storage/users/pshi/logs/unet/')
 DATALOADER:
   NUM_WORKER: 0
+MODEL:
+  LEGACY: True # If True, use the fixed UNet for backwards compatibility
