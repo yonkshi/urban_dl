@@ -62,9 +62,9 @@ def train_net(net,
         def custom_ce(prediction, target):
             # activated_pred = torch.softmax(prediction, dim=1)
             activated_pred = torch.sigmoid(prediction)
-            loss = 5 * activated_pred.log() * target + 0.2 * (1 - target) * (1 - activated_pred).log()
-            loss = -loss
-            loss = loss[~torch.isnan(loss)].mean()
+            loss1 = 5 * activated_pred.log() * target + 0.2 * (1 - target) * (1 - activated_pred).log()
+            loss2 = -loss1
+            loss = loss2[~torch.isnan(loss2)].mean()
             return loss
         criterion = custom_ce
 
@@ -146,8 +146,9 @@ def train_net(net,
             global_step += 1
 
         # Evaluation after each epoch
-        maxF1, best_fpr, best_fnr, mAUC, mAP = model_eval(net, cfg, device, max_samples=50 )
+        maxF1, argmaxF1, best_fpr, best_fnr, mAUC, mAP = model_eval(net, cfg, device, max_samples=50 )
         wandb.log({'test_set max F1': maxF1,
+                   'training_set argmax F1': argmaxF1,
                    'test_set AUC score': mAUC,
                    'test_set Average Precision': mAP,
                    'test_set false positive rate': best_fpr,
@@ -156,8 +157,9 @@ def train_net(net,
                    'step': global_step,
                    })
 
-        maxF1, best_fpr, best_fnr,  mAUC, mAP = model_eval(net, cfg, device, run_type='TRAIN')
+        maxF1, argmaxF1, best_fpr, best_fnr,  mAUC, mAP = model_eval(net, cfg, device, run_type='TRAIN')
         wandb.log({'training_set max F1': maxF1,
+                   'training_set argmax F1': argmaxF1,
                    'training_set AUC score': mAUC,
                    'training_set Average Precision': mAP,
                    'training_set false positive rate':best_fpr,

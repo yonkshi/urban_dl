@@ -102,7 +102,7 @@ def model_checkpoints_eval_runner(net, cfg):
         net.load_state_dict(torch.load(full_model_path))
 
         # TRAINING EVALUATION
-        maxF1, best_fpr, best_fnr,  mAUC, mAP = model_eval(net, cfg, device, run_type='TRAIN')
+        maxF1, argmaxF1, best_fpr, best_fnr,  mAUC, mAP = model_eval(net, cfg, device, run_type='TRAIN')
         wandb.log({'training_set max F1': maxF1,
                    'training_set AUC score': mAUC,
                    'training_set Average Precision': mAP,
@@ -113,7 +113,7 @@ def model_checkpoints_eval_runner(net, cfg):
 
 
         # TEST SET EVALUATION
-        maxF1, best_fpr, best_fnr,   mAUC, mAP = model_eval(net, cfg, device, run_type='TEST')
+        maxF1, argmaxF1, best_fpr, best_fnr,   mAUC, mAP = model_eval(net, cfg, device, run_type='TEST')
         wandb.log({'test_set max F1': maxF1,
                    'test_set AUC score': mAUC,
                    'test_set Average Precision': mAP,
@@ -184,7 +184,7 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000):
     ap = average_precision_score(y_true_np, y_pred_np)
     print(ap)
 
-    return maxF1, best_fpr, best_fnr, auc, ap
+    return maxF1, argmaxF1, best_fpr, best_fnr, auc, ap
 def downsample_dataset_for_eval(y_true, y_pred):
     # Full dataset is too big to compute for the CPU, so we down sample it
     num_samples = y_pred.shape[0]
