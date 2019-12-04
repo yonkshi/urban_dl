@@ -3,7 +3,7 @@ MODEL:
   POSITIVE_WEIGHT: 250
   LOSS_TYPE: 'CrossEntropyLoss'
   OUT_CHANNELS: 2
-  TOPOGRAPHY: [256, 512, 1024, 2048,]
+  TOPOGRAPHY: [128, 512, 1024, 1024,]
   SIMPLE_INTERPOLATION: False
 OUTPUT_BASE_DIR: ('/local_storage/users/pshi/logs/unet/')
 TRAINER:
