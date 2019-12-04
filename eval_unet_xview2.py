@@ -151,10 +151,14 @@ def model_inference(net, cfg):
             test_localization_num_pred = '_'.join([test,'localization', num, 'prediction'])
             img_filename = test_localization_num_pred + '.png'
 
-        img_save_dir = os.path.join(inference_dir, img_filename)
+            test_damage_num_pred = '_'.join([test, 'damage', num, 'prediction'])
+            dmg_img_filename = test_damage_num_pred + '.png'
 
+        img_save_dir = os.path.join(inference_dir, img_filename)
+        dmg_img_save_dir = os.path.join(inference_dir, dmg_img_filename)
         im = Image.fromarray(y_pred, mode='L')
         im.save(img_save_dir)
+        im.save(dmg_img_save_dir)
 
 
 
