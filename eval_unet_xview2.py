@@ -144,7 +144,6 @@ def model_inference(net, cfg):
         inference_dir = os.path.join(cfg.OUTPUT_DIR, 'predictions')
         os.makedirs(inference_dir, exist_ok=True)
 
-        # TODO image renaming scheme
         if img_filename.startswith('test'): # for the real dataset
             test, pre, num_png = str.split(img_filename, '_')
             num, png = str.split(num_png, '.')
@@ -245,7 +244,8 @@ def inference_loop(net, cfg, device,
                    callback = None,
                    run_type = 'TEST',
                    max_samples = 999999999,
-                   dataset = None
+                   dataset = None,
+                   callback_include_x = False
               ):
 
     net.to(device)
@@ -282,7 +282,11 @@ def inference_loop(net, cfg, device,
                 y_pred = y_pred[:, None, ...]
 
             if callback:
-                callback(y_label, y_pred, sample_name)
+                if callback_include_x:
+                    callback(imgs, y_label, y_pred, sample_name)
+                else:
+                    callback(y_label, y_pred, sample_name)
+
 
             if (max_samples is not None) and step >= max_samples:
                 break
