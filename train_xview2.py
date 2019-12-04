@@ -21,9 +21,11 @@ import wandb
 from debug_tools import __benchmark_init, benchmark
 from unet import UNet
 from unet.utils import SloveniaDataset, Xview2Dataset, Xview2Detectron2Dataset
+
 from experiment_manager.metrics import f1_score
 from experiment_manager.args import default_argument_parser
 from experiment_manager.config import new_config
+from experiment_manager.loss import soft_dice_loss
 from eval_unet_xview2 import model_eval
 
 # import hp
@@ -58,15 +60,8 @@ def train_net(net,
         balance_weight = [cfg.MODEL.NEGATIVE_WEIGHT, cfg.MODEL.POSITIVE_WEIGHT]
         balance_weight = torch.tensor(balance_weight).float().to(device)
         criterion = nn.CrossEntropyLoss(weight = balance_weight)
-    elif cfg.MODEL.LOSS_TYPE == 'CustomCELoss':
-        def custom_ce(prediction, target):
-            # activated_pred = torch.softmax(prediction, dim=1)
-            activated_pred = torch.sigmoid(prediction)
-            loss1 = 5 * activated_pred.log() * target + 0.2 * (1 - target) * (1 - activated_pred).log()
-            loss2 = -loss1
-            loss = loss2[~torch.isnan(loss2)].mean()
-            return loss
-        criterion = custom_ce
+    elif cfg.MODEL.LOSS_TYPE == 'SoftDiceLoss':
+        criterion = soft_dice_loss
 
     net.to(device)
 
