@@ -271,15 +271,17 @@ def inference_loop(net, cfg, device,
             y_label = y_label.to(device)
 
             y_pred = net(imgs)
-            y_pred = torch.sigmoid(y_pred)
 
             if step % 100 == 0 or step == dataset_length-1:
                 print(f'Processed {step+1}/{dataset_length}')
 
             if cfg.MODEL.LOSS_TYPE == 'CrossEntropyLoss':
                 # In Two class Cross entropy mode, positive classes are in Channel #2
+                y_pred = torch.softmax(y_pred, dim=1)
                 y_pred = y_pred[:,1 ,...]
                 y_pred = y_pred[:, None, ...]
+            else:
+                y_pred = torch.sigmoid(y_pred)
 
             if callback:
                 if callback_include_x:
