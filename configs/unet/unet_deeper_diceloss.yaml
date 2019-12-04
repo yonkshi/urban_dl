@@ -1,17 +1,5 @@
-_BASE_: "base.yaml"
+_BASE_: "unet_deeper.yaml"
 MODEL:
-  POSITIVE_WEIGHT: 250
-  LOSS_TYPE: 'CrossEntropyLoss'
-  OUT_CHANNELS: 2
-  TOPOGRAPHY: [64, 128, 256, 512,]
-  SIMPLE_INTERPOLATION: False
-OUTPUT_BASE_DIR: ('/local_storage/users/pshi/logs/unet/')
-TRAINER:
-  LR: 0.001
-  BATCH_SIZE: 8
-DATALOADER:
-  NUM_WORKER: 4
-AUGMENTATION:
-  # Random cropping of the images
-  CROP: True
-  CROP_SIZE: 256
+  LOSS_TYPE: 'SoftDiceLoss'
+  OUT_CHANNELS: 1
+
