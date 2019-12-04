@@ -1,0 +1,7 @@
+_BASE_: "unet_deeper.yaml"
+AUGMENTATION:
+  # Random cropping of the images
+  RESIZE: True
+  RESIZE_RATIO: 0.5
+  CROP: True
+  CROP_SIZE: 256

@@ -76,6 +76,11 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
     def _process_input(self, image_filename):
         img_path = os.path.join(self.dataset_path, image_filename)
         img = cv2.imread(img_path)
+
+        if self._cfg.AUGMENTATION.RESIZE:
+            scale = self._cfg.AUGMENTATION.RESIZE_RATIO
+            img = cv2.resize(img, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+
         # BGR to RGB
         img = img[...,::-1]
 

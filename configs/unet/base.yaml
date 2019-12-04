@@ -25,6 +25,9 @@ DATALOADER:
   SHUFFLE: True
 AUGMENTATION:
   # Random cropping of the images
+  RESIZE: False # target image size (before cropping)
+  RESIZE_RATIO: 1.0
   CROP: False
   CROP_SIZE: 1024
+
 
