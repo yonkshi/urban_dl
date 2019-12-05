@@ -19,7 +19,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
     '''
     Dataset for Detectron2 style labelled Dataset
     '''
-    def __init__(self, file_path, timeidx, cfg):
+    def __init__(self, file_path, timeidx, cfg, include_raw_label=False):
         super().__init__()
 
         ds_path = os.path.join(file_path,'labels.json')
@@ -32,6 +32,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         print('dataset length', self.length)
         self.timeidx = timeidx
         self._cfg = cfg
+        self.include_raw_label = include_raw_label
 
 
         self.label_mask_cache = {}
@@ -51,6 +52,8 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         if self._cfg.AUGMENTATION.CROP:
             input, label = self._random_crop(input, label)
 
+        if self.include_raw_label:
+            return input, label, sample_name, data_sample['annotations']
         return input, label, sample_name
 
     def _extract_label(self, annotations_set, image_size):
@@ -58,7 +61,6 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         mask = Image.new('L', (1024, 1024), 0)
         for anno in annotations_set:
             building_polygon = anno['segmentation'][0]
-
             ImageDraw.Draw(mask).polygon(building_polygon, outline=1, fill=1)
 
         mask = np.asarray(mask).astype(np.float32)
