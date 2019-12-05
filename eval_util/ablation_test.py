@@ -30,7 +30,7 @@ from sklearn.metrics import roc_auc_score, average_precision_score, roc_curve
 MODEL_NAME = 'unet_deeper_diceloss'
 CHECKPOINT_NAME = 'cp_100000.pkl'
 THRESHOLD = 0.8
-BATCH_SIZE = 4
+BATCH_SIZE = 6
 plt.rcParams['figure.figsize'] = [15, 30]
 torch.manual_seed(0)
 
