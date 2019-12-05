@@ -77,7 +77,7 @@ def inference_loop2(net, cfg, device,
             y_pred = net(imgs)
 
             if step % 10 == 0 or step == dataset_length-1:
-                print(f'Processed {step+1}/{dataset_length}', f', max cuda usage: {torch.cuda.max_memory_allocated() / 1e6 :.2f} MB')
+                print(f'Processed {step+1}/{dataset_length}', f', max cuda usage: {torch.cuda.max_memory_allocated() / 1e6 :.2f} MB', flush=True)
 
             if cfg.MODEL.LOSS_TYPE == 'CrossEntropyLoss':
                 # In Two class Cross entropy mode, positive classes are in Channel #2
