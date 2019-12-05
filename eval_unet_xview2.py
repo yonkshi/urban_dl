@@ -194,8 +194,8 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, ep
     print(maxF1.item(), flush=True)
 
 
-    y_true_set = torch.cat(y_true_set, dim = 0)
-    y_pred_set = torch.cat(y_pred_set, dim=0)
+    y_true_set = torch.cat(y_true_set, dim = 0).type(torch.bool)
+    y_pred_set = torch.cat(y_pred_set, dim=0) > argmaxF1
 
     y_true_set, y_pred_set = downsample_dataset_for_eval(y_true_set, y_pred_set)
 
