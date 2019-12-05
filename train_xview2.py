@@ -112,11 +112,8 @@ def train_net(net,
             optimizer.step()
 
             loss_set.append(loss.item())
-            wandb.log({
-                'loss': loss.item(),
-                'step': global_step,
-            })
-            if global_step % 10 == 0 or global_step == 0:
+
+            if global_step % 100 == 0 or global_step == 0:
 
                 if global_step % 10000 == 0 and global_step > 0:
                     check_point_name = f'cp_{global_step}.pkl'
@@ -124,7 +121,10 @@ def train_net(net,
                     torch.save(net.state_dict(), save_path)
 
                 # Averaged loss and f1 writer
-                writer.add_scalar('loss/train', np.mean(loss_set), global_step)
+                wandb.log({
+                    'loss': np.mean(loss_set),
+                    'step': global_step,
+                })
                 # writer.add_scalar('f1/train', np.mean(f1_set), global_step)
 
                 max_mem, max_cache = gpu_stats()
