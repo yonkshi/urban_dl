@@ -43,6 +43,11 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         # label = label[None, ...] # C x H x W
         sample_name = data_sample['file_name']
 
+        if self._cfg.AUGMENTATION.RESIZE:
+            # Resize label
+            scale = self._cfg.AUGMENTATION.RESIZE_RATIO
+            label = cv2.resize(label, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+
         if self._cfg.AUGMENTATION.CROP:
             input, label = self._random_crop(input, label)
 
@@ -66,7 +71,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         crop_size = self._cfg.AUGMENTATION.CROP_SIZE
         image_size = input.shape[-1]
         crop_limit = image_size - crop_size
-        crop_x, crop_y = np.random.randint(0, crop_size, 2)
+        crop_x, crop_y = np.random.randint(0, crop_limit, 2)
 
         cropped_input = input[:, crop_y:crop_size + crop_y, crop_x:crop_size+crop_x]
         cropped_label = label[crop_y:crop_size + crop_y, crop_x:crop_size+crop_x]
@@ -77,7 +82,9 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         img_path = os.path.join(self.dataset_path, image_filename)
         img = cv2.imread(img_path)
 
+
         if self._cfg.AUGMENTATION.RESIZE:
+            # Resize image
             scale = self._cfg.AUGMENTATION.RESIZE_RATIO
             img = cv2.resize(img, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
 
