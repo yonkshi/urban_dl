@@ -54,6 +54,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
 
         if self.include_raw_label:
             raw_label = [anno['bbox'] for anno in data_sample['annotations']]
+            print(raw_label)
             return input, label, sample_name, raw_label
         return input, label, sample_name
 
