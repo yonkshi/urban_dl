@@ -19,7 +19,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
     '''
     Dataset for Detectron2 style labelled Dataset
     '''
-    def __init__(self, file_path, timeidx, cfg, include_raw_label=False):
+    def __init__(self, file_path, cfg, random_crop, include_raw_label=False):
         super().__init__()
 
         ds_path = os.path.join(file_path,'labels.json')
@@ -30,9 +30,9 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
 
         self.length = len(ds)
         print('dataset length', self.length)
-        self.timeidx = timeidx
         self._cfg = cfg
         self.include_raw_label = include_raw_label
+        self._random_crop = random_crop
 
 
         self.label_mask_cache = {}
@@ -49,7 +49,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
             scale = self._cfg.AUGMENTATION.RESIZE_RATIO
             label = cv2.resize(label, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
 
-        if self._cfg.AUGMENTATION.CROP:
+        if self._random_crop:
             input, label = self._random_crop(input, label)
 
         if self.include_raw_label:

@@ -74,7 +74,7 @@ def train_net(net,
         net.train()
 
         # reset the generators
-        dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0], epoch, cfg)
+        dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0], cfg, random_crop=cfg.AUGMENTATION.CROP)
         dataloader = torch_data.DataLoader(dataset,
                                            batch_size=cfg.TRAINER.BATCH_SIZE,
                                            num_workers=cfg.DATALOADER.NUM_WORKER,
