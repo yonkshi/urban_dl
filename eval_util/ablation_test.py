@@ -65,12 +65,12 @@ def inference_loop2(net, cfg, device,
     # reset the generators
     if dataset is None:
         dataset = Xview2Detectron2Dataset(dset_source, 0, cfg)
-    dataloader = torch_data.DataLoader(dataset, batch_size=BATCH_SIZE, num_workers=0, shuffle = False, drop_last=False,)
+    dataloader = torch_data.DataLoader(dataset, batch_size=BATCH_SIZE, num_workers=4, shuffle = False, drop_last=False,)
 
     dlen = len(dataset)
     dataset_length = np.minimum(len(dataset), max_samples)
     with torch.no_grad():
-        for step, (imgs, y_label, sample_name, raw_label) in enumerate(dataloader):
+        for step, (imgs, y_label, sample_name, index) in enumerate(dataloader):
             imgs = imgs.to(device)
             y_label = y_label.to(device)
 
@@ -87,7 +87,7 @@ def inference_loop2(net, cfg, device,
             else:
                 y_pred = torch.sigmoid(y_pred)
 
-            callback(imgs, y_label, y_pred, sample_name, raw_label)
+            callback(imgs, y_label, y_pred, sample_name, index)
 
 
             if (max_samples is not None) and step >= max_samples:
