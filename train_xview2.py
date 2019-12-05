@@ -112,7 +112,11 @@ def train_net(net,
             optimizer.step()
 
             loss_set.append(loss.item())
-            if global_step % 100 == 0 or global_step == 0:
+            wandb.log({
+                'loss': loss.item(),
+                'step': global_step,
+            })
+            if global_step % 10 == 0 or global_step == 0:
 
                 if global_step % 10000 == 0 and global_step > 0:
                     check_point_name = f'cp_{global_step}.pkl'
@@ -126,6 +130,7 @@ def train_net(net,
                 max_mem, max_cache = gpu_stats()
                 print(f'step {i},  avg loss: {np.mean(loss_set):.4f}, cuda mem: {max_mem} MB, cuda cache: {max_cache} MB',
                       flush=True)
+
 
 
                 loss_set = []
@@ -142,27 +147,9 @@ def train_net(net,
             global_step += 1
 
         # Evaluation after each epoch
-        maxF1, argmaxF1, best_fpr, best_fnr, mAUC, mAP = model_eval(net, cfg, device, max_samples=50 )
-        wandb.log({'test_set max F1': maxF1,
-                   'training_set argmax F1': argmaxF1,
-                   'test_set AUC score': mAUC,
-                   'test_set Average Precision': mAP,
-                   'test_set false positive rate': best_fpr,
-                   'test_set false negative rate': best_fnr,
-                   'epoch': epoch,
-                   'step': global_step,
-                   })
+        model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
+        model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
 
-        maxF1, argmaxF1, best_fpr, best_fnr,  mAUC, mAP = model_eval(net, cfg, device, run_type='TRAIN')
-        wandb.log({'training_set max F1': maxF1,
-                   'training_set argmax F1': argmaxF1,
-                   'training_set AUC score': mAUC,
-                   'training_set Average Precision': mAP,
-                   'training_set false positive rate':best_fpr,
-                   'training_set false negative rate': best_fnr,
-                   'epoch': epoch,
-                   'step': global_step
-                   })
 
 
 

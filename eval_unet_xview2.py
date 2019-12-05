@@ -97,31 +97,16 @@ def model_checkpoints_eval_runner(net, cfg):
 
     checkpoint_files = list_and_sort_checkpoint_files()
 
-    for cp_num,cp_file in checkpoint_files:
+    for cp_num, cp_file in checkpoint_files:
         print(' ==== checkpoint', cp_file)
         full_model_path = os.path.join(cfg.OUTPUT_DIR, cp_file)
         net.load_state_dict(torch.load(full_model_path))
 
         # TRAINING EVALUATION
-        maxF1, argmaxF1, best_fpr, best_fnr,  mAUC, mAP = model_eval(net, cfg, device, run_type='TRAIN')
-        wandb.log({'training_set max F1': maxF1,
-                   'training_set AUC score': mAUC,
-                   'training_set Average Precision': mAP,
-                   'training_set false positive rate':best_fpr,
-                   'training_set false negative rate': best_fnr,
-                   'step': cp_num
-                   })
-
+        model_eval(net, cfg, device, run_type='TRAIN', step=cp_num)
 
         # TEST SET EVALUATION
-        maxF1, argmaxF1, best_fpr, best_fnr,   mAUC, mAP = model_eval(net, cfg, device, run_type='TEST')
-        wandb.log({'test_set max F1': maxF1,
-                   'test_set AUC score': mAUC,
-                   'test_set Average Precision': mAP,
-                   'test_set false positive rate': best_fpr,
-                   'test_set false negative rate': best_fnr,
-                   'step': cp_num
-                   })
+        model_eval(net, cfg, device, run_type='TEST', step=cp_num)
 
 def model_inference(net, cfg):
     '''
@@ -165,7 +150,7 @@ def model_inference(net, cfg):
 
     return
 
-def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000):
+def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, epoch=0):
     '''
     Runner that is concerned with training changes
     :param run_type: 'train' or 'eval'
@@ -217,17 +202,20 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000):
     y_true_np = to_numpy(y_true_set.flatten())
     y_pred_np = to_numpy(y_pred_set.flatten())
 
-    # Area under curve
-    print('Computing AUC score  ', end='', flush=True)
-    auc = roc_auc_score(y_true_np, y_pred_np)
-    print(auc)
-
     # Average Precision
     print('Computing AP score ... ', end='', flush=True)
     ap = average_precision_score(y_true_np, y_pred_np)
     print(ap)
 
-    return maxF1, argmaxF1, best_fpr, best_fnr, auc, ap
+    set_name = 'test_set' if run_type == 'TEST' else 'training_set'
+    wandb.log({f'{set_name} max F1': maxF1,
+               f'{set_name} argmax F1': argmaxF1,
+               f'{set_name} Average Precision': ap,
+               f'{set_name} false positive rate': best_fpr,
+               f'{set_name} false negative rate': best_fnr,
+               'step': step,
+               'epoch': epoch,
+               })
 
 def downsample_dataset_for_eval(y_true, y_pred):
     # Full dataset is too big to compute for the CPU, so we down sample it
