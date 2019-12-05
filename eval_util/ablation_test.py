@@ -106,18 +106,18 @@ def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
 
     hw_dims = (-1, -2)
     # Compute all TP, TN, FP, FP, FN at once
-    bTP = (Y_true & Y_pred).sum(dim=hw_dims)
-    bTN = (~Y_true & ~Y_pred).sum(dim=hw_dims)
-    bFP = (Y_true & ~Y_pred).sum(dim=hw_dims)
-    bFN = (~Y_true & Y_pred).sum(dim=hw_dims)
-    bAreas = Y_true.sum(dim=hw_dims)
+    bTP = (Y_true & Y_pred).sum(dim=hw_dims).cpu()
+    bTN = (~Y_true & ~Y_pred).sum(dim=hw_dims).cpu()
+    bFP = (Y_true & ~Y_pred).sum(dim=hw_dims).cpu()
+    bFN = (~Y_true & Y_pred).sum(dim=hw_dims).cpu()
+    bAreas = Y_true.sum(dim=hw_dims).cpu()
 
     # Iterate through batch
     for tp, tn, fp, fn, total_area, img_filename, index in zip(bTP, bTN, bFP, bFN, bAreas, img_filenames, indices):
-        tp = tp.sum().item()
-        tn = tn.sum().item()
-        fp = fp.sum().item()
-        fn = fn.sum().item()
+        tp = tp.item()
+        tn = tn.item()
+        fp = fp.item()
+        fn = fn.item()
 
         # print(annotation_set.keys(), flush=True)
         total_area = total_area.item()
