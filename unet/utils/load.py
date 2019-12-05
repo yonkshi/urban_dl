@@ -53,7 +53,8 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
             input, label = self._random_crop(input, label)
 
         if self.include_raw_label:
-            return input, label, sample_name, data_sample['annotations']
+            raw_label = [anno['bbox'] for anno in data_sample['annotations']]
+            return input, label, sample_name, raw_label
         return input, label, sample_name
 
     def _extract_label(self, annotations_set, image_size):
