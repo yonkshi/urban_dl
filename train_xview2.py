@@ -130,7 +130,7 @@ def train_net(net,
                 # writer.add_scalar('f1/train', np.mean(f1_set), global_step)
 
                 max_mem, max_cache = gpu_stats()
-                print(f'step {i},  avg loss: {np.mean(loss_set):.4f}, cuda mem: {max_mem} MB, cuda cache: {max_cache} MB',
+                print(f'step {global_step},  avg loss: {np.mean(loss_set):.4f}, cuda mem: {max_mem} MB, cuda cache: {max_cache} MB, time: {time_per_n_batches}s',
                       flush=True)
 
 
