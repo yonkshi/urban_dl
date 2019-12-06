@@ -1,15 +1,14 @@
 MODEL:
 
   BINARY_CLASSIFICATION: True
-  OUT_CHANNELS: 1
+  OUT_CHANNELS: 2
   IN_CHANNELS: 3
-  LOSS_TYPE: 'BCEWithLogitsLoss'
-  POSITIVE_WEIGHT: 1
+  LOSS_TYPE: 'CrossEntropyLoss'
+  POSITIVE_WEIGHT: 250
   NEGATIVE_WEIGHT: 1
   LEGACY: False # If True, use the fixed UNet for backwards compatibility
-  TOPOGRAPHY: [64, 128, 256, 256,]
-  SIMPLE_INTERPOLATION: True  # True: Bilinear interpo, False: Deconv interpo
-
+  TOPOGRAPHY: [64, 128, 256, 512,]
+  SIMPLE_INTERPOLATION: False # True: Bilinear interpo, False: Deconv interpo
 
 DATASETS:
   TRAIN: ("/local_storage/datasets/xview2/full_no_dense/train/",)
