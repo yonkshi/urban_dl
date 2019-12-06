@@ -4,6 +4,7 @@ import os
 from argparse import ArgumentParser
 import datetime
 import enum
+import timeit
 
 import numpy as np
 import torch
@@ -68,6 +69,7 @@ def train_net(net,
     __benchmark_init()
     global_step = 0
     epochs = cfg.TRAINER.EPOCHS
+    start = timeit.default_timer()
     for epoch in range(epochs):
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
 
@@ -114,6 +116,9 @@ def train_net(net,
             loss_set.append(loss.item())
 
             if global_step % 100 == 0 or global_step == 0:
+                # time per 100 steps
+                stop = timeit.default_timer()
+                time_per_n_batches= stop - start
 
                 if global_step % 10000 == 0 and global_step > 0:
                     check_point_name = f'cp_{global_step}.pkl'
@@ -121,10 +126,7 @@ def train_net(net,
                     torch.save(net.state_dict(), save_path)
 
                 # Averaged loss and f1 writer
-                wandb.log({
-                    'loss': np.mean(loss_set),
-                    'step': global_step,
-                })
+
                 # writer.add_scalar('f1/train', np.mean(f1_set), global_step)
 
                 max_mem, max_cache = gpu_stats()
@@ -132,6 +134,13 @@ def train_net(net,
                       flush=True)
 
 
+
+                wandb.log({
+                    'loss': np.mean(loss_set),
+                    'gpu_memory': max_mem,
+                    'time': time_per_n_batches,
+                    'step': global_step,
+                })
 
                 loss_set = []
                 # f1_set = []
@@ -141,6 +150,8 @@ def train_net(net,
                     writer.add_figure('output_image/train', figure, global_step)
 
                 optimizer.zero_grad()
+
+                start = stop
 
             # torch.cuda.empty_cache()
             __benchmark_init()

@@ -1,8 +1,7 @@
 _BASE_: "base.yaml"
 MODEL:
-  POSITIVE_WEIGHT: 250
-  LEGACY: True
   LOSS_TYPE: 'SoftDiceLoss'
+  OUT_CHANNELS: 1
 OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
   TRAIN: ("/storage/yonk/debug/train/",)
