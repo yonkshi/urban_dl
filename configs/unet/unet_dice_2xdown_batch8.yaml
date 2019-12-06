@@ -6,9 +6,9 @@ MODEL:
 OUTPUT_BASE_DIR: ('/local_storage/users/pshi/logs/unet/')
 TRAINER:
   LR: 0.001
-  BATCH_SIZE: 16
+  BATCH_SIZE: 8
 DATALOADER:
-  NUM_WORKER: 16
+  NUM_WORKER: 4
 AUGMENTATION:
   RESIZE: True
   RESIZE_RATIO: 0.5
