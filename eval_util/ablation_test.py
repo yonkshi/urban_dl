@@ -178,6 +178,8 @@ def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
 
             height = y2 - y1
             width = x2 - x1
+
+            true_area = height * width
             result = {
                 'index': index.item(),
                 'TP': tp,
@@ -188,7 +190,12 @@ def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
                 'image_name': img_filename,
                 'height': height,
                 'width': width,
-                'area': height * width
+                'area': height * width,
+
+                # TODO Finish this section
+                'real_TP': tp,
+                'real_FN': fn,
+                'real_area': true_area,
 
             }
             results_table.append(result)

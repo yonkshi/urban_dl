@@ -26,7 +26,7 @@ from unet.utils import SloveniaDataset, Xview2Dataset, Xview2Detectron2Dataset
 from experiment_manager.metrics import f1_score
 from experiment_manager.args import default_argument_parser
 from experiment_manager.config import new_config
-from experiment_manager.loss import soft_dice_loss
+from experiment_manager.loss import soft_dice_loss, soft_dice_loss_balanced
 from eval_unet_xview2 import model_eval
 
 # import hp
@@ -63,6 +63,8 @@ def train_net(net,
         criterion = nn.CrossEntropyLoss(weight = balance_weight)
     elif cfg.MODEL.LOSS_TYPE == 'SoftDiceLoss':
         criterion = soft_dice_loss
+    elif cfg.MODEL.LOSS_TYPE == 'SoftDiceBalancedLoss':
+        criterion = soft_dice_loss_balanced
 
     net.to(device)
 

@@ -34,7 +34,6 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         self.include_index = include_index
         self._should_random_crop = random_crop
 
-
         self.label_mask_cache = {}
 
     def __getitem__(self, index):
