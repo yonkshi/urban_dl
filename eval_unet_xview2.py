@@ -57,7 +57,7 @@ def final_model_evaluation_runner(net, cfg):
     # ===
     # Collect for summary
 
-    y_true_set = torch.cat(y_true_set, dim = 0)
+    y_true_set = torch.cat(y_true_set, dim = 0).round()
     y_pred_set = torch.cat(y_pred_set, dim=0)
 
     y_true_set, y_pred_set = downsample_dataset_for_eval(y_true_set, y_pred_set)
