@@ -98,7 +98,6 @@ def train_net(net,
         loss_set, f1_set = [], []
         positive_pixels_set = [] # Used to evaluated image over sampling techniques
         for i, (x, y_gts, sample_name, image_weight) in enumerate(dataloader):
-            print(i)
             # visualize_image(imgs, y_label, y_label, sample_name)
             # print('max_gpu_usage',torch.cuda.max_memory_allocated() / 10e9, ', max_GPU_cache_isage', torch.cuda.max_memory_cached()/10e9)
             optimizer.zero_grad()
