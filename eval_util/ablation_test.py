@@ -34,6 +34,7 @@ MODEL_NAME = args.config_file
 CHECKPOINT_NAME = args.checkpoint_name
 THRESHOLD = args.threshold
 BATCH_SIZE = args.batch_size
+TRAIN_TYPE = 'test'
 
 torch.manual_seed(0)
 
@@ -104,7 +105,11 @@ def inference_loop2(net, cfg, device,
 # Per image  ===========
 
 print('================= Running ablation per image ===============', flush=True)
-dset_source = cfg.DATASETS.TRAIN[0]
+if TRAIN_TYPE == 'train':
+    dset_source = cfg.DATASETS.TRAIN[0]
+else:
+    dset_source = cfg.DATASETS.TEST[0]
+
 dataset = Xview2Detectron2Dataset(dset_source, cfg, resize_label=False, random_crop=False, include_index=True)  # TODO return raw label
 results_table = []
 
@@ -174,14 +179,13 @@ inference_loop2(net, cfg, device, compute_sample,
 results = pd.DataFrame(results_table)
 storage_path = path.join(cfg.OUTPUT_DIR, 'ablation',)
 os.makedirs(storage_path, exist_ok=True)
-results.to_pickle(path.join(storage_path, 'per_image_result_train.pkl'))
+results.to_pickle(path.join(storage_path, f'per_image_result_{TRAIN_TYPE}.pkl'))
 
 
 # ===========
 # Per building
 # ===========
 print('================= Running ablation per building ===============', flush=True)
-dset_source = cfg.DATASETS.TRAIN[0]
 dataset = Xview2Detectron2Dataset(dset_source, cfg, resize_label=False, random_crop=False, include_index=True)
 results_table = []
 
@@ -262,4 +266,4 @@ inference_loop2(net, cfg, device, compute_sample,
 results = pd.DataFrame(results_table)
 storage_path = path.join(cfg.OUTPUT_DIR, 'ablation',)
 os.makedirs(storage_path, exist_ok=True)
-results.to_pickle(path.join(storage_path, 'per_building_result_train.pkl'))
+results.to_pickle(path.join(storage_path, f'per_building_result_{TRAIN_TYPE}.pkl'))
