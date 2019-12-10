@@ -29,13 +29,17 @@ def final_model_evaluation_runner(net, cfg):
     Runner that only concerns with only a single model,
     :return:
     '''
+    import matplotlib.pyplot as plt
     print('=== Evaluating final model ===')
     # Setup
-    F1_THRESH = torch.linspace(0, 1, 100).to(device)
-    f1_set = []
-    fpr_set = [] # False positive rate
-    tpr_set = []
 
+    wandb.init(
+        name=cfg.NAME,
+        project='urban_dl',
+        tags=['final_model_eval'],
+    )
+
+    F1_THRESH = torch.linspace(0, 1, 100).to(device)
     y_true_set = []
     y_pred_set = []
     measurer = MultiThresholdMetric(F1_THRESH)
@@ -62,10 +66,17 @@ def final_model_evaluation_runner(net, cfg):
     y_pred_np = to_numpy(y_pred_set.flatten())
 
     # F1 score
-    print('Computing F1 vs thresholds')
-    f1 = measurer.compute_f1()
+    print('Computing F1 vs thresholds', flush=True)
+    f1 = measurer.compute_f1().cpu().numpy()
+    plt.plot(np.arange(0, 100, 1, dtype=np.int32), f1)
+    plt.ylabel('f1 score')
+    plt.xlabel('threshold ')
+    plt.title('F1 vs threshold curve')
 
-    print('computing ROC curve')
+    wandb.log({'f1 vs threshold': plt})
+
+
+    print('computing ROC curve', flush=True)
     # ROC curve
     fpr, tpr, thresh = roc_curve(y_true_np, y_pred_np)
 
@@ -76,7 +87,7 @@ def final_model_evaluation_runner(net, cfg):
     tpr_downsampled = tpr[downsample_idx]
 
 
-    import matplotlib.pyplot as plt
+
     plt.plot(fpr_downsampled, tpr_downsampled)
     plt.plot([0, 1], [0, 1], color='navy', linestyle='--')
     plt.ylabel('true_positive rate')
@@ -87,9 +98,6 @@ def final_model_evaluation_runner(net, cfg):
 
     wandb.log({'roc': plt})
 
-    # Log to wandb
-    for thresh, f1_thresh in enumerate(f1):
-        wandb.log({'f1': f1_thresh, 'thresholds':thresh})
 
     print('done')
 
@@ -342,11 +350,6 @@ if __name__ == '__main__':
     args = custom_argparse(parser).parse_known_args()[0]
     cfg = setup(args)
     print('ready to run 0')
-    wandb.init(
-        name=cfg.NAME,
-        project='urban_dl',
-        tags=['inference']
-    )
     print('ready to run 1')
     # torch.set_default_dtype(torch.float16)f
     out_channels = 1 if cfg.MODEL.BINARY_CLASSIFICATION else cfg.MODEL.OUT_CHANNELS
