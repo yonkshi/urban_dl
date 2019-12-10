@@ -57,12 +57,16 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
 
     def _extract_label(self, annotations_set, image_size):
         masks = []
-        mask = Image.new('L', (1024, 1024), 0)
-        for anno in annotations_set:
-            building_polygon = anno['segmentation'][0]
-            ImageDraw.Draw(mask).polygon(building_polygon, outline=1, fill=1)
 
-        mask = np.asarray(mask).astype(np.float32)
+        building_polygons = []
+        for anno in annotations_set:
+            building_polygon_xy = np.array(anno['segmentation'][0], dtype=np.int32).reshape(-1, 2)
+            building_polygons.append(building_polygon_xy)
+
+        mask2 = np.zeros((1024, 1024), dtype=np.uint8)
+        cv2.fillPoly(mask2, building_polygons, 1)
+        mask = mask2.astype(np.float32)
+
         return mask
 
     def _random_crop(self, input, label):
@@ -82,7 +86,6 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
     def _process_input(self, image_filename):
         img_path = os.path.join(self.dataset_path, image_filename)
         img = cv2.imread(img_path)
-
 
         if self._cfg.AUGMENTATION.RESIZE:
             # Resize image
