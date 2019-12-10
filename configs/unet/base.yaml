@@ -21,7 +21,7 @@ TRAINER:
   EPOCHS: 1000
 DATALOADER:
   NUM_WORKER: 1
-  SHUFFLE: True
+  SHUFFLE: False
 AUGMENTATION:
   # Random cropping of the images
   RESIZE: False # target image size (before cropping)

@@ -81,13 +81,13 @@ def train_net(net,
         dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0], cfg,
                                           random_crop=cfg.AUGMENTATION.CROP,
                                           oversampling=cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE,
-                                          include_image_weight=True
+                                          include_image_weight=True,
                                           )
         dataloader = torch_data.DataLoader(dataset,
                                            batch_size=cfg.TRAINER.BATCH_SIZE,
                                            num_workers=cfg.DATALOADER.NUM_WORKER,
                                            shuffle = cfg.DATALOADER.SHUFFLE,
-                                           drop_last=True,
+                                           drop_last=False,
                                            )
 
         epoch_loss = 0
