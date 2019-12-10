@@ -122,12 +122,21 @@ def model_inference(net, cfg):
     def save_to_png(y_true, y_pred, img_filenames):
         # Y_pred activation
 
-        y_pred = (y_pred > 0.2).type(torch.uint8)
+        # interp image if scaling was originally enabled
+        if cfg.AUGMENTATION.RESIZE:
+            upscale_ratio = 1 / cfg.AUGMENTATION.RESIZE_RATIO
+            y_pred = torch.nn.functional.interpolate(y_pred,
+                                                     scale_factor=upscale_ratio,
+                                                     mode='bilinear')
+
+        y_pred = (y_pred > 0.01).type(torch.uint8)
 
         y_pred = y_pred.squeeze().cpu().numpy()
         img_filename = img_filenames[0]
         inference_dir = os.path.join(cfg.OUTPUT_DIR, 'predictions')
         os.makedirs(inference_dir, exist_ok=True)
+
+
 
         if img_filename.startswith('test'): # for the real dataset
             test, pre, num_png = str.split(img_filename, '_')
