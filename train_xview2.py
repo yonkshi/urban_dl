@@ -80,7 +80,8 @@ def train_net(net,
         # reset the generators
         dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0], cfg,
                                           random_crop=cfg.AUGMENTATION.CROP,
-                                          oversampling=cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE
+                                          oversampling=cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE,
+                                          include_image_weight=True
                                           )
         dataloader = torch_data.DataLoader(dataset,
                                            batch_size=cfg.TRAINER.BATCH_SIZE,
@@ -96,7 +97,7 @@ def train_net(net,
         mAP_set_train, mAUC_set_train, maxF1_train = [],[],[]
         loss_set, f1_set = [], []
         positive_pixels_set = [] # Used to evaluated image over sampling techniques
-        for i, (x, y_gts, sample_name) in enumerate(dataloader):
+        for i, (x, y_gts, sample_name, image_weight) in enumerate(dataloader):
 
             # visualize_image(imgs, y_label, y_label, sample_name)
             # print('max_gpu_usage',torch.cuda.max_memory_allocated() / 10e9, ', max_GPU_cache_isage', torch.cuda.max_memory_cached()/10e9)
@@ -121,7 +122,7 @@ def train_net(net,
             optimizer.step()
 
             loss_set.append(loss.item())
-            positive_pixels_set.append(y_pred.sum().cpu().item())
+            positive_pixels_set.extend(image_weight.cpu().numpy())
 
             if global_step % 100 == 0 or global_step == 0:
                 # time per 100 steps
