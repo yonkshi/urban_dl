@@ -79,7 +79,7 @@ def train_net(net,
 
         # reset the generators
         dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0], cfg,
-                                          random_crop=cfg.AUGMENTATION.CROP,
+                                          crop_type=cfg.AUGMENTATION.CROP_TYPE,
                                           oversampling=cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE,
                                           include_image_weight=True,
                                           )
@@ -87,7 +87,7 @@ def train_net(net,
                                            batch_size=cfg.TRAINER.BATCH_SIZE,
                                            num_workers=cfg.DATALOADER.NUM_WORKER,
                                            shuffle = cfg.DATALOADER.SHUFFLE,
-                                           drop_last=False,
+                                           drop_last=True,
                                            )
 
         epoch_loss = 0

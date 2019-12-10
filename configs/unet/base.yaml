@@ -26,7 +26,7 @@ AUGMENTATION:
   # Random cropping of the images
   RESIZE: False # target image size (before cropping)
   RESIZE_RATIO: 1.0
-  CROP: False
+  CROP_TYPE: 'none'
   CROP_SIZE: 1024
   IMAGE_OVERSAMPLING_TYPE: 'none'
 

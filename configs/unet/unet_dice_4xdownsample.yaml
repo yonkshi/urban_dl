@@ -13,5 +13,5 @@ AUGMENTATION:
   RESIZE: True
   RESIZE_RATIO: 0.25
   # Random cropping of the images
-  CROP: False
+  CROP_TYPE: 'none'
   CROP_SIZE: 256

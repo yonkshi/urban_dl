@@ -253,7 +253,9 @@ def inference_loop(net, cfg, device,
 
     dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
     if dataset is None:
-        dataset = Xview2Detectron2Dataset(dset_source, cfg, random_crop=cfg.AUGMENTATION.CROP)
+        dataset = Xview2Detectron2Dataset(dset_source, cfg,
+                                          crop_type='none')
+
     dataloader = torch_data.DataLoader(dataset,
                                        batch_size=1,
                                        num_workers=cfg.DATALOADER.NUM_WORKER,

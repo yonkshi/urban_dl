@@ -19,7 +19,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
     '''
     Dataset for Detectron2 style labelled Dataset
     '''
-    def __init__(self, file_path, cfg, random_crop, resize_label=True,  include_index=False, oversampling=None, include_image_weight = False):
+    def __init__(self, file_path, cfg, crop_type, resize_label=True,  include_index=False, oversampling=None, include_image_weight = False):
         super().__init__()
 
         ds_path = os.path.join(file_path,'labels.json')
@@ -33,7 +33,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         print('dataset length', self.length)
         self._cfg = cfg
         self.include_index = include_index
-        self._should_random_crop = random_crop
+        self._crop_type = crop_type
         self._should_resize_label = resize_label
         self.label_mask_cache = {}
         self.include_image_weight = include_image_weight
@@ -58,8 +58,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
             scale = self._cfg.AUGMENTATION.RESIZE_RATIO
             label = cv2.resize(label, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
 
-        if self._should_random_crop:
-            input, label = self._random_crop(input, label)
+        input, label = self._random_crop(input, label, data_sample)
 
         ret = [input, label, sample_name]
         if self.include_index:
@@ -83,16 +82,34 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
 
         return mask
 
-    def _random_crop(self, input, label):
-
+    def _random_crop(self, input, label, img_metadata):
         assert input.shape[-1] == input.shape[-2], 'Image must be square shaped, or did you rotate the axis wrong? '
-        crop_size = self._cfg.AUGMENTATION.CROP_SIZE
+        crop_size = round(self._cfg.AUGMENTATION.CROP_SIZE / 2)
         image_size = input.shape[-1]
         crop_limit = image_size - crop_size
-        crop_x, crop_y = np.random.randint(0, crop_limit, 2)
+        if self._crop_type == 'none':
+            return input, label
+        elif self._crop_type == 'uniform':
 
-        cropped_input = input[:, crop_y:crop_size + crop_y, crop_x:crop_size+crop_x]
-        cropped_label = label[crop_y:crop_size + crop_y, crop_x:crop_size+crop_x]
+            crop_x, crop_y = np.random.randint(crop_size, crop_limit, 2)
+        elif self._crop_type == 'gaussian':
+            # background uniform random, in case gaussian went out of border
+            crop_x_uni, crop_y_uni = np.random.randint(crop_size, crop_limit, 2)
+
+            image_weight = img_metadata['image_weight']
+            sigma = np.sqrt(image_weight)
+            mu = img_metadata['image_com']
+            # ratio = image_weight / (1024 ** 2)
+            # ttt = (np.random.randn(100, 2) * sigma + mu).round().astype(np.int32)
+            crop_y, crop_x = (np.random.randn(2) * sigma + mu).round().astype(np.int32)
+
+            # use random crop if sample is out of bound or image is empty (sigma == 0)
+            crop_x = crop_x if 0 < crop_x < crop_limit or sigma == 0 else crop_x_uni
+            crop_y = crop_y if 0 < crop_y < crop_limit or sigma == 0 else crop_y_uni
+
+
+        cropped_input = input[:, crop_y - crop_size: crop_y + crop_size, crop_x - crop_size: crop_x + crop_size]
+        cropped_label = label[crop_y - crop_size: crop_y + crop_size, crop_x - crop_size: crop_x + crop_size]
 
         return cropped_input, cropped_label
 

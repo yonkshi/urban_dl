@@ -16,6 +16,6 @@ AUGMENTATION:
   RESIZE: True # target image size (before cropping)
   RESIZE_RATIO: 0.5
   # Random cropping of the images
-  CROP: True
+  CROP_TYPE: 'uniform'
   CROP_SIZE: 256
   IMAGE_OVERSAMPLING_TYPE: 'simple'

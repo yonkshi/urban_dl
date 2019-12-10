@@ -13,5 +13,5 @@ DATALOADER:
   NUM_WORKER: 4
 AUGMENTATION:
   # Random cropping of the images
-  CROP: True
+  CROP_TYPE: 'uniform'
   CROP_SIZE: 256
