@@ -103,7 +103,7 @@ def inference_loop2(net, cfg, device,
 
 # Per image  ===========
 
-print('================= Running ablation per image ===============')
+print('================= Running ablation per image ===============', flush=True)
 dset_source = cfg.DATASETS.TRAIN[0]
 dataset = Xview2Detectron2Dataset(dset_source, cfg, resize_label=False, random_crop=False, include_index=True)  # TODO return raw label
 results_table = []
@@ -172,13 +172,15 @@ def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
 inference_loop2(net, cfg, device, compute_sample,
                 dataset=dataset)
 results = pd.DataFrame(results_table)
-results.to_pickle(path.join(cfg.OUTPUT_DIR, 'ablation', 'per_image_result_train.pkl'))
+storage_path = path.join(cfg.OUTPUT_DIR, 'ablation',)
+os.makedirs(storage_path, exist_ok=True)
+results.to_pickle(path.join(storage_path, 'per_image_result_train.pkl'))
 
 
 # ===========
 # Per building
 # ===========
-print('================= Running ablation per building ===============')
+print('================= Running ablation per building ===============', flush=True)
 dset_source = cfg.DATASETS.TRAIN[0]
 dataset = Xview2Detectron2Dataset(dset_source, cfg, resize_label=False, random_crop=False, include_index=True)
 results_table = []
@@ -258,4 +260,6 @@ inference_loop2(net, cfg, device, compute_sample,
                 dataset=dataset)
 
 results = pd.DataFrame(results_table)
-results.to_pickle(path.join(cfg.OUTPUT_DIR, 'ablation', 'per_building_result_train.pkl'))
+storage_path = path.join(cfg.OUTPUT_DIR, 'ablation',)
+os.makedirs(storage_path, exist_ok=True)
+results.to_pickle(path.join(storage_path, 'per_building_result_train.pkl'))
