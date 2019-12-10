@@ -51,14 +51,15 @@ full_model_path = os.path.join(cfg.OUTPUT_DIR, CHECKPOINT_NAME)
 net.load_state_dict(torch.load(full_model_path))
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+if TRAIN_TYPE == 'train':
+    dset_source = cfg.DATASETS.TRAIN[0]
+else:
+    dset_source = cfg.DATASETS.TEST[0]
 
+with open(dset_source + '/labels.json') as f:
+    ds = json.load(f)
+dataset_json = ds
 
-with open(cfg.DATASETS.TRAIN[0] + '/labels.json') as f:
-    ds = json.load(f)
-dataset_train = ds
-with open(cfg.DATASETS.TEST[0] + '/labels.json') as f:
-    ds = json.load(f)
-dataset_test = ds
 def inference_loop2(net, cfg, device,
                    callback = None,
                    run_type = 'TEST',
@@ -105,10 +106,7 @@ def inference_loop2(net, cfg, device,
 # Per image  ===========
 
 print('================= Running ablation per image ===============', flush=True)
-if TRAIN_TYPE == 'train':
-    dset_source = cfg.DATASETS.TRAIN[0]
-else:
-    dset_source = cfg.DATASETS.TEST[0]
+
 
 dataset = Xview2Detectron2Dataset(dset_source, cfg, resize_label=False, random_crop=False, include_index=True)  # TODO return raw label
 results_table = []
@@ -147,7 +145,7 @@ def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
 
         # print(annotation_set.keys(), flush=True)
         total_area = total_area.item()
-        density = len(dataset_train[index]['annotations'])
+        density = len(dataset_json[index]['annotations'])
 
         result = {
             'index': index.item(),
@@ -211,11 +209,11 @@ def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
     # Iterate through batch
     for y_pred, TP, TN, FP, FN, img_filename, index in zip(Y_pred, bTP, bTN, bFP, bFN, img_filenames, indices):
         y_pred = y_pred.cpu().numpy()
-        num_buildings = len(dataset_train[index]['annotations'])
+        num_buildings = len(dataset_json[index]['annotations'])
 
 
         # iterate through buildings
-        for idx, anno in enumerate(dataset_train[index]['annotations']):
+        for idx, anno in enumerate(dataset_json[index]['annotations']):
             x1, y1, x2, y2 = np.array(anno['bbox']).astype(np.int32)
 
             crop_range = (slice(y1 - 2, y2 + 2), slice(x1 - 2, x2 + 2))  # equiv: [y1-2:y2+2, x1-2:x2+2]
