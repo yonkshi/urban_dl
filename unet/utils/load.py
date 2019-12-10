@@ -19,7 +19,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
     '''
     Dataset for Detectron2 style labelled Dataset
     '''
-    def __init__(self, file_path, cfg, random_crop, resize_label=True,  include_index=False):
+    def __init__(self, file_path, cfg, random_crop, resize_label=True,  include_index=False, oversampling=None):
         super().__init__()
 
         ds_path = os.path.join(file_path,'labels.json')
@@ -27,6 +27,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
             ds = json.load(f)
         self.dataset = ds
         self.dataset_path = file_path
+        self.oversampling = oversampling
 
         self.length = len(ds)
         print('dataset length', self.length)
@@ -36,8 +37,16 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         self._should_resize_label = resize_label
         self.label_mask_cache = {}
 
+        self._preprocessing()
+
     def __getitem__(self, index):
-        data_sample = self.dataset[index]
+
+        if self.oversampling == 'simple':
+            idx = np.random.choice(np.arange(0, self.length), p=self.image_p)
+            data_sample = self.dataset[idx]
+        else:
+            data_sample = self.dataset[index]
+
         input, image_shape =self._process_input(data_sample['file_name'])
         label = self._extract_label(data_sample['annotations'], image_shape)
         # label = label[None, ...] # C x H x W
@@ -99,6 +108,19 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         input = np.moveaxis(input, -1, 0)
         image_shape = input.shape[1:]
         return input, image_shape
+
+    def simple_oversampling_preprocess(self):
+        print('performing oversampling...', end='', flush=True)
+        EMPTY_IMAGE_BASELINE = 1000
+        image_p = np.array([image_desc['image_weight'] for image_desc in self.dataset]) + EMPTY_IMAGE_BASELINE
+        print('done', flush=True)
+        # normalize to [0., 1.]
+        image_p = image_p / image_p.sum()
+        self.image_p = image_p
+    def _preprocessing(self):
+        if self.oversampling == 'simple':
+            self.simple_oversampling_preprocess()
+
 
     def __len__(self):
 

@@ -11,9 +11,9 @@ MODEL:
   SIMPLE_INTERPOLATION: False # True: Bilinear interpo, False: Deconv interpo
 
 DATASETS:
-  TRAIN: ("/local_storage/datasets/xview2/full_no_dense/train/",)
-  TEST: ("/local_storage/datasets/xview2/full_no_dense/test/",)
-  INFERENCE: ("/local_storage/datasets/xview2/full_no_dense/real_test_set/",)
+  TRAIN: ("/local_storage/datasets/xview2/full/train/",)
+  TEST: ("/local_storage/datasets/xview2/full/test/",)
+  INFERENCE: ("/local_storage/datasets/xview2/full/real_test_set/",)
 OUTPUT_BASE_DIR: ('/local_storage/users/pshi/logs/unet/')
 TRAINER:
   LR: 0.001
@@ -28,5 +28,7 @@ AUGMENTATION:
   RESIZE_RATIO: 1.0
   CROP: False
   CROP_SIZE: 1024
+  IMAGE_OVERSAMPLING_TYPE: 'none'
+
 
 

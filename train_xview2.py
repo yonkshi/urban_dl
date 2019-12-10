@@ -78,7 +78,10 @@ def train_net(net,
         net.train()
 
         # reset the generators
-        dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0], cfg, random_crop=cfg.AUGMENTATION.CROP)
+        dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0], cfg,
+                                          random_crop=cfg.AUGMENTATION.CROP,
+                                          oversampling=cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE
+                                          )
         dataloader = torch_data.DataLoader(dataset,
                                            batch_size=cfg.TRAINER.BATCH_SIZE,
                                            num_workers=cfg.DATALOADER.NUM_WORKER,
@@ -92,6 +95,7 @@ def train_net(net,
         # mean AP, mean AUC, max F1
         mAP_set_train, mAUC_set_train, maxF1_train = [],[],[]
         loss_set, f1_set = [], []
+        total_positive_pixels = 0 # Used to evaluated image over sampling techniques
         for i, (x, y_gts, sample_name) in enumerate(dataloader):
 
             # visualize_image(imgs, y_label, y_label, sample_name)
@@ -101,6 +105,7 @@ def train_net(net,
             x = x.to(device)
 
             y_gts = y_gts.to(device)
+
             y_pred = net(x)
 
             if cfg.MODEL.LOSS_TYPE == 'CrossEntropyLoss':
@@ -116,6 +121,7 @@ def train_net(net,
             optimizer.step()
 
             loss_set.append(loss.item())
+            total_positive_pixels += y_pred.sum().cpu().item()
 
             if global_step % 100 == 0 or global_step == 0:
                 # time per 100 steps
@@ -141,10 +147,12 @@ def train_net(net,
                     'loss': np.mean(loss_set),
                     'gpu_memory': max_mem,
                     'time': time_per_n_batches,
+                    'total_positive_pixels': total_positive_pixels,
                     'step': global_step,
                 })
 
                 loss_set = []
+                total_positive_pixels = 0
                 # f1_set = []
                 if global_step % 1000 == 0:
                     figure, plt = visualize_image(x, y_pred, y_gts, sample_name)
