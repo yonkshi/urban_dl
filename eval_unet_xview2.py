@@ -122,7 +122,7 @@ def model_inference(net, cfg):
     :return:
     '''
     inference_dataset = cfg.DATASETS.INFERENCE[0]
-    dataset = SimpleInferenceDataset(inference_dataset)
+    dataset = SimpleInferenceDataset(inference_dataset, downsample_scale= cfg.AUGMENTATION.RESIZE_RATIO)
     import scipy.misc
     import cv2
     from PIL import Image
