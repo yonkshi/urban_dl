@@ -33,12 +33,6 @@ def final_model_evaluation_runner(net, cfg):
     print('=== Evaluating final model ===')
     # Setup
 
-    wandb.init(
-        name=cfg.NAME,
-        project='urban_dl',
-        tags=['final_model_eval'],
-    )
-
     F1_THRESH = torch.linspace(0, 1, 100).to(device)
     y_true_set = []
     y_pred_set = []
@@ -364,9 +358,19 @@ if __name__ == '__main__':
 
     try:
         if args.eval_type == 'checkpoints':
+            wandb.init(
+                name=cfg.NAME,
+                project='urban_dl',
+                tags=['checkpoints_eval', 'final_model_eval'],
+            )
             model_checkpoints_eval_runner(net, cfg)
             final_model_evaluation_runner(net, cfg)
         elif args.eval_type == 'final':
+            wandb.init(
+                name=cfg.NAME,
+                project='urban_dl',
+                tags=['final_model_eval'],
+            )
             final_model_evaluation_runner(net, cfg)
         elif args.eval_type == 'inference':
             model_inference(net, cfg)

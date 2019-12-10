@@ -281,7 +281,8 @@ if __name__ == '__main__':
 
     wandb.init(
         name=cfg.NAME,
-        project='urban_dl'
+        project='urban_dl',
+        tags=['run'],
     )
 
     try:

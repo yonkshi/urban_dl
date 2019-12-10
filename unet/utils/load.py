@@ -19,7 +19,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
     '''
     Dataset for Detectron2 style labelled Dataset
     '''
-    def __init__(self, file_path, cfg, random_crop, include_index=False):
+    def __init__(self, file_path, cfg, random_crop, resize_label=True,  include_index=False):
         super().__init__()
 
         ds_path = os.path.join(file_path,'labels.json')
@@ -33,7 +33,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         self._cfg = cfg
         self.include_index = include_index
         self._should_random_crop = random_crop
-
+        self._should_resize_label = resize_label
         self.label_mask_cache = {}
 
     def __getitem__(self, index):
@@ -43,7 +43,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         # label = label[None, ...] # C x H x W
         sample_name = data_sample['file_name']
 
-        if self._cfg.AUGMENTATION.RESIZE:
+        if self._cfg.AUGMENTATION.RESIZE and self._should_resize_label:
             # Resize label
             scale = self._cfg.AUGMENTATION.RESIZE_RATIO
             label = cv2.resize(label, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
@@ -71,7 +71,6 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
 
     def _random_crop(self, input, label):
 
-        assert self._cfg.AUGMENTATION.CROP, "Cropping is not enabled!"
         assert input.shape[-1] == input.shape[-2], 'Image must be square shaped, or did you rotate the axis wrong? '
         crop_size = self._cfg.AUGMENTATION.CROP_SIZE
         image_size = input.shape[-1]

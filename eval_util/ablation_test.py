@@ -5,37 +5,43 @@ import os
 from os import path, listdir
 from os.path import join, isfile
 import json
+import argparse
 
 from argparse import ArgumentParser
 
 import numpy as np
 import torch
-import torch.nn as nn
-import matplotlib.pyplot as plt
 import pandas as pd
+import cv2
+from scipy.ndimage.morphology import distance_transform_edt
 
 
 from torch.utils import data as torch_data
-from tabulate import tabulate
-from debug_tools import __benchmark_init, benchmark
 from unet import UNet
 from unet.utils import Xview2Detectron2Dataset
-from experiment_manager.metrics import roc_score, f1_score, MultiThresholdMetric
-from experiment_manager.args import default_argument_parser
 from experiment_manager.config import new_config
-from experiment_manager.utils import to_numpy
-from experiment_manager.dataset import SimpleInferenceDataset
-from sklearn.metrics import roc_auc_score, average_precision_score, roc_curve
 
-MODEL_NAME = 'unet_deeper_diceloss'
-CHECKPOINT_NAME = 'cp_100000.pkl'
-THRESHOLD = 0.8
-BATCH_SIZE = 5
-plt.rcParams['figure.figsize'] = [15, 30]
+
+parser = argparse.ArgumentParser(description="Experiment Args")
+parser.add_argument('-c', "--config-file", dest='config_file', required=True, help="path to config file")
+parser.add_argument('-p', '--checkpoint', dest='checkpoint_name', type=str,required=True, help='dataset directory')
+parser.add_argument('-t', '--threshold', dest='threshold', type=float,required=True, help='dataset directory')
+parser.add_argument('-b', '--batch-size', dest='batch_size', type=int, default=5, help='output directory')
+parser.add_argument( '-d', "--debug", dest='debug', action="store_true", help="whether to attempt to resume from the checkpoint directory", )
+args = parser.parse_known_args()[0]
+
+MODEL_NAME = args.config_file
+CHECKPOINT_NAME = args.checkpoint_name
+THRESHOLD = args.threshold
+BATCH_SIZE = args.batch_size
+
 torch.manual_seed(0)
 
 cfg = new_config()
-cfg.merge_from_file(f'/Midgard/home/pshi/urban_dl/configs/unet/{MODEL_NAME}.yaml')
+if args.debug:
+    cfg.merge_from_file(f'/home/yonk/urban_dl/urban_dl/configs/unet/{MODEL_NAME}.yaml')
+else:
+    cfg.merge_from_file(f'/Midgard/home/pshi/urban_dl/configs/unet/{MODEL_NAME}.yaml')
 cfg.OUTPUT_DIR = path.join(cfg.OUTPUT_BASE_DIR, MODEL_NAME)
 net = UNet(cfg)
 
@@ -65,12 +71,12 @@ def inference_loop2(net, cfg, device,
     # reset the generators
     if dataset is None:
         dataset = Xview2Detectron2Dataset(dset_source, 0, cfg)
-    dataloader = torch_data.DataLoader(dataset, batch_size=BATCH_SIZE, num_workers=4, shuffle = False, drop_last=False,)
+    dataloader = torch_data.DataLoader(dataset, batch_size=BATCH_SIZE, num_workers=cfg.DATALOADER.NUM_WORKER, shuffle = False, drop_last=False,)
 
-    dlen = len(dataset)
     dataset_length = np.minimum(len(dataset), max_samples)
     with torch.no_grad():
         for step, (imgs, y_label, sample_name, index) in enumerate(dataloader):
+
             imgs = imgs.to(device)
             y_label = y_label.to(device)
 
@@ -94,14 +100,24 @@ def inference_loop2(net, cfg, device,
                 break
 
 
+
+# Per image  ===========
+
+print('================= Running ablation per image ===============')
 dset_source = cfg.DATASETS.TRAIN[0]
-dataset = Xview2Detectron2Dataset(dset_source, cfg, random_crop=False, include_index=True)  # TODO return raw label
+dataset = Xview2Detectron2Dataset(dset_source, cfg, resize_label=False, random_crop=False, include_index=True)  # TODO return raw label
 results_table = []
 
-# Per image
+
 def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
+    # interp image if scaling was originally enabled
+    if cfg.AUGMENTATION.RESIZE:
+        upscale_ratio = 1 / cfg.AUGMENTATION.RESIZE_RATIO
+        Y_pred = torch.nn.functional.interpolate(Y_pred,
+                                                 scale_factor=upscale_ratio,
+                                                 mode='bilinear')
     # expand batch
-    Y_pred = Y_pred.squeeze() > THRESHOLD  # remove empty channel and activate Y_pred
+    Y_pred = Y_pred.squeeze(1) > THRESHOLD  # remove empty channel and activate Y_pred
     Y_true = Y_true.type(torch.bool)
 
     hw_dims = (-1, -2)
@@ -112,8 +128,13 @@ def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
     bFN = (~Y_true & Y_pred).sum(dim=hw_dims).cpu()
     bAreas = Y_true.sum(dim=hw_dims).cpu()
 
+    # All false positive pixels
+    bFP_pixels = (~Y_true & Y_pred).cpu().numpy()
+    # SDT = Signed Distance Transform
+    bSDT_maps = (~Y_true).cpu().numpy() # All negative (both false pos + true neg) pixels to 1, all positive pixels to 0
+
     # Iterate through batch
-    for tp, tn, fp, fn, total_area, img_filename, index in zip(bTP, bTN, bFP, bFN, bAreas, img_filenames, indices):
+    for fp_pixels, sdt_map, tp, tn, fp, fn, total_area, img_filename, index in zip(bFP_pixels, bSDT_maps, bTP, bTN, bFP, bFN, bAreas, img_filenames, indices):
         tp = tp.item()
         tn = tn.item()
         fp = fp.item()
@@ -134,27 +155,46 @@ def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
             'density': density,
             'total_area': total_area,
         }
+
+        # Distance transform, distance from all negative pixels to positive pixels
+        sdt = distance_transform_edt(sdt_map)
+        fp_distances = sdt[fp_pixels]
+
+        distance_intervals = 2 ** np.arange(1, 11)
+        for interval in distance_intervals:
+            interval_mask = fp_distances <= interval
+            fp_distances = fp_distances[~interval_mask] # next_interval
+            result[f'fp_sdt<={interval}'] = interval_mask.sum()
+
         results_table.append(result)
 
 
 inference_loop2(net, cfg, device, compute_sample,
                 dataset=dataset)
 results = pd.DataFrame(results_table)
-results.to_pickle('ablation_per_image_result_train.pkl')
+results.to_pickle(path.join(cfg.OUTPUT_DIR, 'ablation', 'per_image_result_train.pkl'))
 
 
-
-
+# ===========
 # Per building
-
+# ===========
+print('================= Running ablation per building ===============')
 dset_source = cfg.DATASETS.TRAIN[0]
-dataset = Xview2Detectron2Dataset(dset_source, cfg, random_crop=False, include_index=True)  # TODO return raw label
+dataset = Xview2Detectron2Dataset(dset_source, cfg, resize_label=False, random_crop=False, include_index=True)
 results_table = []
 
 
 def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
+
+    # interp image if scaling was originally enabled
+    if cfg.AUGMENTATION.RESIZE:
+        upscale_ratio = 1 / cfg.AUGMENTATION.RESIZE_RATIO
+        Y_pred = torch.nn.functional.interpolate(Y_pred,
+                                                 scale_factor=upscale_ratio,
+                                                 mode='bilinear')
+
     # expand batch
-    Y_pred = Y_pred.squeeze() > THRESHOLD
+    Y_pred = Y_pred.squeeze(1) > THRESHOLD
     Y_true = Y_true.type(torch.bool)
     # Compute all TP, TN, FP, FP, FN at once
     bTP = (Y_true & Y_pred)
@@ -163,10 +203,13 @@ def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
     bFN = (~Y_true & Y_pred)
 
     # Iterate through batch
-    for TP, TN, FP, FN, img_filename, index in zip(bTP, bTN, bFP, bFN, img_filenames, indices):
+    for y_pred, TP, TN, FP, FN, img_filename, index in zip(Y_pred, bTP, bTN, bFP, bFN, img_filenames, indices):
+        y_pred = y_pred.cpu().numpy()
+        num_buildings = len(dataset_train[index]['annotations'])
+
 
         # iterate through buildings
-        for anno in dataset_train[index]['annotations']:
+        for idx, anno in enumerate(dataset_train[index]['annotations']):
             x1, y1, x2, y2 = np.array(anno['bbox']).astype(np.int32)
 
             crop_range = (slice(y1 - 2, y2 + 2), slice(x1 - 2, x2 + 2))  # equiv: [y1-2:y2+2, x1-2:x2+2]
@@ -179,7 +222,18 @@ def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
             height = y2 - y1
             width = x2 - x1
 
-            true_area = height * width
+            # Real Per building A
+
+            seg = np.array(anno['segmentation'], dtype=np.int32)
+            seg_xy = seg.reshape(-1, 2)
+            building_poly = np.zeros((1024, 1024), dtype=np.uint8)
+            cv2.fillConvexPoly(building_poly, seg_xy , 1)
+            y_true_real = building_poly.astype(np.bool)
+
+            real_area = y_true_real.sum()
+            real_tp = (y_pred & y_true_real).sum()
+            real_fn = real_area - real_tp
+
             result = {
                 'index': index.item(),
                 'TP': tp,
@@ -192,10 +246,9 @@ def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
                 'width': width,
                 'area': height * width,
 
-                # TODO Finish this section
-                'real_TP': tp,
-                'real_FN': fn,
-                'real_area': true_area,
+                'real_TP': real_tp,
+                'real_FN': real_fn,
+                'real_area': real_area,
 
             }
             results_table.append(result)
@@ -205,4 +258,4 @@ inference_loop2(net, cfg, device, compute_sample,
                 dataset=dataset)
 
 results = pd.DataFrame(results_table)
-results.to_pickle('ablation_per_building_result_train.pkl')
+results.to_pickle(path.join(cfg.OUTPUT_DIR, 'ablation', 'per_building_result_train.pkl'))
