@@ -110,8 +110,6 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
 
         cropped_input = input[:, crop_y - crop_size: crop_y + crop_size, crop_x - crop_size: crop_x + crop_size]
         cropped_label = label[crop_y - crop_size: crop_y + crop_size, crop_x - crop_size: crop_x + crop_size]
-        print(cropped_input.shape, flush=False)
-        print(cropped_label.shape, flush=False)
         return cropped_input, cropped_label
 
     def _process_input(self, image_filename):
