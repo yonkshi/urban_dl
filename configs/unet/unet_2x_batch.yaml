@@ -10,7 +10,7 @@ TRAINER:
   LR: 0.001
   BATCH_SIZE: 16
 DATALOADER:
-  NUM_WORKER: 16
+  NUM_WORKER: 8
 AUGMENTATION:
   # Random cropping of the images
   CROP: True
