@@ -104,8 +104,8 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
             crop_y, crop_x = (np.random.randn(2) * sigma + mu).round().astype(np.int32)
 
             # use random crop if sample is out of bound or image is empty (sigma == 0)
-            crop_x = crop_x if 0 < crop_x < crop_limit or sigma == 0 else crop_x_uni
-            crop_y = crop_y if 0 < crop_y < crop_limit or sigma == 0 else crop_y_uni
+            crop_x = crop_x if crop_size < crop_x < crop_limit and sigma != 0 else crop_x_uni
+            crop_y = crop_y if crop_size < crop_y < crop_limit and sigma != 0 else crop_y_uni
 
 
         cropped_input = input[:, crop_y - crop_size: crop_y + crop_size, crop_x - crop_size: crop_x + crop_size]
