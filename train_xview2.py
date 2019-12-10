@@ -95,7 +95,7 @@ def train_net(net,
         # mean AP, mean AUC, max F1
         mAP_set_train, mAUC_set_train, maxF1_train = [],[],[]
         loss_set, f1_set = [], []
-        positive_pixels_set = 0 # Used to evaluated image over sampling techniques
+        positive_pixels_set = [] # Used to evaluated image over sampling techniques
         for i, (x, y_gts, sample_name) in enumerate(dataloader):
 
             # visualize_image(imgs, y_label, y_label, sample_name)
@@ -140,8 +140,6 @@ def train_net(net,
                 max_mem, max_cache = gpu_stats()
                 print(f'step {global_step},  avg loss: {np.mean(loss_set):.4f}, cuda mem: {max_mem} MB, cuda cache: {max_cache} MB, time: {time_per_n_batches:.2f}s',
                       flush=True)
-
-
 
                 wandb.log({
                     'loss': np.mean(loss_set),

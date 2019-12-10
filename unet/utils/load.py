@@ -19,7 +19,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
     '''
     Dataset for Detectron2 style labelled Dataset
     '''
-    def __init__(self, file_path, cfg, random_crop, resize_label=True,  include_index=False, oversampling=None):
+    def __init__(self, file_path, cfg, random_crop, resize_label=True,  include_index=False, oversampling=None, include_image_weight = False):
         super().__init__()
 
         ds_path = os.path.join(file_path,'labels.json')
@@ -36,6 +36,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         self._should_random_crop = random_crop
         self._should_resize_label = resize_label
         self.label_mask_cache = {}
+        self.include_image_weight = include_image_weight
 
         self._preprocessing()
 
@@ -60,9 +61,13 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         if self._should_random_crop:
             input, label = self._random_crop(input, label)
 
+        ret = [input, label, sample_name]
         if self.include_index:
-            return input, label, sample_name, index
-        return input, label, sample_name
+            ret += index
+        if self.include_image_weight:
+            # Used for oversampling stats
+            ret += data_sample['image_weight']
+        return ret
 
     def _extract_label(self, annotations_set, image_size):
         masks = []
@@ -123,7 +128,6 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
 
 
     def __len__(self):
-
         return self.length
 
 class SloveniaDataset(torch.utils.data.Dataset):
