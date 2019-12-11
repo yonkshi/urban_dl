@@ -19,7 +19,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
     '''
     Dataset for Detectron2 style labelled Dataset
     '''
-    def __init__(self, file_path, include_index=False,  include_image_weight = False, transform = None):
+    def __init__(self, file_path, include_index=False, image_oversampling = None,include_image_weight = False, transform = None):
         super().__init__()
 
         ds_path = os.path.join(file_path,'labels.json')
@@ -33,6 +33,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         # self._cfg = cfg
         self.include_index = include_index
         # self._crop_type = crop_type
+        self.oversampling = image_oversampling
         self.label_mask_cache = {}
         self.include_image_weight = include_image_weight
         self.transform = transform
@@ -142,7 +143,8 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         image_p = image_p / image_p.sum()
         self.image_p = image_p
     def _preprocessing(self):
-        self.simple_oversampling_preprocess()
+        if self.oversampling is not None:
+            self.simple_oversampling_preprocess()
 
     def __len__(self):
         return self.length

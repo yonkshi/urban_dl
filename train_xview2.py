@@ -89,6 +89,7 @@ def train_net(net,
         # reset the generators
         dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0],
                                           include_image_weight=True,
+                                          image_oversampling = cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE,
                                           transform=trfm
                                           )
         dataloader = torch_data.DataLoader(dataset,

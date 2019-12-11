@@ -9,7 +9,6 @@ class Resize():
 
     def __call__(self, args):
         input, label = args
-        print('hello')
 
         input = cv2.resize(input, None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_AREA)
         label = cv2.resize(label, None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_AREA)
