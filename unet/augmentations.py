@@ -48,10 +48,11 @@ class ImportanceRandomCrop(UniformCrop):
     def __call__(self, args):
         input, label = args
 
-        SAMPLE_SIZE = 5 #an abiturary number that I came up with
+        SAMPLE_SIZE = 5 # an abiturary number that I came up with
+        BALANCING_FACTOR = 5000
 
         random_crops = [self.random_crop(input, label) for i in range(SAMPLE_SIZE)]
-        crop_weights = np.array([input.sum() for input, label in random_crops])
+        crop_weights = np.array([input.sum() for input, label in random_crops]) + BALANCING_FACTOR
         crop_weights = crop_weights / crop_weights.sum()
 
         sample_idx = np.random.choice(SAMPLE_SIZE, p=crop_weights)
