@@ -12,8 +12,10 @@ import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 
 from torch.utils import data as torch_data
+from torchvision import transforms, utils
 from tabulate import tabulate
 from debug_tools import __benchmark_init, benchmark
+
 from unet import UNet
 from unet.utils import Xview2Detectron2Dataset
 from experiment_manager.metrics import roc_score, f1_score, MultiThresholdMetric
@@ -22,6 +24,7 @@ from experiment_manager.config import new_config
 from experiment_manager.utils import to_numpy
 from experiment_manager.dataset import SimpleInferenceDataset
 from sklearn.metrics import roc_auc_score, average_precision_score, roc_curve
+from unet.augmentations import *
 # import hp
 
 def final_model_evaluation_runner(net, cfg):
@@ -253,8 +256,12 @@ def inference_loop(net, cfg, device,
 
     dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
     if dataset is None:
-        dataset = Xview2Detectron2Dataset(dset_source, cfg,
-                                          crop_type='none')
+        trfm = []
+        if cfg.AUGMENTATION.RESIZE: trfm.append( Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
+        trfm.append(PIL2Torch())
+        trfm = transforms.Compose(trfm)
+
+        dataset = Xview2Detectron2Dataset(dset_source, transform=trfm)
 
     dataloader = torch_data.DataLoader(dataset,
                                        batch_size=1,

@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 from torch import optim
 from torch.utils import data as torch_data
+from torchvision import transforms, utils
 from tensorboardX import SummaryWriter
 from coolname import generate_slug
 import matplotlib.pyplot as plt
@@ -22,6 +23,7 @@ import wandb
 from debug_tools import __benchmark_init, benchmark
 from unet import UNet
 from unet.utils import SloveniaDataset, Xview2Dataset, Xview2Detectron2Dataset
+from unet.augmentations import *
 
 from experiment_manager.metrics import f1_score
 from experiment_manager.args import default_argument_parser
@@ -76,12 +78,18 @@ def train_net(net,
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
 
         net.train()
+        trfm = []
+        if cfg.AUGMENTATION.RESIZE: trfm.append( Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
+        if cfg.AUGMENTATION.CROP_TYPE == 'uniform': trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
+        elif cfg.AUGMENTATION.CROP_TYPE == 'importance': trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
+        trfm.append(PIL2Torch())
+        trfm = transforms.Compose(trfm)
+
 
         # reset the generators
-        dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0], cfg,
-                                          crop_type=cfg.AUGMENTATION.CROP_TYPE,
-                                          oversampling=cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE,
+        dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0],
                                           include_image_weight=True,
+                                          transform=trfm
                                           )
         dataloader = torch_data.DataLoader(dataset,
                                            batch_size=cfg.TRAINER.BATCH_SIZE,

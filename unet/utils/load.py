@@ -19,7 +19,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
     '''
     Dataset for Detectron2 style labelled Dataset
     '''
-    def __init__(self, file_path, cfg, crop_type, resize_label=True,  include_index=False, oversampling=None, include_image_weight = False):
+    def __init__(self, file_path, include_index=False,  include_image_weight = False, transform = None):
         super().__init__()
 
         ds_path = os.path.join(file_path,'labels.json')
@@ -27,17 +27,15 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
             ds = json.load(f)
         self.dataset = ds
         self.dataset_path = file_path
-        self.oversampling = oversampling
 
         self.length = len(ds)
         print('dataset length', self.length)
-        self._cfg = cfg
+        # self._cfg = cfg
         self.include_index = include_index
-        self._crop_type = crop_type
-        self._should_resize_label = resize_label
+        # self._crop_type = crop_type
         self.label_mask_cache = {}
         self.include_image_weight = include_image_weight
-
+        self.transform = transform
         self._preprocessing()
 
     def __getitem__(self, index):
@@ -53,12 +51,15 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         # label = label[None, ...] # C x H x W
         sample_name = data_sample['file_name']
 
-        if self._cfg.AUGMENTATION.RESIZE and self._should_resize_label:
-            # Resize label
-            scale = self._cfg.AUGMENTATION.RESIZE_RATIO
-            label = cv2.resize(label, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+        # if self._cfg.AUGMENTATION.RESIZE and self._should_resize_label:
+        #     # Resize label
+        #     scale = self._cfg.AUGMENTATION.RESIZE_RATIO
+        #     label = cv2.resize(label, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
 
-        input, label = self._random_crop(input, label, data_sample)
+        # input, label = self._random_crop(input, label, data_sample)
+
+        if self.transform:
+            input, label = self.transform([input, label])
 
         ret = [input, label, sample_name]
         if self.include_index:
@@ -66,6 +67,8 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         if self.include_image_weight:
             # Used for oversampling stats
             ret += [data_sample['image_weight']]
+
+
         return ret
 
     def _extract_label(self, annotations_set, image_size):
@@ -116,19 +119,19 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         img_path = os.path.join(self.dataset_path, image_filename)
         img = cv2.imread(img_path)
 
-        if self._cfg.AUGMENTATION.RESIZE:
-            # Resize image
-            scale = self._cfg.AUGMENTATION.RESIZE_RATIO
-            img = cv2.resize(img, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+        # if self._cfg.AUGMENTATION.RESIZE:
+        #     # Resize image
+        #     scale = self._cfg.AUGMENTATION.RESIZE_RATIO
+        #     img = cv2.resize(img, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
 
         # BGR to RGB
-        img = img[...,::-1]
+        # img = img[...,::-1]
 
-        input = img.astype(np.float32) / 255.
+        # input = img.astype(np.float32) / 255.
         # move from (x, y, c) to (c, x, y) PyTorch style
-        input = np.moveaxis(input, -1, 0)
-        image_shape = input.shape[1:]
-        return input, image_shape
+        # input = np.moveaxis(input, -1, 0)
+        image_shape = img.shape[1:3]
+        return img, image_shape
 
     def simple_oversampling_preprocess(self):
         print('performing oversampling...', end='', flush=True)
