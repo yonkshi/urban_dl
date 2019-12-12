@@ -31,7 +31,7 @@ class ContextLayer(nn.Module):
             nn.BatchNorm2d(channels),
         )
         if include_activation:
-            self.conv.add_module('relu', nn.ReLU(inplace=True))
+            self.conv.add_module('relu', nn.ReLU())
 
     def forward(self, x):
         x = self.conv(x)
