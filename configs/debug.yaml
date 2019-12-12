@@ -18,8 +18,6 @@ TRAINER:
 DATALOADER:
   NUM_WORKER: 0
 AUGMENTATION:
-  RESIZE: False # target image size (before cropping)
-  RESIZE_RATIO: 0.5
   # Random cropping of the images
   CROP_TYPE: 'uniform'
   CROP_SIZE: 256

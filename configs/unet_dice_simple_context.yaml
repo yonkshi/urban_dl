@@ -1,0 +1,6 @@
+_BASE_: "unet_dice.yaml"
+MODEL:
+  MULTISCALE_CONTEXT: # For U-Net bottleneck context module
+    ENABLED: True
+    TYPE: 'Simple'
+    DILATION_TOPOLOGY: [1,1,2,4,8,1]
