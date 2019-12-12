@@ -10,6 +10,11 @@ MODEL:
   TOPOGRAPHY: [64, 128, 256, 512,]
   SIMPLE_INTERPOLATION: False # True: Bilinear interpo, False: Deconv interpo
 
+  MULTISCALE_CONTEXT: # For U-Net bottleneck context module
+    ENABLED: False
+    MULTISCALE_CONTEXT_TYPE: 'final' # [Simple, PyramidSum, ResidualSum, Resnext-Sum]
+    MULTISCALE_CONTEXT_DILATION: []
+
 DATASETS:
   TRAIN: ("/local_storage/datasets/xview2/full/train/",)
   TEST: ("/local_storage/datasets/xview2/full/test/",)

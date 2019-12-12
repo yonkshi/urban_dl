@@ -2,6 +2,7 @@ _BASE_: "base.yaml"
 MODEL:
   LOSS_TYPE: 'SoftDiceLoss'
   OUT_CHANNELS: 1
+  MULTISCALE_DILATION: []
 OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
   TRAIN: ("/storage/yonk/debug/train/",)
@@ -13,9 +14,8 @@ TRAINER:
 DATALOADER:
   NUM_WORKER: 0
 AUGMENTATION:
-  RESIZE: True # target image size (before cropping)
+  RESIZE: False # target image size (before cropping)
   RESIZE_RATIO: 0.5
   # Random cropping of the images
-  CROP_TYPE: 'importance'
+  CROP_TYPE: 'uniform'
   CROP_SIZE: 256
-  IMAGE_OVERSAMPLING_TYPE: 'simple'

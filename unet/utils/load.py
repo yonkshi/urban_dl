@@ -156,7 +156,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         image_p = image_p / image_p.sum()
         self.image_p = image_p
     def _preprocessing(self):
-        if self.oversampling is not None:
+        if self.oversampling is not None or self.oversampling != 'none':
             self.simple_oversampling_preprocess()
 
     def __len__(self):

@@ -23,10 +23,24 @@ class double_conv(nn.Module):
         return x
 
 
+class ContextLayer(nn.Module):
+    def __init__(self, channels, dilation):
+        super(outconv, self).__init__()
+        self.conv = nn.Sequential(
+            nn.Conv2d(channels, channels, 3, padding=1, dilation=dilation),
+            nn.BatchNorm2d(channels),
+            nn.ReLU(inplace=True),
+        )
+
+        def forward(self, x):
+            x = self.conv(x)
+            return x
+
 class inconv(nn.Module):
     def __init__(self, in_ch, out_ch):
         super(inconv, self).__init__()
         self.conv = double_conv(in_ch, out_ch)
+
 
     def forward(self, x):
         x = self.conv(x)
