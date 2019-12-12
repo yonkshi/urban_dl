@@ -87,10 +87,7 @@ def train_net(net,
     # reset the generators
     dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0],
                                       include_image_weight=True,
-                                      image_oversampling=cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE,
-                                      transform=trfm,
-                                      legacy_mask_rasterization=cfg.DATALOADER.LEGACY_MASK_RASTERIZATION,
-                                      )
+                                      transform=trfm,)
 
     dataloader_kwargs = {
         'batch_size': cfg.TRAINER.BATCH_SIZE,
@@ -100,10 +97,11 @@ def train_net(net,
     }
 
     # sampler
-    if cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE == 'uniform':
+    if cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE == 'simple':
         image_p = image_sampling_weight(dataset.dataset_metadata)
         sampler = torch_data.WeightedRandomSampler(weights=image_p, num_samples=len(image_p))
         dataloader_kwargs['sampler'] = sampler
+        dataloader_kwargs['shuffle'] = False
 
     dataloader = torch_data.DataLoader(dataset, **dataloader_kwargs)
 
@@ -182,7 +180,6 @@ def train_net(net,
                 start = stop
 
             # torch.cuda.empty_cache()
-            __benchmark_init()
             global_step += 1
 
         # Evaluation after each epoch

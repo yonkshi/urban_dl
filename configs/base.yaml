@@ -34,7 +34,7 @@ AUGMENTATION:
   RESIZE_RATIO: 1.0
   CROP_TYPE: 'none'
   CROP_SIZE: 1024
-  IMAGE_OVERSAMPLING_TYPE: 'none'
+  IMAGE_OVERSAMPLING_TYPE: 'none' # [none, simple]
 
 
 
