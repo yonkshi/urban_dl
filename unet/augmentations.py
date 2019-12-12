@@ -49,7 +49,7 @@ class ImportanceRandomCrop(UniformCrop):
         input, label = args
 
         SAMPLE_SIZE = 5 # an arbitrary number that I came up with
-        BALANCING_FACTOR = 5000
+        BALANCING_FACTOR = 200
 
         random_crops = [self.random_crop(input, label) for i in range(SAMPLE_SIZE)]
         crop_weights = np.array([input.sum() for input, label in random_crops]) + BALANCING_FACTOR
