@@ -90,7 +90,8 @@ def train_net(net,
         dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0],
                                           include_image_weight=True,
                                           image_oversampling = cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE,
-                                          transform=trfm
+                                          transform=trfm,
+                                          legacy_mask_rasterization=cfg.DATALOADER.LEGACY_MASK_RASTERIZATION,
                                           )
         dataloader = torch_data.DataLoader(dataset,
                                            batch_size=cfg.TRAINER.BATCH_SIZE,

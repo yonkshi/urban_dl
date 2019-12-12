@@ -19,7 +19,12 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
     '''
     Dataset for Detectron2 style labelled Dataset
     '''
-    def __init__(self, file_path, include_index=False, image_oversampling = None,include_image_weight = False, transform = None):
+    def __init__(self, file_path,
+                 include_index=False,
+                 image_oversampling = None,
+                 include_image_weight = False,
+                 transform = None,
+                 legacy_mask_rasterization=False):
         super().__init__()
 
         ds_path = os.path.join(file_path,'labels.json')
@@ -38,6 +43,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         self.include_image_weight = include_image_weight
         self.transform = transform
         self._preprocessing()
+        self.legacy_mask_rasterization = legacy_mask_rasterization
 
     def __getitem__(self, index):
 
@@ -73,18 +79,25 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         return ret
 
     def _extract_label(self, annotations_set, image_size):
-        masks = []
+        if self.legacy_mask_rasterization:
+            mask = Image.new('L', (1024, 1024), 0)
+            for anno in annotations_set:
+                building_polygon = anno['segmentation'][0]
+                ImageDraw.Draw(mask).polygon(building_polygon, outline=1, fill=1)
 
-        building_polygons = []
-        for anno in annotations_set:
-            building_polygon_xy = np.array(anno['segmentation'][0], dtype=np.int32).reshape(-1, 2)
-            building_polygons.append(building_polygon_xy)
+            mask = np.asarray(mask).astype(np.float32)
+            return mask
 
-        mask2 = np.zeros((1024, 1024), dtype=np.uint8)
-        cv2.fillPoly(mask2, building_polygons, 1)
-        mask = mask2.astype(np.float32)
+        else:
+            building_polygons = []
+            for anno in annotations_set:
+                building_polygon_xy = np.array(anno['segmentation'][0], dtype=np.int32).reshape(-1, 2)
+                building_polygons.append(building_polygon_xy)
 
-        return mask
+            mask2 = np.zeros((1024, 1024), dtype=np.uint8)
+            cv2.fillPoly(mask2, building_polygons, 1)
+            mask = mask2.astype(np.float32)
+            return mask
 
     def _random_crop(self, input, label, img_metadata):
         assert input.shape[-1] == input.shape[-2], 'Image must be square shaped, or did you rotate the axis wrong? '

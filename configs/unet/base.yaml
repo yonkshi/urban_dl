@@ -22,6 +22,7 @@ TRAINER:
 DATALOADER:
   NUM_WORKER: 1
   SHUFFLE: False
+  LEGACY_MASK_RASTERIZATION: False
 AUGMENTATION:
   # Random cropping of the images
   RESIZE: False # target image size (before cropping)
