@@ -12,8 +12,8 @@ MODEL:
 
   MULTISCALE_CONTEXT: # For U-Net bottleneck context module
     ENABLED: False
-    MULTISCALE_CONTEXT_TYPE: 'Simple' # [Simple, PyramidSum, ParallelSum]
-    MULTISCALE_CONTEXT_DILATION: []
+    TYPE: 'Simple' # [Simple, PyramidSum, ParallelSum]
+    DILATION: []
 
 DATASETS:
   TRAIN: ("/local_storage/datasets/xview2/full/train/",)
