@@ -11,7 +11,8 @@ class Resize():
         input, label = args
 
         input = cv2.resize(input, None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_AREA)
-        label = cv2.resize(label, None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_AREA)
+        if self.resize_label:
+            label = cv2.resize(label, None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_AREA)
 
         return input, label
 
@@ -47,7 +48,7 @@ class ImportanceRandomCrop(UniformCrop):
     def __call__(self, args):
         input, label = args
 
-        SAMPLE_SIZE = 5 # an abiturary number that I came up with
+        SAMPLE_SIZE = 5 # an arbitrary number that I came up with
         BALANCING_FACTOR = 5000
 
         random_crops = [self.random_crop(input, label) for i in range(SAMPLE_SIZE)]

@@ -13,7 +13,7 @@ from torch import optim
 from torch.utils import data as torch_data
 from torchvision import transforms, utils
 from tensorboardX import SummaryWriter
-from coolname import generate_slug
+
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.colors import ListedColormap, BoundaryNorm
@@ -22,7 +22,7 @@ import wandb
 
 from debug_tools import __benchmark_init, benchmark
 from unet import UNet
-from unet.utils import SloveniaDataset, Xview2Dataset, Xview2Detectron2Dataset
+from unet.utils import Xview2Detectron2Dataset
 from unet.augmentations import *
 
 from experiment_manager.metrics import f1_score
