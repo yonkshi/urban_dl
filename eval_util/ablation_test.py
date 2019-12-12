@@ -40,9 +40,9 @@ torch.manual_seed(0)
 
 cfg = new_config()
 if args.debug:
-    cfg.merge_from_file(f'/home/yonk/urban_dl/urban_dl/configs/unet/{MODEL_NAME}.yaml')
+    cfg.merge_from_file(f'/home/yonk/urban_dl/urban_dl/configs/{MODEL_NAME}.yaml')
 else:
-    cfg.merge_from_file(f'/Midgard/home/pshi/urban_dl/configs/unet/{MODEL_NAME}.yaml')
+    cfg.merge_from_file(f'/Midgard/home/pshi/urban_dl/configs/{MODEL_NAME}.yaml')
 cfg.OUTPUT_DIR = path.join(cfg.OUTPUT_BASE_DIR, MODEL_NAME)
 net = UNet(cfg)
 

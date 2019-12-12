@@ -1,17 +1,21 @@
 _BASE_: "base.yaml"
 MODEL:
-  MASK_ON: True
+  LOSS_TYPE: 'SoftDiceLoss'
+  OUT_CHANNELS: 1
+OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
   TRAIN: ("/storage/yonk/debug/train/",)
   TEST: ("/storage/yonk/debug/test/",)
+  INFERENCE: ("/storage/yonk/debug/test/",)
+TRAINER:
+  LR: 0.001
+  BATCH_SIZE: 8
 DATALOADER:
-  FILTER_EMPTY_ANNOTATIONS: False
-  NUM_WORKERS: 0
-TEST:
-  DETECTIONS_PER_IMAGE: 1000
-SOLVER:
-  IMS_PER_BATCH: 2
-  BASE_LR: 0.00025
-  MAX_ITER: 1000
-INPUT:
-  MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
+  NUM_WORKER: 0
+AUGMENTATION:
+  RESIZE: True # target image size (before cropping)
+  RESIZE_RATIO: 0.5
+  # Random cropping of the images
+  CROP_TYPE: 'importance'
+  CROP_SIZE: 256
+  IMAGE_OVERSAMPLING_TYPE: 'simple'
