@@ -1,5 +1,5 @@
+SEED: 0
 MODEL:
-
   BINARY_CLASSIFICATION: True
   OUT_CHANNELS: 2
   IN_CHANNELS: 3
@@ -35,6 +35,7 @@ AUGMENTATION:
   CROP_TYPE: 'none'
   CROP_SIZE: 1024
   IMAGE_OVERSAMPLING_TYPE: 'none' # [none, simple]
+
 
 
 
