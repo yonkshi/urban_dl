@@ -30,7 +30,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         ds_path = os.path.join(file_path,'labels.json')
         with open(ds_path) as f:
             ds = json.load(f)
-        self.dataset = ds
+        self.dataset_metadata = ds
         self.dataset_path = file_path
 
         self.length = len(ds)
@@ -42,28 +42,18 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         self.label_mask_cache = {}
         self.include_image_weight = include_image_weight
         self.transform = transform
-        self._preprocessing()
-        self.legacy_mask_rasterization = legacy_mask_rasterization
+        # self._preprocessing()
+        # self.legacy_mask_rasterization = legacy_mask_rasterization
 
     def __getitem__(self, index):
 
-        if self.oversampling == 'simple':
-            idx = np.random.choice(np.arange(0, self.length), p=self.image_p)
-            data_sample = self.dataset[idx]
-        else:
-            data_sample = self.dataset[index]
+
+        data_sample = self.dataset_metadata[index]
 
         input, image_shape =self._process_input(data_sample['file_name'])
         label = self._extract_label(data_sample['annotations'], image_shape)
         # label = label[None, ...] # C x H x W
         sample_name = data_sample['file_name']
-
-        # if self._cfg.AUGMENTATION.RESIZE and self._should_resize_label:
-        #     # Resize label
-        #     scale = self._cfg.AUGMENTATION.RESIZE_RATIO
-        #     label = cv2.resize(label, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
-
-        # input, label = self._random_crop(input, label, data_sample)
 
         if self.transform:
             input, label = self.transform([input, label])
@@ -151,14 +141,13 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
     def simple_oversampling_preprocess(self):
         print('performing oversampling...', end='', flush=True)
         EMPTY_IMAGE_BASELINE = 1000
-        image_p = np.array([image_desc['image_weight'] for image_desc in self.dataset]) + EMPTY_IMAGE_BASELINE
+        image_p = np.array([image_desc['image_weight'] for image_desc in self.dataset_metadata]) + EMPTY_IMAGE_BASELINE
         print('done', flush=True)
         # normalize to [0., 1.]
         image_p = image_p / image_p.sum()
         self.image_p = image_p
     def _preprocessing(self):
-        if self.oversampling is not None and self.oversampling != 'none':
-            self.simple_oversampling_preprocess()
+        self.simple_oversampling_preprocess()
 
     def __len__(self):
         return self.length

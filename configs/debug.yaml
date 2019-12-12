@@ -3,6 +3,10 @@ MODEL:
   LOSS_TYPE: 'SoftDiceLoss'
   OUT_CHANNELS: 1
   MULTISCALE_DILATION: []
+  MULTISCALE_CONTEXT: # For U-Net bottleneck context module
+    ENABLED: True
+    TYPE: 'PyramidSum' # [Simple, PyramidSum, ResidualSum, Resnext-Sum]
+    DILATION_TOPOLOGY: [1,1,2,4,8,1]
 OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
   TRAIN: ("/storage/yonk/debug/train/",)

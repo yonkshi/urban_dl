@@ -24,17 +24,18 @@ class double_conv(nn.Module):
 
 
 class ContextLayer(nn.Module):
-    def __init__(self, channels, dilation):
-        super(outconv, self).__init__()
+    def __init__(self, channels, dilation, include_activation = True):
+        super().__init__()
         self.conv = nn.Sequential(
-            nn.Conv2d(channels, channels, 3, padding=1, dilation=dilation),
+            nn.Conv2d(channels, channels, 3, padding=dilation, dilation=dilation),
             nn.BatchNorm2d(channels),
-            nn.ReLU(inplace=True),
         )
+        if include_activation:
+            self.conv.add_module('relu', nn.ReLU(inplace=True))
 
-        def forward(self, x):
-            x = self.conv(x)
-            return x
+    def forward(self, x):
+        x = self.conv(x)
+        return x
 
 class inconv(nn.Module):
     def __init__(self, in_ch, out_ch):

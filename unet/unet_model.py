@@ -14,13 +14,14 @@ class UNet(nn.Module):
 
         super(UNet, self).__init__()
 
-        first_chan = cfg.MODEL.TOPOGRAPHY[0]
+        first_chan = cfg.MODEL.TOPOLOGY[0]
         self.inc = inconv(n_channels, first_chan)
         self.outc = outconv(first_chan, n_classes)
+        self.multiscale_context_enabled = cfg.MODEL.MULTISCALE_CONTEXT.ENABLED
+        self.multiscale_context_type = cfg.MODEL.MULTISCALE_CONTEXT.TYPE
 
         # Variable scale
-
-        down_topo = cfg.MODEL.TOPOGRAPHY
+        down_topo = cfg.MODEL.TOPOLOGY
         down_dict = OrderedDict()
         n_layers = len(down_topo)
         up_topo = [first_chan] # topography upwards
@@ -36,7 +37,11 @@ class UNet(nn.Module):
             down_dict[f'down{idx+1}'] = layer
             up_topo.append(out_dim)
         self.down_seq = nn.ModuleDict(down_dict)
+        bottleneck_dim = out_dim
 
+        # context layer
+        if self.multiscale_context_enabled:
+            self.multiscale_context = MultiScaleContextForUNet(cfg, bottleneck_dim)
 
         # Upward layers
         for idx in reversed(range(n_layers)):
@@ -52,11 +57,6 @@ class UNet(nn.Module):
 
         self.up_seq = nn.ModuleDict(up_dict)
 
-
-
-
-        # self.out_softmax = nn.Softmax2d()
-
     def forward(self, x):
         x1 = self.inc(x)
 
@@ -66,15 +66,53 @@ class UNet(nn.Module):
             out = layer(inputs[-1])
             inputs.append(out)
 
+        #Multiscale context
+        if self.multiscale_context_enabled:
+            bottleneck_features = inputs.pop()
+            context = self.multiscale_context(bottleneck_features)
+            inputs.append(context)
+
         # Upward U:
         inputs.reverse()
         x1 = inputs.pop(0)
         for idx, layer in enumerate(self.up_seq.values()):
-            is_first_layer = idx == 0
             x2 = inputs[idx]
             x1 = layer(x1, x2)  # x1 for next up layer
 
         out = self.outc(x1)
-        # out = self.out_softmax(out)
 
         return out
+
+class MultiScaleContextForUNet(nn.Module):
+    def __init__(self, cfg, bottlneck_dim):
+        super().__init__()
+        self._cfg = cfg
+        self.multiscale_context_type = cfg.MODEL.MULTISCALE_CONTEXT.TYPE
+        self.context = self.build_multiscale_context(bottlneck_dim)
+
+    def build_multiscale_context(self, bottleneck_dim):
+        context_layers = []
+        for i, layer_dilation in enumerate(self._cfg.MODEL.MULTISCALE_CONTEXT.DILATION_TOPOLOGY):
+            layer = ContextLayer(bottleneck_dim, layer_dilation)
+            context_layers.append(layer)
+        if self.multiscale_context_type == 'Simple':
+            context = nn.Sequential(*context_layers)
+        if self.multiscale_context_type == 'PyramidSum':
+            context =  nn.ModuleList(context_layers)
+        if self.multiscale_context_type == 'ParallelSum':
+            context =  nn.ModuleList(context_layers)
+        return context
+
+    def forward(self, x):
+        if self.multiscale_context_type == 'Simple':
+            context = self.context(x)
+        elif self.multiscale_context_type == 'PyramidSum':
+            context = x
+            for layer in self.context:
+                context = layer(context)
+        elif self.multiscale_context_type == 'ParallelSum':
+            context = x
+            for layer in self.context:
+                context += layer(x)
+
+        return context

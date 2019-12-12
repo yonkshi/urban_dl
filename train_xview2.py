@@ -73,35 +73,45 @@ def train_net(net,
     __benchmark_init()
     global_step = 0
     epochs = cfg.TRAINER.EPOCHS
-    start = timeit.default_timer()
+
+    net.train()
+    trfm = []
+    if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
+    if cfg.AUGMENTATION.CROP_TYPE == 'uniform':
+        trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
+    elif cfg.AUGMENTATION.CROP_TYPE == 'importance':
+        trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
+    trfm.append(PIL2Torch())
+    trfm = transforms.Compose(trfm)
+
+    # reset the generators
+    dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0],
+                                      include_image_weight=True,
+                                      image_oversampling=cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE,
+                                      transform=trfm,
+                                      legacy_mask_rasterization=cfg.DATALOADER.LEGACY_MASK_RASTERIZATION,
+                                      )
+
+    dataloader_kwargs = {
+        'batch_size': cfg.TRAINER.BATCH_SIZE,
+        'num_workers': cfg.DATALOADER.NUM_WORKER,
+        'shuffle':cfg.DATALOADER.SHUFFLE,
+        'drop_last': True,
+    }
+
+    # sampler
+    if cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE == 'uniform':
+        image_p = image_sampling_weight(dataset.dataset_metadata)
+        sampler = torch_data.WeightedRandomSampler(weights=image_p, num_samples=len(image_p))
+        dataloader_kwargs['sampler'] = sampler
+
+    dataloader = torch_data.DataLoader(dataset, **dataloader_kwargs)
+
+
     for epoch in range(epochs):
+        start = timeit.default_timer()
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
-
-        net.train()
-        trfm = []
-        if cfg.AUGMENTATION.RESIZE: trfm.append( Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
-        if cfg.AUGMENTATION.CROP_TYPE == 'uniform': trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
-        elif cfg.AUGMENTATION.CROP_TYPE == 'importance': trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
-        trfm.append(PIL2Torch())
-        trfm = transforms.Compose(trfm)
-
-
-        # reset the generators
-        dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0],
-                                          include_image_weight=True,
-                                          image_oversampling = cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE,
-                                          transform=trfm,
-                                          legacy_mask_rasterization=cfg.DATALOADER.LEGACY_MASK_RASTERIZATION,
-                                          )
-        dataloader = torch_data.DataLoader(dataset,
-                                           batch_size=cfg.TRAINER.BATCH_SIZE,
-                                           num_workers=cfg.DATALOADER.NUM_WORKER,
-                                           shuffle = cfg.DATALOADER.SHUFFLE,
-                                           drop_last=True,
-                                           )
-
         epoch_loss = 0
-        benchmark('Dataset Setup')
 
         # mean AP, mean AUC, max F1
         mAP_set_train, mAUC_set_train, maxF1_train = [],[],[]
@@ -181,7 +191,14 @@ def train_net(net,
 
 
 
-
+def image_sampling_weight(dataset_metadata):
+    print('performing oversampling...', end='', flush=True)
+    EMPTY_IMAGE_BASELINE = 1000
+    image_p = np.array([image_desc['image_weight'] for image_desc in dataset_metadata]) + EMPTY_IMAGE_BASELINE
+    print('done', flush=True)
+    # normalize to [0., 1.]
+    image_p = image_p
+    return image_p
 
 class LULC(enum.Enum):
     BACKGROUND = (0, 'Background', 'black')
