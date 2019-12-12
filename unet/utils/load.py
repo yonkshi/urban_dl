@@ -73,9 +73,10 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
             ret += [index]
         if self.include_image_weight:
             # Used for oversampling stats
-            ret += [data_sample['image_weight']]
-
-
+            if hasattr(data_sample, 'image_weight'):
+                ret += [data_sample['image_weight']]
+            else:
+                ret += [label.sum()]
         return ret
 
     def _extract_label(self, annotations_set, image_size):
