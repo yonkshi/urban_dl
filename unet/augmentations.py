@@ -19,7 +19,8 @@ class Resize():
 class PIL2Torch():
     def __call__(self, args):
         input, label = args
-        input = input[..., [2,0,1]]
+        # BGR to RGB
+        input = input[..., [2,1,0]]
         input_t = TF.to_tensor(input)
         return input_t, label
 
