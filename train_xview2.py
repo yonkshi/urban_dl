@@ -78,13 +78,7 @@ def train_net(net,
     #     trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
     # trfm.append(PIL2Torch())
     trfm = transforms.Compose(trfm)
-    dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0], cfg, random_crop=cfg.AUGMENTATION.CROP, transform=trfm)
-    dataloader = torch_data.DataLoader(dataset,
-                                       batch_size=cfg.TRAINER.BATCH_SIZE,
-                                       num_workers=cfg.DATALOADER.NUM_WORKER,
-                                       shuffle=cfg.DATALOADER.SHUFFLE,
-                                       drop_last=True,
-                                       )
+
 
     __benchmark_init()
     global_step = 0
@@ -93,6 +87,13 @@ def train_net(net,
     for epoch in range(epochs):
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
 
+        dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0], cfg, random_crop=cfg.AUGMENTATION.CROP, transform=trfm)
+        dataloader = torch_data.DataLoader(dataset,
+                                           batch_size=cfg.TRAINER.BATCH_SIZE,
+                                           num_workers=cfg.DATALOADER.NUM_WORKER,
+                                           shuffle=cfg.DATALOADER.SHUFFLE,
+                                           drop_last=True,
+                                           )
         epoch_loss = 0
         benchmark('Dataset Setup')
 
