@@ -74,6 +74,8 @@ def train_net(net,
     # reset the generators
     trfm = []
     if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
+    if cfg.AUGMENTATION.CROP:
+        trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
     trfm.append(PIL2Torch())
     trfm = transforms.Compose(trfm)
     dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0], cfg, random_crop=cfg.AUGMENTATION.CROP, transform=trfm)
