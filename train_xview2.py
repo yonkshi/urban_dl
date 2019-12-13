@@ -76,7 +76,7 @@ def train_net(net,
     global_step = 0
     epochs = cfg.TRAINER.EPOCHS
 
-    net.train()
+
     trfm = []
     if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
     if cfg.AUGMENTATION.CROP_TYPE == 'uniform':
@@ -113,6 +113,7 @@ def train_net(net,
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
         epoch_loss = 0
 
+        net.train()
         # mean AP, mean AUC, max F1
         mAP_set_train, mAUC_set_train, maxF1_train = [],[],[]
         loss_set, f1_set = [], []
