@@ -73,7 +73,7 @@ def train_net(net,
 
     # reset the generators
     trfm = []
-    if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
+    # if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
     # if cfg.AUGMENTATION.CROP:
     #     trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
     # trfm.append(PIL2Torch())

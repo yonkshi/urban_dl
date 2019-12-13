@@ -44,16 +44,14 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         # label = label[None, ...] # C x H x W
         sample_name = data_sample['file_name']
 
+        if self._cfg.AUGMENTATION.RESIZE and self._should_resize_label:
+            # Resize label
+            scale = self._cfg.AUGMENTATION.RESIZE_RATIO
+            label = cv2.resize(label, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+
+
         if self.transform:
             input, label = self.transform([input, label])
-
-        # BGR to RGB
-        input = input[...,[2,1,0]]
-
-        input = input.astype(np.float32) / 255.
-        # move from (x, y, c) to (c, x, y) PyTorch style
-        input = np.moveaxis(input, -1, 0)
-
 
         if self._should_random_crop:
             input, label = self._random_crop(input, label)
@@ -94,8 +92,19 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         img_path = os.path.join(self.dataset_path, image_filename)
         img = cv2.imread(img_path)
 
-        image_shape = img.shape[:2]
-        return img, image_shape
+        if self._cfg.AUGMENTATION.RESIZE:
+            # Resize image
+            scale = self._cfg.AUGMENTATION.RESIZE_RATIO
+            img = cv2.resize(img, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+
+        # BGR to RGB
+        img = img[...,::-1]
+
+        input = img.astype(np.float32) / 255.
+        # move from (x, y, c) to (c, x, y) PyTorch style
+        input = np.moveaxis(input, -1, 0)
+        image_shape = input.shape[1:]
+        return input, image_shape
 
     def __len__(self):
 
