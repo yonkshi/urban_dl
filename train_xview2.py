@@ -13,7 +13,6 @@ from torch import optim
 from torch.utils import data as torch_data
 from torchvision import transforms, utils
 from tensorboardX import SummaryWriter
-from coolname import generate_slug
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.colors import ListedColormap, BoundaryNorm
