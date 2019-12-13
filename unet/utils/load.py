@@ -47,14 +47,6 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         if self.transform:
             input, label = self.transform([input, label])
 
-        # BGR to RGB
-        input = input[...,::-1]
-
-        input = input.astype(np.float32) / 255.
-        # move from (x, y, c) to (c, x, y) PyTorch style
-        input = np.moveaxis(input, -1, 0)
-
-
         if self._should_random_crop:
             input, label = self._random_crop(input, label)
 
