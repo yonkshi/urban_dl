@@ -255,14 +255,14 @@ def inference_loop(net, cfg, device,
 
     dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
     if dataset is None:
-        trfm = []
+        # trfm = []
         # if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
         # trfm.append(PIL2Torch())
-        trfm = transforms.Compose(trfm)
-        dataset = Xview2Detectron2Dataset(dset_source, cfg, random_crop=cfg.AUGMENTATION.CROP, transform=trfm)
+        # trfm = transforms.Compose(trfm)
+        dataset = Xview2Detectron2Dataset(dset_source, cfg, random_crop=cfg.AUGMENTATION.CROP)
     dataloader = torch_data.DataLoader(dataset,
                                        batch_size=1,
-                                       num_workers=cfg.DATALOADER.NUM_WORKER,
+                                       num_workers=2,
                                        shuffle = cfg.DATALOADER.SHUFFLE,
                                        drop_last=True,
                                        )
