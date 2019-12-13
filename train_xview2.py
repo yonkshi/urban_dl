@@ -75,8 +75,9 @@ def train_net(net,
     # reset the generators
     trfm = []
     if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
+    trfm.append(PIL2Torch())
     trfm = transforms.Compose(trfm)
-    dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0], cfg, random_crop=cfg.AUGMENTATION.CROP)
+    dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0], cfg, random_crop=cfg.AUGMENTATION.CROP, transform=trfm)
     dataloader = torch_data.DataLoader(dataset,
                                        batch_size=cfg.TRAINER.BATCH_SIZE,
                                        num_workers=cfg.DATALOADER.NUM_WORKER,
