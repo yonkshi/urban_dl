@@ -259,7 +259,7 @@ def inference_loop(net, cfg, device,
         if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
         trfm.append(PIL2Torch())
         trfm = transforms.Compose(trfm)
-        dataset = Xview2Detectron2Dataset(dset_source, cfg, random_crop=cfg.AUGMENTATION.CROP)
+        dataset = Xview2Detectron2Dataset(dset_source, cfg, random_crop=cfg.AUGMENTATION.CROP, transform=trfm)
     dataloader = torch_data.DataLoader(dataset,
                                        batch_size=1,
                                        num_workers=cfg.DATALOADER.NUM_WORKER,
