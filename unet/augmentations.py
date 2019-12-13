@@ -37,6 +37,16 @@ class UniformCrop():
 
         input = input[y:y+self.crop_size, x:x+self.crop_size, :]
         label = label[y:y+self.crop_size, x:x+self.crop_size]
+
+
+        crop_size = self._cfg.AUGMENTATION.CROP_SIZE
+        image_size = input.shape[-1]
+        crop_limit = image_size - crop_size
+        crop_x, crop_y = np.random.randint(0, crop_limit, 2)
+
+        cropped_input = input[:, crop_y:crop_size + crop_y, crop_x:crop_size+crop_x]
+        cropped_label = label[crop_y:crop_size + crop_y, crop_x:crop_size+crop_x]
+
         return input, label
 
     def __call__(self, args):
