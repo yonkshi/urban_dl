@@ -284,7 +284,10 @@ if __name__ == '__main__':
         project='urban_dl',
         tags=['run'],
     )
-
+    torch.manual_seed(cfg.SEED)
+    np.random.seed(cfg.SEED)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
     try:
         train_net(net, cfg)
     except KeyboardInterrupt:
