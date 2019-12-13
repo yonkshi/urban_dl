@@ -69,7 +69,7 @@ def train_net(net,
 
     net.to(device)
 
-    net.train()
+
 
     # reset the generators
     trfm = []
@@ -96,6 +96,8 @@ def train_net(net,
                                            )
         epoch_loss = 0
         benchmark('Dataset Setup')
+
+        net.train()
 
         # mean AP, mean AUC, max F1
         mAP_set_train, mAUC_set_train, maxF1_train = [],[],[]
