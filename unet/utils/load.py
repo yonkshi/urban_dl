@@ -19,7 +19,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
     '''
     Dataset for Detectron2 style labelled Dataset
     '''
-    def __init__(self, file_path, cfg, random_crop, resize_label=True,  include_index=False):
+    def __init__(self, file_path, cfg, random_crop, resize_label=True,  include_index=False, transform = None,):
         super().__init__()
 
         ds_path = os.path.join(file_path,'labels.json')
@@ -35,6 +35,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         self._should_random_crop = random_crop
         self._should_resize_label = resize_label
         self.label_mask_cache = {}
+        self.transform = transform
 
     def __getitem__(self, index):
         data_sample = self.dataset[index]
@@ -50,6 +51,9 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
 
         if self._should_random_crop:
             input, label = self._random_crop(input, label)
+
+        if self.transform:
+            input, label = self.transform([input, label])
 
         if self.include_index:
             return input, label, sample_name, index

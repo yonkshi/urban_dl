@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 from torch import optim
 from torch.utils import data as torch_data
+from torchvision import transforms, utils
 from tensorboardX import SummaryWriter
 from coolname import generate_slug
 import matplotlib.pyplot as plt
@@ -24,6 +25,7 @@ from unet import UNet
 from unet.utils import SloveniaDataset, Xview2Dataset, Xview2Detectron2Dataset
 
 from experiment_manager.metrics import f1_score
+from unet.augmentations import *
 from experiment_manager.args import default_argument_parser
 from experiment_manager.config import new_config
 from experiment_manager.loss import soft_dice_loss, soft_dice_loss_balanced
@@ -68,23 +70,26 @@ def train_net(net,
 
     net.to(device)
 
+    net.train()
+
+    # reset the generators
+    trfm = []
+    if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
+    trfm = transforms.Compose(trfm)
+    dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0], cfg, random_crop=cfg.AUGMENTATION.CROP)
+    dataloader = torch_data.DataLoader(dataset,
+                                       batch_size=cfg.TRAINER.BATCH_SIZE,
+                                       num_workers=cfg.DATALOADER.NUM_WORKER,
+                                       shuffle=cfg.DATALOADER.SHUFFLE,
+                                       drop_last=True,
+                                       )
+
     __benchmark_init()
     global_step = 0
     epochs = cfg.TRAINER.EPOCHS
     start = timeit.default_timer()
     for epoch in range(epochs):
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
-
-        net.train()
-
-        # reset the generators
-        dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0], cfg, random_crop=cfg.AUGMENTATION.CROP)
-        dataloader = torch_data.DataLoader(dataset,
-                                           batch_size=cfg.TRAINER.BATCH_SIZE,
-                                           num_workers=cfg.DATALOADER.NUM_WORKER,
-                                           shuffle = cfg.DATALOADER.SHUFFLE,
-                                           drop_last=True,
-                                           )
 
         epoch_loss = 0
         benchmark('Dataset Setup')
