@@ -166,10 +166,10 @@ def train_net(net,
             # torch.cuda.empty_cache()
             __benchmark_init()
             global_step += 1
-
-        # Evaluation after each epoch
-        model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
-        model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
+        if epoch > 2:
+            # Evaluation after each epoch
+            model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
+            model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
 
 
 
