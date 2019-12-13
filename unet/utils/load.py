@@ -47,10 +47,6 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         if self.transform:
             input, label = self.transform([input, label])
 
-        if self._should_random_crop:
-            input, label = self._random_crop(input, label)
-
-
         if self.include_index:
             return input, label, sample_name, index
         return input, label, sample_name
