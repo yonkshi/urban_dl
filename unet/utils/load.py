@@ -48,7 +48,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
             input, label = self.transform([input, label])
 
         # BGR to RGB
-        input = input[...,::-1]
+        input = input[...,[2,1,0]]
 
         input = input.astype(np.float32) / 255.
         # move from (x, y, c) to (c, x, y) PyTorch style
