@@ -71,7 +71,10 @@ def final_model_evaluation_runner(net, cfg):
     plt.title('F1 vs threshold curve')
 
     wandb.log({'f1 vs threshold': plt})
-
+    wandb.log({
+        'total False Negative': measurer.FN,
+        'total False Positive': measurer.FP,
+               })
 
     print('computing ROC curve', flush=True)
     # ROC curve
