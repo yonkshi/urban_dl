@@ -52,7 +52,7 @@ class ImportanceRandomCrop(UniformCrop):
         BALANCING_FACTOR = 200
 
         random_crops = [self.random_crop(input, label) for i in range(SAMPLE_SIZE)]
-        crop_weights = np.array([input.sum() for input, label in random_crops]) + BALANCING_FACTOR
+        crop_weights = np.array([label.sum() for input, label in random_crops]) + BALANCING_FACTOR
         crop_weights = crop_weights / crop_weights.sum()
 
         sample_idx = np.random.choice(SAMPLE_SIZE, p=crop_weights)
