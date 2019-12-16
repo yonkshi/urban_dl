@@ -1,4 +1,4 @@
-SEED: 43 # best seed so far 1339
+SEED: 1339 # best seed so far 1339 or 43
 MODEL:
   BINARY_CLASSIFICATION: True
   OUT_CHANNELS: 2
