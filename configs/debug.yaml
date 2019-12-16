@@ -1,6 +1,6 @@
 _BASE_: "base.yaml"
 MODEL:
-  LOSS_TYPE: 'SoftDiceLoss'
+  LOSS_TYPE: 'ComboLoss'
   OUT_CHANNELS: 1
   BLOCK_TYPE: 'Triple'
 OUTPUT_BASE_DIR: ('logs/')

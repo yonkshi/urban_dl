@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 from torch import optim
 from torch.utils import data as torch_data
+from torch.nn import functional as F
 from torchvision import transforms, utils
 from tensorboardX import SummaryWriter
 
@@ -69,7 +70,8 @@ def train_net(net,
         criterion = soft_dice_loss_balanced
     elif cfg.MODEL.LOSS_TYPE == 'JaccardLikeLoss':
         criterion = jaccard_like_loss
-
+    elif cfg.MODEL.LOSS_TYPE == 'ComboLoss':
+        criterion = lambda pred, gts: F.binary_cross_entropy_with_logits(pred, gts) + soft_dice_loss(pred, gts)
     net.to(device)
 
     __benchmark_init()
