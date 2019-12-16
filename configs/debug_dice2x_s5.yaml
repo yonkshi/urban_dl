@@ -1,0 +1,17 @@
+_BASE_: "base.yaml"
+SEED: 5
+MODEL:
+  LOSS_TYPE: 'SoftDiceLoss'
+  OUT_CHANNELS: 1
+OUTPUT_BASE_DIR: ('/local_storage/users/pshi/logs/unet/')
+TRAINER:
+  LR: 0.0002
+  BATCH_SIZE: 16
+DATALOADER:
+  NUM_WORKER: 16
+AUGMENTATION:
+  RESIZE: True
+  RESIZE_RATIO: 0.5
+  # Random cropping of the images
+  CROP_TYPE: 'uniform'
+  CROP_SIZE: 256
