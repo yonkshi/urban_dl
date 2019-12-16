@@ -110,14 +110,10 @@ print('================= Running ablation per image ===============', flush=True
 
 trfm = []
 if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO, resize_label=False))
-if cfg.AUGMENTATION.CROP_TYPE == 'uniform':
-    trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
-elif cfg.AUGMENTATION.CROP_TYPE == 'importance':
-    trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
 trfm.append(PIL2Torch())
 trfm = transforms.Compose(trfm)
 
-dataset = Xview2Detectron2Dataset(dset_source, include_index=True, transforms=trfm)
+dataset = Xview2Detectron2Dataset(dset_source, include_index=True, transform=trfm)
 results_table = []
 
 
@@ -193,8 +189,8 @@ results.to_pickle(path.join(storage_path, f'per_image_result_{TRAIN_TYPE}.pkl'))
 # Per building
 # ===========
 print('================= Running ablation per building ===============', flush=True)
-dataset = Xview2Detectron2Dataset()
-dataset = Xview2Detectron2Dataset(dset_source, cfg, resize_label=False, random_crop=False, include_index=True)
+
+dataset = Xview2Detectron2Dataset(dset_source, include_index=True, transform=trfm)
 results_table = []
 
 
