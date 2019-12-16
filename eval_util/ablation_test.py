@@ -14,11 +14,12 @@ import torch
 import pandas as pd
 import cv2
 from scipy.ndimage.morphology import distance_transform_edt
-
+from torchvision import transforms, utils
 
 from torch.utils import data as torch_data
 from unet import UNet
 from unet.utils import Xview2Detectron2Dataset
+from unet.augmentations import *
 from experiment_manager.config import new_config
 
 
@@ -107,8 +108,16 @@ def inference_loop2(net, cfg, device,
 
 print('================= Running ablation per image ===============', flush=True)
 
+trfm = []
+if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO, resize_label=False))
+if cfg.AUGMENTATION.CROP_TYPE == 'uniform':
+    trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
+elif cfg.AUGMENTATION.CROP_TYPE == 'importance':
+    trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
+trfm.append(PIL2Torch())
+trfm = transforms.Compose(trfm)
 
-dataset = Xview2Detectron2Dataset(dset_source, cfg, resize_label=False, random_crop=False, include_index=True)  # TODO return raw label
+dataset = Xview2Detectron2Dataset(dset_source, include_index=True, transforms=trfm)
 results_table = []
 
 
@@ -184,6 +193,7 @@ results.to_pickle(path.join(storage_path, f'per_image_result_{TRAIN_TYPE}.pkl'))
 # Per building
 # ===========
 print('================= Running ablation per building ===============', flush=True)
+dataset = Xview2Detectron2Dataset()
 dataset = Xview2Detectron2Dataset(dset_source, cfg, resize_label=False, random_crop=False, include_index=True)
 results_table = []
 
