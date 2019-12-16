@@ -22,6 +22,27 @@ class double_conv(nn.Module):
         x = self.conv(x)
         return x
 
+class triple_conv(nn.Module):
+    '''(conv => BN => ReLU) * 2'''
+    def __init__(self, in_ch, out_ch):
+        super(triple_conv, self).__init__()
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_ch, out_ch, 3, padding=1),
+            nn.BatchNorm2d(out_ch),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_ch, out_ch, 3, padding=1),
+            nn.BatchNorm2d(out_ch),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_ch, out_ch, 3, padding=1),
+            nn.BatchNorm2d(out_ch),
+            nn.ReLU(inplace=True),
+        )
+
+    def forward(self, x):
+        x = self.conv(x)
+        return x
+
+
 
 class ContextLayer(nn.Module):
     def __init__(self, channels, dilation, include_activation = True):
@@ -38,10 +59,9 @@ class ContextLayer(nn.Module):
         return x
 
 class inconv(nn.Module):
-    def __init__(self, in_ch, out_ch):
+    def __init__(self, in_ch, out_ch, conv_block):
         super(inconv, self).__init__()
-        self.conv = double_conv(in_ch, out_ch)
-
+        self.conv = conv_block(in_ch, out_ch)
 
     def forward(self, x):
         x = self.conv(x)
@@ -49,12 +69,14 @@ class inconv(nn.Module):
 
 
 class down(nn.Module):
-    def __init__(self, in_ch, out_ch):
+    def __init__(self, in_ch, out_ch, conv_block):
         super(down, self).__init__()
+
         self.mpconv = nn.Sequential(
             nn.MaxPool2d(2),
-            double_conv(in_ch, out_ch)
+            conv_block(in_ch, out_ch)
         )
+
 
     def forward(self, x):
         x = self.mpconv(x)
@@ -62,7 +84,7 @@ class down(nn.Module):
 
 
 class up(nn.Module):
-    def __init__(self, in_ch, out_ch, bilinear=True):
+    def __init__(self, in_ch, out_ch, conv_block, bilinear=True, ):
         super(up, self).__init__()
 
         #  would be a nice idea if the upsampling could be learned too,
@@ -72,7 +94,7 @@ class up(nn.Module):
         else:
             self.up = nn.ConvTranspose2d(in_ch//2, in_ch//2, 2, stride=2)
 
-        self.conv = double_conv(in_ch, out_ch)
+        self.conv = conv_block(in_ch, out_ch)
 
     def forward(self, x1, x2):
         x1 = self.up(x1)

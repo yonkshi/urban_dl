@@ -8,6 +8,7 @@ MODEL:
   NEGATIVE_WEIGHT: 1
   LEGACY: False # If True, use the fixed UNet for backwards compatibility
   TOPOLOGY: [64, 128, 256, 512,]
+  BLOCK_TYPE: 'Double' # Double = Double conv, Triple = Triple conv, for greater receptive field
   SIMPLE_INTERPOLATION: False # True: Bilinear interpo, False: Deconv interpo
 
   MULTISCALE_CONTEXT: # For U-Net bottleneck context module

@@ -4,7 +4,6 @@ MODEL:
   OUT_CHANNELS: 1
 OUTPUT_BASE_DIR: ('/local_storage/users/pshi/logs/unet/')
 TRAINER:
-  LR: 0.001
   BATCH_SIZE: 16
 DATALOADER:
   NUM_WORKER: 16

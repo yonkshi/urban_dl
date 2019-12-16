@@ -1,0 +1,3 @@
+_BASE_: "unet_dice.yaml"
+MODEL:
+  BLOCK_TYPE: 'Triple'

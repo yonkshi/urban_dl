@@ -10,15 +10,22 @@ class UNet(nn.Module):
 
         n_channels = cfg.MODEL.IN_CHANNELS
         n_classes = cfg.MODEL.OUT_CHANNELS
+        if cfg.MODEL.BLOCK_TYPE == 'double':
+            conv_block = double_conv
+        elif cfg.MODEL.BLOCK_TYPE == 'triple':
+            conv_block = triple_conv
+
         self._cfg = cfg
 
         super(UNet, self).__init__()
 
         first_chan = cfg.MODEL.TOPOLOGY[0]
-        self.inc = inconv(n_channels, first_chan)
+        self.inc = inconv(n_channels, first_chan, conv_block)
         self.outc = outconv(first_chan, n_classes)
         self.multiscale_context_enabled = cfg.MODEL.MULTISCALE_CONTEXT.ENABLED
         self.multiscale_context_type = cfg.MODEL.MULTISCALE_CONTEXT.TYPE
+
+
 
         # Variable scale
         down_topo = cfg.MODEL.TOPOLOGY
@@ -32,7 +39,7 @@ class UNet(nn.Module):
             is_not_last_layer = idx != n_layers-1
             in_dim = down_topo[idx]
             out_dim = down_topo[idx+1] if is_not_last_layer else down_topo[idx] # last layer
-            layer = down(in_dim, out_dim)
+            layer = down(in_dim, out_dim, conv_block)
             print(f'down{idx+1}: in {in_dim}, out {out_dim}')
             down_dict[f'down{idx+1}'] = layer
             up_topo.append(out_dim)
