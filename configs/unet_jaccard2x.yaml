@@ -1,14 +1,4 @@
-_BASE_: "base.yaml"
+_BASE_: "unet_dice2x.yaml"
 MODEL:
   LOSS_TYPE: 'JaccardLikeLoss'
   OUT_CHANNELS: 1
-TRAINER:
-  BATCH_SIZE: 16
-DATALOADER:
-  NUM_WORKER: 16
-AUGMENTATION:
-  RESIZE: True
-  RESIZE_RATIO: 0.5
-  # Random cropping of the images
-  CROP_TYPE: 'uniform'
-  CROP_SIZE: 256
