@@ -10,9 +10,9 @@ class UNet(nn.Module):
 
         n_channels = cfg.MODEL.IN_CHANNELS
         n_classes = cfg.MODEL.OUT_CHANNELS
-        if cfg.MODEL.BLOCK_TYPE == 'double':
+        if cfg.MODEL.BLOCK_TYPE == 'Double':
             conv_block = double_conv
-        elif cfg.MODEL.BLOCK_TYPE == 'triple':
+        elif cfg.MODEL.BLOCK_TYPE == 'Triple':
             conv_block = triple_conv
 
         self._cfg = cfg
@@ -57,7 +57,7 @@ class UNet(nn.Module):
             x2_idx = idx - 1 if is_not_last_layer else idx
             in_dim = up_topo[x1_idx] * 2
             out_dim = up_topo[x2_idx]
-            layer = up(in_dim, out_dim, bilinear=cfg.MODEL.SIMPLE_INTERPOLATION)
+            layer = up(in_dim, out_dim, conv_block, bilinear=cfg.MODEL.SIMPLE_INTERPOLATION)
 
             print(f'up{idx+1}: in {in_dim}, out {out_dim}')
             up_dict[f'up{idx+1}'] = layer
