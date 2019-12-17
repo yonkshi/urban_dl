@@ -1,5 +1,5 @@
 _BASE_: "unet_combo2x.yaml"
-
+SEED: 1339
 MODEL:
   IN_CHANNELS: 4
 
