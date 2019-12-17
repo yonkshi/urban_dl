@@ -110,7 +110,7 @@ print('================= Running ablation per image ===============', flush=True
 
 trfm = []
 if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO, resize_label=False))
-trfm.append(PIL2Torch())
+trfm.append(Npy2Torch())
 trfm = transforms.Compose(trfm)
 
 dataset = Xview2Detectron2Dataset(dset_source, include_index=True, transform=trfm)

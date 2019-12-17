@@ -85,7 +85,8 @@ def train_net(net,
         trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
     elif cfg.AUGMENTATION.CROP_TYPE == 'importance':
         trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
-    trfm.append(PIL2Torch())
+    trfm.append(Npy2Torch())
+    if cfg.AUGMENTATION.ENABLE_VARI: trfm.append(VARI())
     trfm = transforms.Compose(trfm)
 
     # reset the generators
@@ -175,10 +176,10 @@ def train_net(net,
                 loss_set = []
                 positive_pixels_set = []
                 # f1_set = []
-                if global_step % 1000 == 0:
-                    figure, plt = visualize_image(x, y_pred, y_gts, sample_name)
-                    wandb.log({"output_image": plt})
-                    writer.add_figure('output_image/train', figure, global_step)
+                # if global_step % 1000 == 0:
+                #     figure, plt = visualize_image(x, y_pred, y_gts, sample_name)
+                #     wandb.log({"output_image": plt})
+                #     writer.add_figure('output_image/train', figure, global_step)
 
                 optimizer.zero_grad()
 

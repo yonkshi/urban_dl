@@ -1,6 +1,7 @@
 import torchvision.transforms.functional as TF
 import cv2
 import numpy as np
+import torch
 class Resize():
 
     def __init__(self, scale, resize_label=True):
@@ -16,7 +17,20 @@ class Resize():
 
         return input, label
 
-class PIL2Torch():
+class VARI():
+    def __call__(self, args):
+        input, label = args
+        # Input is in BGR
+        assert input.shape[1] == input.shape[2] and torch.is_tensor(input), 'invalid tensor, did you forget to put VARI after Np2Torch?'
+        R = input[0]
+        G = input[1]
+        B = input[2]
+        VARI = (G-R) / (G+R-B)
+        VARI = VARI.unsqueeze(0)
+        input_t = torch.cat([input, VARI])
+        return input_t ,label
+
+class Npy2Torch():
     def __call__(self, args):
         input, label = args
         input = input[..., [2,1,0]]
