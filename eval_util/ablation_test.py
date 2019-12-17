@@ -143,10 +143,10 @@ def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
 
     # All false negative pixels
     bFN_pixels = (~Y_true & Y_pred).cpu().numpy()
-    bSDT_FP_maps = (~Y_true).cpu().numpy()
+    bSDT_FN_maps = (~Y_true).cpu().numpy()
 
     # Iterate through batch
-    for fp_pixels, sdt_map, tp, tn, fp, fn, total_area, img_filename, index in zip(bFP_pixels, bSDT_FP_maps, bTP, bTN, bFP, bFN, bAreas, img_filenames, indices):
+    for fn_pixels, sdt_fn_map, fp_pixels, sdt_map, tp, tn, fp, fn, total_area, img_filename, index in zip(bFN_pixels, bSDT_FN_maps, bFP_pixels, bSDT_FP_maps, bTP, bTN, bFP, bFN, bAreas, img_filenames, indices):
         tp = tp.item()
         tn = tn.item()
         fp = fp.item()
@@ -171,7 +171,7 @@ def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
         # Distance transform, distance from all negative pixels to positive pixels
         sdt = distance_transform_edt(sdt_map)
         fp_distances = sdt[fp_pixels]
-
+        # TODO Yonk TUESDAY: Finish distance transform for false negative
         distance_intervals = 2 ** np.arange(1, 11)
         for interval in distance_intervals:
             interval_mask = fp_distances <= interval
