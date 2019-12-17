@@ -1,5 +1,4 @@
 _BASE_: "unet_combo2x.yaml"
-OUTPUT_BASE_DIR: ('/local_storage/users/pshi/logs/unet/')
 AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'importance'
