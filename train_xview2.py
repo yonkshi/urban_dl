@@ -149,7 +149,7 @@ def train_net(net,
             loss_set.append(loss.item())
             positive_pixels_set.extend(image_weight.cpu().numpy())
 
-            if global_step % 100 == 0 or global_step == 0:
+            if global_step % 1 == 0 or global_step == 0:
                 # time per 100 steps
                 stop = timeit.default_timer()
                 time_per_n_batches= stop - start
