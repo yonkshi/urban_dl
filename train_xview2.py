@@ -29,7 +29,7 @@ from unet.augmentations import *
 from experiment_manager.metrics import f1_score
 from experiment_manager.args import default_argument_parser
 from experiment_manager.config import new_config
-from experiment_manager.loss import soft_dice_loss, soft_dice_loss_balanced, jaccard_like_loss
+from experiment_manager.loss import soft_dice_loss, soft_dice_loss_balanced, jaccard_like_loss, jaccard_like_balanced_loss
 from eval_unet_xview2 import model_eval
 
 # import hp
@@ -73,7 +73,7 @@ def train_net(net,
     elif cfg.MODEL.LOSS_TYPE == 'ComboLoss':
         criterion = lambda pred, gts: F.binary_cross_entropy_with_logits(pred, gts) + soft_dice_loss(pred, gts)
     elif cfg.MODEL.LOSS_TYPE == 'FrankensteinLoss':
-        pass
+        criterion = lambda pred, gts: F.binary_cross_entropy_with_logits(pred, gts) + jaccard_like_balanced_loss(pred, gts)
     net.to(device)
 
     __benchmark_init()
