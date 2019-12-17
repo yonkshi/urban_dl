@@ -72,6 +72,8 @@ def train_net(net,
         criterion = jaccard_like_loss
     elif cfg.MODEL.LOSS_TYPE == 'ComboLoss':
         criterion = lambda pred, gts: F.binary_cross_entropy_with_logits(pred, gts) + soft_dice_loss(pred, gts)
+    elif cfg.MODEL.LOSS_TYPE == 'FrankensteinLoss':
+        pass
     net.to(device)
 
     __benchmark_init()
