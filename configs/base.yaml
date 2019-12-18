@@ -15,7 +15,7 @@ MODEL:
     ENABLED: False
     TYPE: 'Simple' # [Simple, PyramidSum, ParallelSum]
     DILATION: []
-THRESH: 80 # Best threshold (only to be filled after running final model evaluation)
+THRESH: 0.01 # Best threshold (only to be filled after running final model evaluation)
 DATASETS:
   TRAIN: ("/local_storage/datasets/xview2/full/train/",)
   TEST: ("/local_storage/datasets/xview2/full/test/",)

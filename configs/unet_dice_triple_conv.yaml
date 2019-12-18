@@ -1,4 +1,4 @@
 _BASE_: "unet_dice.yaml"
-THRESH: 1
+THRESH: 0.01
 MODEL:
   BLOCK_TYPE: 'Triple'

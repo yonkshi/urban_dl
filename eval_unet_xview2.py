@@ -122,6 +122,7 @@ def model_inference(net, cfg):
     :return:
     '''
     inference_dataset = cfg.DATASETS.INFERENCE[0]
+    THRESHOLD = cfg.THRESH
     dataset = SimpleInferenceDataset(inference_dataset, downsample_scale= cfg.AUGMENTATION.RESIZE_RATIO)
     from PIL import Image
 
@@ -135,7 +136,7 @@ def model_inference(net, cfg):
                                                      scale_factor=upscale_ratio,
                                                      mode='bilinear')
 
-        y_pred = (y_pred > 0.01).type(torch.uint8)
+        y_pred = (y_pred > THRESHOLD).type(torch.uint8)
 
         y_pred = y_pred.squeeze().cpu().numpy()
         img_filename = img_filenames[0]
@@ -346,6 +347,11 @@ def custom_argparse(parser):
                         dest='eval_type',
                         default="final",
                         choices=['final', 'checkpoints', 'inference'],
+                        help="select an evaluation type")
+    parser.add_argument("--threshold",
+                        dest='threshold',
+                        default=0.01,
+                        type=float,
                         help="select an evaluation type")
     return parser
 
