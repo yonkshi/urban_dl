@@ -132,8 +132,8 @@ def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
     # Compute all TP, TN, FP, FP, FN at once
     bTP = (Y_true & Y_pred).sum(dim=hw_dims).cpu()
     bTN = (~Y_true & ~Y_pred).sum(dim=hw_dims).cpu()
-    bFP = (Y_true & ~Y_pred).sum(dim=hw_dims).cpu()
-    bFN = (~Y_true & Y_pred).sum(dim=hw_dims).cpu()
+    bFP = (~Y_true & Y_pred).sum(dim=hw_dims).cpu()
+    bFN = (Y_true & ~Y_pred).sum(dim=hw_dims).cpu()
     bAreas = Y_true.sum(dim=hw_dims).cpu()
 
     # All false positive pixels
