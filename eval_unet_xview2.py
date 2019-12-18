@@ -380,7 +380,7 @@ if __name__ == '__main__':
             final_model_evaluation_runner(net, cfg)
         elif args.eval_type == 'final':
             wandb.init(
-                name=cfg.NAME,
+                name=f'{cfg.NAME} ({args.resume_from})',
                 project='urban_dl',
                 tags=['final_model_eval'],
             )
