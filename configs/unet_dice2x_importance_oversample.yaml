@@ -3,3 +3,4 @@ AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'importance'
   CROP_SIZE: 256
+
