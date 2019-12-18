@@ -1,0 +1,4 @@
+_BASE_: "unet_dice2x.yaml"
+MODEL:
+  LOSS_TYPE: 'WeightedComboLoss'
+  OUT_CHANNELS: 1

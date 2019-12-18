@@ -1,5 +1,6 @@
 _BASE_: "unet_combo2x.yaml"
 SEED: 43
+THRESH: 20
 AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'importance'

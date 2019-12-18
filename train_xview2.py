@@ -72,6 +72,8 @@ def train_net(net,
         criterion = jaccard_like_loss
     elif cfg.MODEL.LOSS_TYPE == 'ComboLoss':
         criterion = lambda pred, gts: F.binary_cross_entropy_with_logits(pred, gts) + soft_dice_loss(pred, gts)
+    elif cfg.MODEL.LOSS_TYPE == 'WeightedComboLoss':
+        criterion = lambda pred, gts: 2 * F.binary_cross_entropy_with_logits(pred, gts) + soft_dice_loss(pred, gts)
     elif cfg.MODEL.LOSS_TYPE == 'FrankensteinLoss':
         criterion = lambda pred, gts: F.binary_cross_entropy_with_logits(pred, gts) + jaccard_like_balanced_loss(pred, gts)
     net.to(device)
@@ -149,7 +151,7 @@ def train_net(net,
             loss_set.append(loss.item())
             positive_pixels_set.extend(image_weight.cpu().numpy())
 
-            if global_step % 1 == 0 or global_step == 0:
+            if global_step % 100 == 0 or global_step == 0:
                 # time per 100 steps
                 stop = timeit.default_timer()
                 time_per_n_batches= stop - start
