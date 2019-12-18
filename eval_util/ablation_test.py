@@ -125,7 +125,7 @@ def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
                                                  scale_factor=upscale_ratio,
                                                  mode='bilinear')
     # expand batch
-    Y_pred = Y_pred.squeeze(1) > THRESHOLD  # remove empty channel and activate Y_pred
+    Y_pred = Y_pred.squeeze(1) >= THRESHOLD  # remove empty channel and activate Y_pred
     Y_true = Y_true.type(torch.bool)
 
     hw_dims = (-1, -2)
@@ -142,7 +142,7 @@ def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
     bSDT_FP_maps = (~Y_true).cpu().numpy() # All negative (both false pos + true neg) pixels to 1, all positive pixels to 0
 
     # All false negative pixels
-    bFN_pixels = (~Y_true & Y_pred).cpu().numpy()
+    bFN_pixels = (Y_true & ~Y_pred).cpu().numpy()
     bSDT_FN_maps = Y_true.cpu().numpy()
 
     # Iterate through batch
