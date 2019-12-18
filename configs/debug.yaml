@@ -2,7 +2,7 @@ _BASE_: "base.yaml"
 MODEL:
   LOSS_TYPE: 'ComboLoss'
   OUT_CHANNELS: 1
-  IN_CHANNELS: 3
+  IN_CHANNELS: 4
 OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
   TRAIN: ("/storage/yonk/debug/train/",)
@@ -18,3 +18,4 @@ AUGMENTATION:
   CROP_TYPE: 'importance'
   CROP_SIZE: 256
   IMAGE_OVERSAMPLING_TYPE: 'simple'
+  ENABLE_VARI: True

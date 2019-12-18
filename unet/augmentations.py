@@ -26,8 +26,7 @@ class VARI():
         G = input[1]
         B = input[2]
         eps = 1e-6
-        VARI = (G-R) / (eps + G+R-B)
-        VARI = VARI.unsqueeze(0)
+        VARI = (G-R) / 2 * (eps + G+R-B) + 0.5 # Linearly transformed to be [0, 1]
         input_t = torch.cat([input, VARI])
         return input_t ,label
 
