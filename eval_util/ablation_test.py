@@ -137,7 +137,7 @@ def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
     bAreas = Y_true.sum(dim=hw_dims).cpu()
 
     # All false positive pixels
-    bFP_pixels = (Y_true & ~Y_pred).cpu().numpy()
+    bFP_pixels = (~Y_true & Y_pred).cpu().numpy()
     # SDT = Signed Distance Transform
     bSDT_FP_maps = (~Y_true).cpu().numpy() # All negative (both false pos + true neg) pixels to 1, all positive pixels to 0
 
