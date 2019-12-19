@@ -3,6 +3,7 @@ from os import path
 import timeit
 
 import torch.nn as nn
+import torch.nn.functional as F
 from torch import optim
 from torch.utils import data as torch_data
 from torchvision import transforms, utils
@@ -32,8 +33,8 @@ def train_net(net,
     optimizer = optim.Adam(net.parameters(),
                            lr=cfg.TRAINER.LR,
                            weight_decay=0.0005)
-    if cfg.MODEL.LOSS_TYPE == 'BCEWithLogitsLoss':
-        criterion = nn.BCEWithLogitsLoss()
+    if cfg.MODEL.LOSS_TYPE == 'CrossEntropyLoss':
+        criterion = cross_entropy_loss
     elif cfg.MODEL.LOSS_TYPE == 'SoftDiceMulticlassLoss':
         criterion = soft_dice_loss_multi_class
 
@@ -126,8 +127,8 @@ def train_net(net,
             global_step += 1
 
         # Evaluation for multiclass F1 score
-        # dmg_model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
-        # dmg_model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
+        dmg_model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
+        dmg_model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
 
 
 def image_sampling_weight(dataset_metadata):
@@ -159,6 +160,9 @@ def summarize_config(cfg):
              }
     print(tabulate(table, headers='keys', tablefmt="fancy_grid", ))
 
+def cross_entropy_loss(pred, y):
+    y = y.argmax(dim=1).long()
+    return F.cross_entropy(pred, y)
 
 def setup(args):
     cfg = new_config()

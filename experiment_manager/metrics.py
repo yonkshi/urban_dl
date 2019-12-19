@@ -109,32 +109,13 @@ class MultiClassF1():
         y_true = y_true.bool() # [B,  C, ...]
         # Make y_pred one hot along dim C
         y_pred_argmax = torch.argmax(y_pred, dim=1, keepdim=True)  # [B, C, ...]
-        y_pred = torch.zeros_like(y_pred).scatter_(1, y_pred_argmax,1).bool()
+        y_pred = torch.zeros_like(y_pred, dtype=torch.bool).scatter_(1, y_pred_argmax,True)
 
         self.TP += (y_true & y_pred).sum(dim=self._data_dims).float()
         self.TN += (~y_true & ~y_pred).sum(dim=self._data_dims).float()
         self.FP += (~y_true & y_pred).sum(dim=self._data_dims).float()
         self.FN += (y_true & ~y_pred).sum(dim=self._data_dims).float()
 
-    @property
-    def precision(self):
-        if hasattr(self, '_precision'):
-            '''precision previously computed'''
-            return self._precision
-
-        denom = (self.TP + self.FP).clamp(10e-05)
-        self._precision = self.TP / denom
-        return self._precision
-
-    @property
-    def recall(self):
-        if hasattr(self, '_recall'):
-            '''recall previously computed'''
-            return self._recall
-
-        denom = (self.TP + self.FN).clamp(10e-05)
-        self._recall = self.TP / denom
-        return self._recall
 
     def compute_basic_metrics(self):
         '''
@@ -147,9 +128,19 @@ class MultiClassF1():
 
         return false_pos_rate, false_neg_rate
 
-    def compute_f1(self):
-        denom = (self.precision + self.recall).clamp(10e-05)
-        return 2 * self.precision * self.recall / denom
+    def compute_f1(self, include_bg=False):
+        self.TP = self.TP.clamp(10e-05)
+        self.TN = self.TN.clamp(10e-05)
+        self.FP = self.FP.clamp(10e-05)
+        self.FN = self.FN.clamp(10e-05)
+        individual_f1 = 2 * self.TP / (2 * self.TP + self.FN + self.FP)
+        if not include_bg:
+            individual_f1 = individual_f1[..., :-1]
+        f1 = len(individual_f1) / (individual_f1 ** -1).sum()
+
+        f1 = f1.cpu().item()
+        individual_f1 = individual_f1.cpu().numpy()
+        return f1, individual_f1
 
 def true_pos(y_true, y_pred, dim=0):
     return torch.sum(y_true * torch.round(y_pred), dim=dim) # Only sum along H, W axis, assuming no C

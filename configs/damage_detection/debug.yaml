@@ -1,6 +1,6 @@
 _BASE_: "damage_base.yaml"
 MODEL:
-  LOSS_TYPE: 'SoftDiceMulticlassLoss'
+  LOSS_TYPE: 'CrossEntropyLoss'
   OUT_CHANNELS: 5
   IN_CHANNELS: 4
 OUTPUT_BASE_DIR: ('logs/')

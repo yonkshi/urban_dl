@@ -1,6 +1,7 @@
 _BASE_: "damage_base.yaml"
 TRAINER:
   BATCH_SIZE: 16
+
 DATALOADER:
   NUM_WORKER: 1
 AUGMENTATION:

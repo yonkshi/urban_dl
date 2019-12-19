@@ -245,9 +245,6 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
     '''
     measurer = MultiClassF1()
     def evaluate(y_true, y_pred, img_filename):
-        y_true = y_true.detach()
-        y_pred = y_pred.detach()
-
         measurer.add_sample(y_true, y_pred)
 
     dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
@@ -264,28 +261,37 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
                           pre_or_post=cfg.DATASETS.PRE_OR_POST,
                           transform=trfm,)
 
-    inference_loop(net, cfg, device, evaluate, 'TRAIN', max_samples = max_samples, dataset = dataset)
+    inference_loop(net, cfg, device, evaluate, batch_size=cfg.TRAINER.INFERENCE_BATCH_SIZE, run_type='TRAIN',  max_samples = max_samples, dataset = dataset)
 
 
     # Summary gathering ===
 
-    print('Computing F1 score ', end=' ', flush=True)
+    print('Computing F1 score ... ', end=' ', flush=True)
     # Max of the mean F1 score
 
     # measurer = MultiThresholdMetric(y_true_set, y_pred_set, F1_THRESH)
     # Max F1
 
-    f1 = measurer.compute_f1()
-    fpr, fnr = measurer.compute_basic_metrics()
-
+    total_f1, f1_per_class = measurer.compute_f1(include_bg=False)
+    all_fpr, all_fnr = measurer.compute_basic_metrics()
+    print(total_f1, flush=True)
 
     set_name = 'test_set' if run_type == 'TEST' else 'training_set'
-    wandb.log({f'{set_name} F1': f1,
-               f'{set_name} false positive rate': best_fpr,
-               f'{set_name} false negative rate': best_fnr,
+    log_data = {f'{set_name} total F1': total_f1,
                'step': step,
                'epoch': epoch,
-               })
+               }
+
+    damage_levels = ['no-damage', 'minor-damage', 'major-damage', 'destroyed']
+    for f1, dmg in zip(f1_per_class, damage_levels):
+        log_data[f'{set_name} {dmg} f1'] = f1
+
+    damage_levels += ['negative class']
+    for fpr, fnr, dmg in zip(all_fpr, all_fnr, damage_levels):
+        log_data[f'{set_name} {dmg} false negative rate'] = fnr
+        log_data[f'{set_name} {dmg} false positive rate'] = fpr
+
+    wandb.log(log_data)
 
 def downsample_dataset_for_eval(y_true, y_pred):
     # Full dataset is too big to compute for the CPU, so we down sample it
@@ -299,12 +305,13 @@ def downsample_dataset_for_eval(y_true, y_pred):
     return y_true, y_pred
 
 def inference_loop(net, cfg, device,
-                   callback = None,
-                   run_type = 'TEST',
-                   max_samples = 999999999,
-                   dataset = None,
-                   callback_include_x = False,
-                   multi_class = False
+                    callback = None,
+                    batch_size = 1,
+                    run_type = 'TEST',
+                    max_samples = 999999999,
+                    dataset = None,
+                    callback_include_x = False,
+
               ):
 
     net.to(device)
@@ -324,7 +331,7 @@ def inference_loop(net, cfg, device,
         dataset = Xview2Detectron2Dataset(dset_source, pre_or_post=cfg.DATASETS.PRE_OR_POST, transform=trfm)
 
     dataloader = torch_data.DataLoader(dataset,
-                                       batch_size=1,
+                                       batch_size=batch_size,
                                        num_workers=cfg.DATALOADER.NUM_WORKER,
                                        shuffle = cfg.DATALOADER.SHUFFLE,
                                        drop_last=True,
