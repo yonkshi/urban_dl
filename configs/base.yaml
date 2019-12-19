@@ -17,9 +17,9 @@ MODEL:
     DILATION: []
 THRESH: 0.01 # Best threshold (only to be filled after running final model evaluation)
 DATASETS:
-  TRAIN: ("/local_storage/datasets/xview2/full/train/",)
-  TEST: ("/local_storage/datasets/xview2/full/test/",)
-  INFERENCE: ("/local_storage/datasets/xview2/full/real_test_set/",)
+  TRAIN: ("/local_storage/datasets/xview2/full_new/train/",)
+  TEST: ("/local_storage/datasets/xview2/full_new/test/",)
+  INFERENCE: ("/local_storage/datasets/xview2/full_new/real_test_set/",)
   PRE_OR_POST: 'pre' # 'pre' vs 'post' disaster images to use
 OUTPUT_BASE_DIR: ('/Midgard/home/pshi/run_logs/unet/')
 TRAINER:
