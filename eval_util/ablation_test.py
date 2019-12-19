@@ -18,7 +18,7 @@ from torchvision import transforms, utils
 
 from torch.utils import data as torch_data
 from unet import UNet
-from unet.utils import Xview2Detectron2Dataset
+from unet.dataloader import Xview2Detectron2Dataset
 from unet.augmentations import *
 from experiment_manager.config import new_config
 

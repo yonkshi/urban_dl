@@ -46,8 +46,6 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
 
 
     def __getitem__(self, index):
-
-        # TODO PRE or POST selection or both
         data_sample = self.dataset_metadata[index][self.pre_or_post]
 
         sample_name = data_sample['file_name']
@@ -97,15 +95,40 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         return self.length
 
 class Xview2Detectron2DamageLevelDataset(Xview2Detectron2Dataset):
+
     def _extract_label(self, annotations_set, sample_name):
         # TODO This data can be preprocessed
+        # TODO Resolve overlapping data in preprocessed data
+        NUM_CLASSES = 4
+        INCLUDE_BACKGROUND = True
 
-        building_polygons = [[] for _ in range(5)]
+        buildings_polygons = [[] for _ in range(NUM_CLASSES)]
+
+        # Distribute buildings to their respective classes
+        negative_damage_level_count = 0
+        unclassified_damage_level_count = 0
         for anno in annotations_set:
-            building_polygon_xy = np.array(anno['segmentation'][0], dtype=np.int32).reshape(-1, 2)
-            building_polygons.append(building_polygon_xy)
+            damage_level = anno['damage_level']
 
-        mask2 = np.zeros((1024, 1024), dtype=np.uint8)
-        cv2.fillPoly(mask2, building_polygons, 1)
-        mask = mask2.astype(np.float32)
-        return mask
+            assert damage_level >= -1, 'damage level error, did you use positive damage?'
+
+            if damage_level == 4:
+                damage_level = 0
+                # TODO Decide what to do with unclassified labels
+
+            building_polygon_xy = np.array(anno['segmentation'][0], dtype=np.int32).reshape(-1, 2)
+            buildings_polygons[damage_level].append(building_polygon_xy)
+
+        masks = np.zeros((1024, 1024, NUM_CLASSES, ), dtype=np.uint8)
+        for class_idx, building_poly in enumerate(buildings_polygons):
+            cv2.fillPoly(masks[..., class_idx], building_poly, 1)
+
+        masks = masks.astype(np.float32)
+        if INCLUDE_BACKGROUND:
+            positive_px = masks.sum(axis=-1, keepdims=True)
+
+            bg = 1 - positive_px
+            masks = np.concatenate([masks, bg], axis = -1)
+
+        return masks
+

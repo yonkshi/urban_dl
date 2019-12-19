@@ -40,6 +40,9 @@ class Npy2Torch():
     def __call__(self, args):
         input, label, image_path = args
         input_t = TF.to_tensor(input)
+        if len(label.shape) > 2:
+            # Label is multi class
+            label = TF.to_tensor(label)
         return input_t, label, image_path
 class BGR2RGB():
     def __call__(self, args):

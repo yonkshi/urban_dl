@@ -12,7 +12,7 @@ from tabulate import tabulate
 import wandb
 
 from unet import UNet
-from unet.utils import Xview2Detectron2Dataset
+from unet.dataloader import Xview2Detectron2DamageLevelDataset
 from unet.augmentations import *
 
 from experiment_manager.args import default_argument_parser
@@ -50,7 +50,7 @@ def train_net(net,
     trfm = transforms.Compose(trfm)
 
     # reset the generators
-    dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0],
+    dataset = Xview2Detectron2DamageLevelDataset(cfg.DATASETS.TRAIN[0],
                                       pre_or_post=cfg.DATASETS.PRE_OR_POST,
                                       include_image_weight=True,
                                       transform=trfm,)
@@ -88,8 +88,6 @@ def train_net(net,
             y_gts = y_gts.to(device)
             y_pred = net(x)
 
-            # For BCE loss, label needs to match the dimensions of network output
-            y_gts = y_gts.unsqueeze(1)
             loss = criterion(y_pred, y_gts)
             epoch_loss += loss.item()
 

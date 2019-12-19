@@ -18,7 +18,7 @@ from tabulate import tabulate
 from debug_tools import __benchmark_init, benchmark
 
 from unet import UNet
-from unet.utils import Xview2Detectron2Dataset
+from unet.dataloader import Xview2Detectron2Dataset
 from experiment_manager.metrics import roc_score, f1_score, MultiThresholdMetric
 from experiment_manager.args import default_argument_parser
 from experiment_manager.config import new_config

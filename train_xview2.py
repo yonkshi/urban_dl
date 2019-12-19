@@ -23,7 +23,7 @@ import wandb
 
 from debug_tools import __benchmark_init, benchmark
 from unet import UNet
-from unet.utils import Xview2Detectron2Dataset
+from unet.dataloader import Xview2Detectron2Dataset
 from unet.augmentations import *
 
 from experiment_manager.metrics import f1_score
