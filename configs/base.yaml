@@ -20,6 +20,7 @@ DATASETS:
   TRAIN: ("/local_storage/datasets/xview2/full/train/",)
   TEST: ("/local_storage/datasets/xview2/full/test/",)
   INFERENCE: ("/local_storage/datasets/xview2/full/real_test_set/",)
+  PRE_OR_POST: 'pre' # 'pre' vs 'post' disaster images to use
 OUTPUT_BASE_DIR: ('/Midgard/home/pshi/run_logs/unet/')
 TRAINER:
   LR: 0.0001

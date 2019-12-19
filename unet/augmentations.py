@@ -1,7 +1,10 @@
+import os
+
 import torchvision.transforms.functional as TF
 import cv2
 import numpy as np
 import torch
+
 class Resize():
 
     def __init__(self, scale, resize_label=True):
@@ -9,17 +12,19 @@ class Resize():
         self.resize_label = resize_label
 
     def __call__(self, args):
-        input, label = args
+        input, label, image_path = args
 
         input = cv2.resize(input, None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_AREA)
         if self.resize_label:
             label = cv2.resize(label, None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_AREA)
 
-        return input, label
+        return input, label, image_path
 
 class VARI():
     def __call__(self, args):
-        input, label = args
+        input, label, image_path = args
+
+        # TODO load existing VARI chanel
         # Input is in BGR
         assert input.shape[1] == input.shape[2] and torch.is_tensor(input), 'invalid tensor, did you forget to put VARI after Np2Torch?'
         R = input[0]
@@ -29,14 +34,14 @@ class VARI():
         VARI = (G-R) / 2 * (eps + G+R-B) + 0.5 # Linearly transformed to be [0, 1]
         VARI = VARI.unsqueeze(0)
         input_t = torch.cat([input, VARI])
-        return input_t ,label
+        return input_t, label, image_path
 
 class Npy2Torch():
     def __call__(self, args):
-        input, label = args
+        input, label, image_path = args
         input = input[..., [2,1,0]]
         input_t = TF.to_tensor(input)
-        return input_t, label
+        return input_t, label, image_path
 
 class UniformCrop():
     '''
@@ -55,13 +60,14 @@ class UniformCrop():
         return input, label
 
     def __call__(self, args):
-        input, label = args
-        return self.random_crop(input, label)
+        input, label, image_path = args
+        input, label = self.random_crop(input, label)
+        return input, label, image_path
 
 
 class ImportanceRandomCrop(UniformCrop):
     def __call__(self, args):
-        input, label = args
+        input, label, image_path = args
 
         SAMPLE_SIZE = 5 # an arbitrary number that I came up with
         BALANCING_FACTOR = 200
@@ -73,5 +79,17 @@ class ImportanceRandomCrop(UniformCrop):
         sample_idx = np.random.choice(SAMPLE_SIZE, p=crop_weights)
         input, label = random_crops[sample_idx]
 
-        return input, label
+        return input, label, image_path
 
+class IncludeLocalizationMask():
+    def __call__(self, args):
+        input, label, image_path = args
+        image_name = os.path.basename(image_path)
+        dir_name = os.path.dirname(image_path)
+        # Load preprocessed mask if exist
+        mask_path = os.path.join(dir_name, 'label_mask',image_path)
+        if os.path.exists(mask_path):
+            mask = cv2.imread(mask_path)[...,0].astype(np.float32)
+            return mask
+
+        return input, label, image_path

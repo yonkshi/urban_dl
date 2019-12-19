@@ -95,6 +95,7 @@ def train_net(net,
 
     # reset the generators
     dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0],
+                                      pre_or_post=cfg.DATASETS.PRE_OR_POST,
                                       include_image_weight=True,
                                       transform=trfm,)
 
@@ -202,7 +203,7 @@ def train_net(net,
 def image_sampling_weight(dataset_metadata):
     print('performing oversampling...', end='', flush=True)
     EMPTY_IMAGE_BASELINE = 1000
-    image_p = np.array([image_desc['image_weight'] for image_desc in dataset_metadata]) + EMPTY_IMAGE_BASELINE
+    image_p = np.array([image_desc['pre']['image_weight'] for image_desc in dataset_metadata]) + EMPTY_IMAGE_BASELINE
     print('done', flush=True)
     # normalize to [0., 1.]
     image_p = image_p

@@ -113,7 +113,7 @@ if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RAT
 trfm.append(Npy2Torch())
 trfm = transforms.Compose(trfm)
 
-dataset = Xview2Detectron2Dataset(dset_source, include_index=True, transform=trfm)
+dataset = Xview2Detectron2Dataset(dset_source, pre_or_post=cfg.DATASETS.PRE_OR_POST, include_index=True, transform=trfm)
 results_table = []
 
 
@@ -202,7 +202,7 @@ results.to_pickle(path.join(storage_path, f'per_image_result_{TRAIN_TYPE}.pkl'))
 # ===========
 print('================= Running ablation per building ===============', flush=True)
 
-dataset = Xview2Detectron2Dataset(dset_source, include_index=True, transform=trfm)
+dataset = Xview2Detectron2Dataset(dset_source, pre_or_post=cfg.DATASETS.PRE_OR_POST, include_index=True, transform=trfm)
 results_table = []
 
 

@@ -10,6 +10,7 @@ import torch
 import wandb
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
+from os import makedirs
 
 from torch.utils import data as torch_data
 from torchvision import transforms, utils
@@ -266,7 +267,7 @@ def inference_loop(net, cfg, device,
         if cfg.AUGMENTATION.ENABLE_VARI: trfm.append(VARI())
         trfm = transforms.Compose(trfm)
 
-        dataset = Xview2Detectron2Dataset(dset_source, transform=trfm)
+        dataset = Xview2Detectron2Dataset(dset_source, pre_or_post=cfg.DATASETS.PRE_OR_POST, transform=trfm)
 
     dataloader = torch_data.DataLoader(dataset,
                                        batch_size=1,
