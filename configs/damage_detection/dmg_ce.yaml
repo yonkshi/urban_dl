@@ -1,0 +1,15 @@
+_BASE_: "damage_base.yaml"
+MODEL:
+  LOSS_TYPE: 'CrossEntropyLoss'
+TRAINER:
+  BATCH_SIZE: 16
+DATALOADER:
+  NUM_WORKER: 8
+AUGMENTATION:
+  # Random cropping of the images
+  CROP_TYPE: 'uniform'
+  CROP_SIZE: 256
+
+
+
+
