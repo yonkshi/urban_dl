@@ -56,7 +56,8 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         # label = label[None, ...] # C x H x W
 
         if self.transform:
-            input, label, _ = self.transform([input, label, sample_name])
+            image_path = os.path.join(self.dataset_path, sample_name)
+            input, label, _ = self.transform([input, label, image_path])
 
         ret = [input, label, sample_name]
         if self.include_index:

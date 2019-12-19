@@ -39,9 +39,13 @@ class VARI():
 class Npy2Torch():
     def __call__(self, args):
         input, label, image_path = args
-        input = input[..., [2,1,0]]
         input_t = TF.to_tensor(input)
         return input_t, label, image_path
+class BGR2RGB():
+    def __call__(self, args):
+        input, label, image_path = args
+        input = input[..., [2,1,0]]
+        return input, label, image_path
 
 class UniformCrop():
     '''
@@ -87,9 +91,13 @@ class IncludeLocalizationMask():
         image_name = os.path.basename(image_path)
         dir_name = os.path.dirname(image_path)
         # Load preprocessed mask if exist
-        mask_path = os.path.join(dir_name, 'label_mask',image_path)
-        if os.path.exists(mask_path):
-            mask = cv2.imread(mask_path)[...,0].astype(np.float32)
-            return mask
+        mask_path = os.path.join(dir_name, 'label_mask',image_name)
+
+        assert os.path.exists(mask_path), 'Mask data is not generated, please double check'
+
+        mask = cv2.imread(mask_path).astype(np.float32)
+        mask = mask[...,0][...,None] # [H, W, 3] -> [H, W, 1]
+
+        input = np.concatenate([input, mask], axis=-1)
 
         return input, label, image_path

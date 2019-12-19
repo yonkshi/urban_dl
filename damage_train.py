@@ -35,12 +35,16 @@ def train_net(net,
         criterion = nn.BCEWithLogitsLoss()
     elif cfg.MODEL.LOSS_TYPE == 'SoftDiceMulticlassLoss':
         criterion = soft_dice_loss_multi_class
+
     net.to(device)
 
     trfm = []
+    trfm.append(BGR2RGB())
+    trfm.append(IncludeLocalizationMask())
     if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
     if cfg.AUGMENTATION.CROP_TYPE == 'uniform':
         trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
+
     trfm.append(Npy2Torch())
     if cfg.AUGMENTATION.ENABLE_VARI: trfm.append(VARI())
     trfm = transforms.Compose(trfm)
@@ -100,7 +104,7 @@ def train_net(net,
                 save_path = os.path.join(log_path, check_point_name)
                 torch.save(net.state_dict(), save_path)
 
-            if global_step % 100 == 0 or global_step == 0:
+            if global_step % 100 == 0 or global_step > 0:
                 # time per 100 steps
                 stop = timeit.default_timer()
                 time_per_n_batches= stop - start
@@ -125,10 +129,7 @@ def train_net(net,
             # torch.cuda.empty_cache()
             global_step += 1
 
-        if epoch % 2 == 0:
-            # Evaluation after every other epoch
-            model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
-            model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
+        # TODO Add multi class eval
 
 
 
@@ -164,7 +165,7 @@ def summarize_config(cfg):
 
 def setup(args):
     cfg = new_config()
-    cfg.merge_from_file(f'configs/damage_dectection/{args.config_file}.yaml')
+    cfg.merge_from_file(f'configs/damage_detection/{args.config_file}.yaml')
     cfg.merge_from_list(args.opts)
     cfg.NAME = args.config_file
 

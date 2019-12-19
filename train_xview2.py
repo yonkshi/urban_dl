@@ -84,6 +84,7 @@ def train_net(net,
 
 
     trfm = []
+    trfm.append(BGR2RGB())
     if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
     if cfg.AUGMENTATION.CROP_TYPE == 'uniform':
         trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))

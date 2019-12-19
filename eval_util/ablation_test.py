@@ -110,6 +110,7 @@ print('================= Running ablation per image ===============', flush=True
 
 trfm = []
 if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO, resize_label=False))
+trfm.append(BGR2RGB())
 trfm.append(Npy2Torch())
 trfm = transforms.Compose(trfm)
 

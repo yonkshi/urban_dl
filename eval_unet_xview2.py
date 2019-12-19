@@ -263,6 +263,7 @@ def inference_loop(net, cfg, device,
     if dataset is None:
         trfm = []
         if cfg.AUGMENTATION.RESIZE: trfm.append( Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
+        trfm.append(BGR2RGB())
         trfm.append(Npy2Torch())
         if cfg.AUGMENTATION.ENABLE_VARI: trfm.append(VARI())
         trfm = transforms.Compose(trfm)
