@@ -80,28 +80,21 @@ def train_net(net,
         epoch_loss = 0
 
         net.train()
-        if epoch == 1: print('train', flush=True) # TODO Temp: for debug
         loss_set, f1_set = [], []
         positive_pixels_set = [] # Used to evaluated image over sampling techniques
         for i, (x, y_gts, sample_name, image_weight) in enumerate(dataloader):
-            if epoch == 1: print('datanumber', i, flush=True)  # TODO Temp: for debug
             optimizer.zero_grad()
-            if epoch == 1: print('zero grad', flush=True)  # TODO Temp: for debug
             x = x.to(device)
             y_gts = y_gts.to(device)
             y_pred = net(x)
-            if epoch == 1: print('forward', flush=True)  # TODO Temp: for debug
             loss = criterion(y_pred, y_gts)
-            if epoch == 1: print('loss')  # TODO Temp: for debug
             epoch_loss += loss.item()
 
             loss.backward()
-            if epoch == 1: print('backward', flush=True)  # TODO Temp: for debug
             optimizer.step()
 
             loss_set.append(loss.item())
             positive_pixels_set.extend(image_weight.cpu().numpy())
-            if epoch == 1: print('forward', flush=True)  # TODO Temp: for debug
             if global_step % 10000 == 0 and global_step > 0:
                 check_point_name = f'cp_{global_step}.pkl'
                 save_path = os.path.join(log_path, check_point_name)

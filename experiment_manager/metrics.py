@@ -98,7 +98,7 @@ class MultiClassF1():
         :param threshold: [Thresh]
         '''
 
-        self._data_dims = (-1, -2, -3, -4) # For a B/W image, it should be [Thresh, B, C, H, W],
+        self._data_dims = (0, 2, 3) # For a B/W image, it should be [Thresh, B, C, H, W],
         self.include_background = include_background
         self.TP = 0
         self.TN = 0
@@ -107,8 +107,9 @@ class MultiClassF1():
 
     def add_sample(self, y_true:torch.Tensor, y_pred):
         y_true = y_true.bool() # [B,  C, ...]
-        y_pred_onehot = torch.argmax(y_pred, dim=0, keepdim=True)  # [B, C, ...]
-
+        # Make y_pred one hot along dim C
+        y_pred_argmax = torch.argmax(y_pred, dim=1, keepdim=True)  # [B, C, ...]
+        y_pred = torch.zeros_like(y_pred).scatter_(1, y_pred_argmax,1).bool()
 
         self.TP += (y_true & y_pred).sum(dim=self._data_dims).float()
         self.TN += (~y_true & ~y_pred).sum(dim=self._data_dims).float()
