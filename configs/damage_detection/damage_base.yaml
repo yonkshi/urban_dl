@@ -1,7 +1,7 @@
 SEED: 1339 # best seed so far 1339 or 43
 MODEL:
   OUT_CHANNELS: 5
-  IN_CHANNELS: 3
+  IN_CHANNELS: 4
   LOSS_TYPE: 'SoftDiceMulticlassLoss'
   TOPOLOGY: [64, 128, 256, 512,]
   BLOCK_TYPE: 'Double' # Double = Double conv, Triple = Triple conv, for greater receptive field
