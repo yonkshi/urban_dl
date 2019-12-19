@@ -29,9 +29,6 @@ class MultiThresholdMetric():
         self._thresholds = threshold[ :, None, None, None, None] # [Tresh, B, C, H, W]
         self._data_dims = (-1, -2, -3, -4) # For a B/W image, it should be [Thresh, B, C, H, W],
 
-        # self._normalize_dimensions()
-        # self._build_threshold_for_computation()
-        # self._pre_compute_basic_metrics()
         self.TP = 0
         self.TN = 0
         self.FP = 0
@@ -43,30 +40,6 @@ class MultiThresholdMetric():
         self._thresholds = self._thresholds[ :, None, None, None, None] # [Tresh, B, C, H, W]
         # self._y_pred = self._y_pred[None, ...]  # [B, Thresh, C, ...]
         # self._y_true = self._y_true[None,:, None, ...] # [Thresh, B,  C, ...]
-
-    # def _build_threshold_for_computation(self):
-    #     ''' Vectorize y_pred so that it contains N_THRESH aligned dimension'''
-    #     self._y_pred = self._y_pred - self._thresholds + 0.5
-
-    def _pre_compute_basic_metrics(self):
-        shape = self._thresholds.shape
-        self.TP = torch.empty(*shape)
-        self.TN = torch.empty(*shape)
-        self.FP = torch.empty(*shape)
-        self.FN = torch.empty(*shape)
-
-        # Running it sequentially because vectorized form is too big to be fit inside the memory.
-        print('precomputing basic metrics..')
-        for i, threshold in enumerate(self._thresholds):
-            y_pred_offset = (self._y_pred - threshold + 0.5).round().bool()
-
-            self.TP[i] = (self._y_true & y_pred_offset).sum()
-            self.TN[i] = (~self._y_true & ~y_pred_offset).sum()
-            self.FP[i] = (self._y_true & ~y_pred_offset).sum()
-            self.FN[i] = (~self._y_true & y_pred_offset).sum()
-            progress(i, 100)
-            # self.TP = (self._y_true * torch.round(self._y_pred)).sum(dim=self._data_dims)
-        print('completed')
 
     def add_sample(self, y_true:torch.Tensor, y_pred):
         y_true = y_true.bool()[None,:, None, ...] # [Thresh, B,  C, ...]
@@ -132,29 +105,9 @@ class MultiClassF1():
         self.FP = 0
         self.FN = 0
 
-    def _pre_compute_basic_metrics(self):
-        shape = self._thresholds.shape
-        self.TP = torch.empty(*shape)
-        self.TN = torch.empty(*shape)
-        self.FP = torch.empty(*shape)
-        self.FN = torch.empty(*shape)
-
-        # Running it sequentially because vectorized form is too big to be fit inside the memory.
-        print('precomputing basic metrics..')
-        for i, threshold in enumerate(self._thresholds):
-            y_pred_offset = (self._y_pred - threshold + 0.5).round().bool()
-
-            self.TP[i] = (self._y_true & y_pred_offset).sum()
-            self.TN[i] = (~self._y_true & ~y_pred_offset).sum()
-            self.FP[i] = (~self._y_true & y_pred_offset).sum()
-            self.FN[i] = (self._y_true & ~y_pred_offset).sum()
-            progress(i, 100)
-            # self.TP = (self._y_true * torch.round(self._y_pred)).sum(dim=self._data_dims)
-        print('completed')
-
     def add_sample(self, y_true:torch.Tensor, y_pred):
-        y_true = y_true.bool()[None,:, None, ...] # [B,  C, ...]
-        y_pred = y_pred[None, ...]  # [B, C, ...]
+        y_true = y_true.bool() # [B,  C, ...]
+        y_pred = y_pred  # [B, C, ...]
 
 
         self.TP += (y_true & y_pred).sum(dim=self._data_dims).float()
