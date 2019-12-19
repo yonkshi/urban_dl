@@ -133,9 +133,9 @@ def train_net(net,
             global_step += 1
 
         # Evaluation for multiclass F1 score
-        measurer = MultiClassF1()
-        model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch, measurer=measurer)
-        model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch, measurer=measurer)
+        # measurer = MultiClassF1()
+        # model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch, measurer=measurer)
+        # model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch, measurer=measurer)
 
 
 def image_sampling_weight(dataset_metadata):
