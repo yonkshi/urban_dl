@@ -102,7 +102,7 @@ def train_net(net,
                 save_path = os.path.join(log_path, check_point_name)
                 torch.save(net.state_dict(), save_path)
 
-            if global_step % 100 == 0 or global_step > 0:
+            if global_step % 100 == 0 and global_step > 0:
                 # time per 100 steps
                 stop = timeit.default_timer()
                 time_per_n_batches= stop - start
