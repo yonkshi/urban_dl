@@ -47,7 +47,7 @@ class Npy2Torch():
 class BGR2RGB():
     def __call__(self, args):
         input, label, image_path = args
-        input = input[..., [2,1,0]]
+        input = bgr2rgb(input)
         return input, label, image_path
 
 class UniformCrop():
@@ -55,7 +55,6 @@ class UniformCrop():
     Performs uniform cropping on numpy images (cv2 images)
     '''
     def __init__(self, crop_size):
-
         self.crop_size = crop_size
     def random_crop(self, input, label):
         image_size = input.shape[-2]
@@ -104,3 +103,28 @@ class IncludeLocalizationMask():
         input = np.concatenate([input, mask], axis=-1)
 
         return input, label, image_path
+class StackPreDisasterImage():
+    def __init__(self, pre_or_post='pre'):
+        self.pre_or_post = pre_or_post
+    def __call__(self, args):
+        input, label, image_path = args
+        image_name = os.path.basename(image_path)
+        dir_name = os.path.dirname(image_path)
+
+        # Load counter part
+        img_name_split = image_name.split('_')
+        img_name_split[-2] = self.pre_or_post
+        cp_image_name = '_'.join(img_name_split)
+
+        # Read image
+        cp_image_path = os.path.join(dir_name, cp_image_name)
+        cp_image = cv2.imread(cp_image_path).astype(np.float32)
+
+        # RGB -> BGR and stack
+        cp_image = bgr2rgb(cp_image)
+        input = np.concatenate([input, cp_image], axis=-1)
+        return input, label, image_path
+
+
+def bgr2rgb(img):
+    return img[..., [2,1,0]]

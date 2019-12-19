@@ -252,6 +252,7 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
     trfm = []
     trfm.append(BGR2RGB())
     trfm.append(IncludeLocalizationMask())
+    if cfg.AUGMENTATION.INCLUDE_PRE_DISASTER: trfm.append(StackPreDisasterImage())
     if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
     trfm.append(Npy2Torch())
     if cfg.AUGMENTATION.ENABLE_VARI: trfm.append(VARI())

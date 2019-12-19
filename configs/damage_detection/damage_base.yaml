@@ -16,12 +16,14 @@ DATASETS:
   TEST: ("/local_storage/datasets/xview2/full_new/test/",)
   INFERENCE: ("/local_storage/datasets/xview2/full_new/real_test_set/",)
   PRE_OR_POST: 'post' # 'pre' vs 'post' disaster images to use
+
 OUTPUT_BASE_DIR: ('/Midgard/home/pshi/run_logs/dmg/')
 TRAINER:
   LR: 0.0001
   BATCH_SIZE: 0
   EPOCHS: 1000
   INFERENCE_BATCH_SIZE: 3
+
 DATALOADER:
   NUM_WORKER: 0
   SHUFFLE: True
@@ -34,6 +36,7 @@ AUGMENTATION:
   CROP_SIZE: 1024
   IMAGE_OVERSAMPLING_TYPE: 'none' # [none, simple]
   ENABLE_VARI: False # False NDVI for detecting vegetation
+  INCLUDE_PRE_DISASTER: False # If true, a Pre Disaster will be stacked
 
 
 

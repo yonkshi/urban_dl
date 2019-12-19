@@ -43,6 +43,7 @@ def train_net(net,
     trfm = []
     trfm.append(BGR2RGB())
     trfm.append(IncludeLocalizationMask())
+    if cfg.AUGMENTATION.INCLUDE_PRE_DISASTER:trfm.append(StackPreDisasterImage())
     if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
     if cfg.AUGMENTATION.CROP_TYPE == 'uniform':
         trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))

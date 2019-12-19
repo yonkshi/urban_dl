@@ -2,7 +2,7 @@ _BASE_: "damage_base.yaml"
 MODEL:
   LOSS_TYPE: 'CrossEntropyLoss'
   OUT_CHANNELS: 5
-  IN_CHANNELS: 4
+  IN_CHANNELS: 7
 OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
   TRAIN: ("/storage/yonk/debug_new/train/",)
@@ -17,4 +17,5 @@ AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'uniform'
   CROP_SIZE: 256
+  INCLUDE_PRE_DISASTER: True
 
