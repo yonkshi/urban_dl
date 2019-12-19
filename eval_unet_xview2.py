@@ -18,8 +18,8 @@ from tabulate import tabulate
 from debug_tools import __benchmark_init, benchmark
 
 from unet import UNet
-from unet.dataloader import Xview2Detectron2Dataset
-from experiment_manager.metrics import roc_score, f1_score, MultiThresholdMetric
+from unet.dataloader import Xview2Detectron2Dataset, Xview2Detectron2DamageLevelDataset
+from experiment_manager.metrics import roc_score, f1_score, MultiThresholdMetric, MultiClassF1
 from experiment_manager.args import default_argument_parser
 from experiment_manager.config import new_config
 from experiment_manager.utils import to_numpy
@@ -167,7 +167,7 @@ def model_inference(net, cfg):
 
     return
 
-def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, epoch=0, measurer=None):
+def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, epoch=0, multi_class=False):
     '''
     Runner that is concerned with training changes
     :param run_type: 'train' or 'eval'
@@ -178,9 +178,10 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, ep
     y_true_set = []
     y_pred_set = []
 
-    if measurer is None:
+    if multi_class:
+        measurer = MultiClassF1(F1_THRESH)
+    else:
         measurer = MultiThresholdMetric(F1_THRESH)
-
     def evaluate(y_true, y_pred, img_filename):
         y_true = y_true.detach()
         y_pred = y_pred.detach()
@@ -236,6 +237,56 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, ep
                'epoch': epoch,
                })
 
+def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, epoch=0, multi_class=False):
+    '''
+    Runner that is concerned with training changes
+    :param run_type: 'train' or 'eval'
+    :return:
+    '''
+    measurer = MultiClassF1()
+    def evaluate(y_true, y_pred, img_filename):
+        y_true = y_true.detach()
+        y_pred = y_pred.detach()
+
+        measurer.add_sample(y_true, y_pred)
+
+    dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
+
+    trfm = []
+    trfm.append(BGR2RGB())
+    trfm.append(IncludeLocalizationMask())
+    if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
+    trfm.append(Npy2Torch())
+    if cfg.AUGMENTATION.ENABLE_VARI: trfm.append(VARI())
+    trfm = transforms.Compose(trfm)
+
+    dataset = Xview2Detectron2DamageLevelDataset(dset_source,
+                          pre_or_post=cfg.DATASETS.PRE_OR_POST,
+                          transform=trfm,)
+
+    inference_loop(net, cfg, device, evaluate, 'TRAIN', max_samples = max_samples, dataset = dataset)
+
+
+    # Summary gathering ===
+
+    print('Computing F1 score ', end=' ', flush=True)
+    # Max of the mean F1 score
+
+    # measurer = MultiThresholdMetric(y_true_set, y_pred_set, F1_THRESH)
+    # Max F1
+
+    f1 = measurer.compute_f1()
+    fpr, fnr = measurer.compute_basic_metrics()
+
+
+    set_name = 'test_set' if run_type == 'TEST' else 'training_set'
+    wandb.log({f'{set_name} F1': f1,
+               f'{set_name} false positive rate': best_fpr,
+               f'{set_name} false negative rate': best_fnr,
+               'step': step,
+               'epoch': epoch,
+               })
+
 def downsample_dataset_for_eval(y_true, y_pred):
     # Full dataset is too big to compute for the CPU, so we down sample it
     num_samples = y_pred.shape[0]
@@ -252,7 +303,8 @@ def inference_loop(net, cfg, device,
                    run_type = 'TEST',
                    max_samples = 999999999,
                    dataset = None,
-                   callback_include_x = False
+                   callback_include_x = False,
+                   multi_class = False
               ):
 
     net.to(device)
@@ -290,11 +342,9 @@ def inference_loop(net, cfg, device,
             if step % 100 == 0 or step == dataset_length-1:
                 print(f'Processed {step+1}/{dataset_length}')
 
-            if cfg.MODEL.LOSS_TYPE == 'CrossEntropyLoss':
+            if y_pred.shape[1] > 1: # multi-class
                 # In Two class Cross entropy mode, positive classes are in Channel #2
                 y_pred = torch.softmax(y_pred, dim=1)
-                y_pred = y_pred[:,1 ,...]
-                y_pred = y_pred[:, None, ...]
             else:
                 y_pred = torch.sigmoid(y_pred)
 

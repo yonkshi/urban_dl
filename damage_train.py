@@ -18,7 +18,7 @@ from experiment_manager.args import default_argument_parser
 from experiment_manager.metrics import MultiClassF1
 from experiment_manager.config import new_config
 from experiment_manager.loss import soft_dice_loss, soft_dice_loss_balanced, jaccard_like_loss, jaccard_like_balanced_loss, soft_dice_loss_multi_class
-from eval_unet_xview2 import model_eval
+from eval_unet_xview2 import dmg_model_eval
 
 # import hp
 
@@ -133,9 +133,8 @@ def train_net(net,
             global_step += 1
 
         # Evaluation for multiclass F1 score
-        # measurer = MultiClassF1()
-        # model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch, measurer=measurer)
-        # model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch, measurer=measurer)
+        # dmg_model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
+        # dmg_model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
 
 
 def image_sampling_weight(dataset_metadata):

@@ -2,7 +2,7 @@ _BASE_: "damage_base.yaml"
 TRAINER:
   BATCH_SIZE: 16
 DATALOADER:
-  NUM_WORKER: 0
+  NUM_WORKER: 1
 AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'uniform'
