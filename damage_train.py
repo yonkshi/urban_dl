@@ -5,7 +5,6 @@ import timeit
 import torch.nn as nn
 from torch import optim
 from torch.utils import data as torch_data
-from torch.nn import functional as F
 from torchvision import transforms, utils
 
 from tabulate import tabulate
@@ -22,6 +21,7 @@ from eval_unet_xview2 import model_eval
 
 # import hp
 
+
 def train_net(net,
               cfg):
 
@@ -29,8 +29,8 @@ def train_net(net,
     summarize_config(cfg)
 
     optimizer = optim.Adam(net.parameters(),
-                          lr=cfg.TRAINER.LR,
-                          weight_decay=0.0005)
+                           lr=cfg.TRAINER.LR,
+                           weight_decay=0.0005)
     if cfg.MODEL.LOSS_TYPE == 'BCEWithLogitsLoss':
         criterion = nn.BCEWithLogitsLoss()
     elif cfg.MODEL.LOSS_TYPE == 'SoftDiceMulticlassLoss':
@@ -79,24 +79,28 @@ def train_net(net,
         epoch_loss = 0
 
         net.train()
+        if epoch == 1: print('train', flush=True) # TODO Temp: for debug
         loss_set, f1_set = [], []
         positive_pixels_set = [] # Used to evaluated image over sampling techniques
         for i, (x, y_gts, sample_name, image_weight) in enumerate(dataloader):
+            if epoch == 1: print('datanumber', i, flush=True)  # TODO Temp: for debug
             optimizer.zero_grad()
-
+            if epoch == 1: print('zero grad', flush=True)  # TODO Temp: for debug
             x = x.to(device)
             y_gts = y_gts.to(device)
             y_pred = net(x)
-
+            if epoch == 1: print('forward', flush=True)  # TODO Temp: for debug
             loss = criterion(y_pred, y_gts)
+            if epoch == 1: print('loss')  # TODO Temp: for debug
             epoch_loss += loss.item()
 
             loss.backward()
+            if epoch == 1: print('backward', flush=True)  # TODO Temp: for debug
             optimizer.step()
 
             loss_set.append(loss.item())
             positive_pixels_set.extend(image_weight.cpu().numpy())
-
+            if epoch == 1: print('forward', flush=True)  # TODO Temp: for debug
             if global_step % 10000 == 0 and global_step > 0:
                 check_point_name = f'cp_{global_step}.pkl'
                 save_path = os.path.join(log_path, check_point_name)
