@@ -18,7 +18,7 @@ from unet.augmentations import *
 from experiment_manager.args import default_argument_parser
 from experiment_manager.metrics import MultiClassF1
 from experiment_manager.config import new_config
-from experiment_manager.loss import soft_dice_loss, soft_dice_loss_balanced, jaccard_like_loss, jaccard_like_balanced_loss, soft_dice_loss_multi_class
+from experiment_manager.loss import *
 from eval_unet_xview2 import dmg_model_eval
 
 # import hp
@@ -37,6 +37,8 @@ def train_net(net,
         criterion = cross_entropy_loss
     elif cfg.MODEL.LOSS_TYPE == 'SoftDiceMulticlassLoss':
         criterion = soft_dice_loss_multi_class
+    elif cfg.MODEL.LOSS_TYPE == 'GeneralizedDiceLoss':
+        criterion = generalized_soft_dice_loss_multi_class
 
     net.to(device)
 
