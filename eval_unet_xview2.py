@@ -167,7 +167,7 @@ def model_inference(net, cfg):
 
     return
 
-def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, epoch=0):
+def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, epoch=0, measurer=None):
     '''
     Runner that is concerned with training changes
     :param run_type: 'train' or 'eval'
@@ -178,7 +178,8 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, ep
     y_true_set = []
     y_pred_set = []
 
-    measurer = MultiThresholdMetric(F1_THRESH)
+    if measurer is None:
+        measurer = MultiThresholdMetric(F1_THRESH)
 
     def evaluate(y_true, y_pred, img_filename):
         y_true = y_true.detach()

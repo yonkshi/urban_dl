@@ -110,7 +110,7 @@ class Xview2Detectron2DamageLevelDataset(Xview2Detectron2Dataset):
         for anno in annotations_set:
             damage_level = anno['damage_level']
 
-            assert damage_level >= -1, 'damage level error, did you use positive damage?'
+            # assert damage_level >= -1, 'damage level error, did you use positive damage?'
 
             if damage_level == 4:
                 damage_level = 0

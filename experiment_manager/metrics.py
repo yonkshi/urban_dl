@@ -125,27 +125,12 @@ class MultiClassF1():
         :param threshold: [Thresh]
         '''
 
-        self._thresholds = threshold[ :, None, None, None, None] # [Tresh, B, C, H, W]
         self._data_dims = (-1, -2, -3, -4) # For a B/W image, it should be [Thresh, B, C, H, W],
 
-        # self._normalize_dimensions()
-        # self._build_threshold_for_computation()
-        # self._pre_compute_basic_metrics()
         self.TP = 0
         self.TN = 0
         self.FP = 0
         self.FN = 0
-
-    def _normalize_dimensions(self):
-        ''' Converts y_truth, y_label and threshold to [B, Thres, C, H, W]'''
-        # Naively assume that all of existing shapes of tensors, we transform [B, H, W] -> [B, Thresh, C, H, W]
-        self._thresholds = self._thresholds[ :, None, None, None, None] # [Tresh, B, C, H, W]
-        # self._y_pred = self._y_pred[None, ...]  # [B, Thresh, C, ...]
-        # self._y_true = self._y_true[None,:, None, ...] # [Thresh, B,  C, ...]
-
-    # def _build_threshold_for_computation(self):
-    #     ''' Vectorize y_pred so that it contains N_THRESH aligned dimension'''
-    #     self._y_pred = self._y_pred - self._thresholds + 0.5
 
     def _pre_compute_basic_metrics(self):
         shape = self._thresholds.shape
@@ -161,21 +146,21 @@ class MultiClassF1():
 
             self.TP[i] = (self._y_true & y_pred_offset).sum()
             self.TN[i] = (~self._y_true & ~y_pred_offset).sum()
-            self.FP[i] = (self._y_true & ~y_pred_offset).sum()
-            self.FN[i] = (~self._y_true & y_pred_offset).sum()
+            self.FP[i] = (~self._y_true & y_pred_offset).sum()
+            self.FN[i] = (self._y_true & ~y_pred_offset).sum()
             progress(i, 100)
             # self.TP = (self._y_true * torch.round(self._y_pred)).sum(dim=self._data_dims)
         print('completed')
 
     def add_sample(self, y_true:torch.Tensor, y_pred):
-        y_true = y_true.bool()[None,:, None, ...] # [Thresh, B,  C, ...]
-        y_pred = y_pred[None, ...]  # [Thresh, B, C, ...]
-        y_pred_offset = (y_pred - self._thresholds + 0.5).round().bool()
+        y_true = y_true.bool()[None,:, None, ...] # [B,  C, ...]
+        y_pred = y_pred[None, ...]  # [B, C, ...]
 
-        self.TP += (y_true & y_pred_offset).sum(dim=self._data_dims).float()
-        self.TN += (~y_true & ~y_pred_offset).sum(dim=self._data_dims).float()
-        self.FP += (y_true & ~y_pred_offset).sum(dim=self._data_dims).float()
-        self.FN += (~y_true & y_pred_offset).sum(dim=self._data_dims).float()
+
+        self.TP += (y_true & y_pred).sum(dim=self._data_dims).float()
+        self.TN += (~y_true & ~y_pred).sum(dim=self._data_dims).float()
+        self.FP += (~y_true & y_pred).sum(dim=self._data_dims).float()
+        self.FN += (y_true & ~y_pred).sum(dim=self._data_dims).float()
 
     @property
     def precision(self):
