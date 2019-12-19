@@ -191,7 +191,7 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, ep
         measurer.add_sample(y_true, y_pred)
 
     if run_type == 'TRAIN':
-        inference_loop(net, cfg, device, evaluate, 'TRAIN', max_samples = max_samples)
+        inference_loop(net, cfg, device, evaluate, run_type= 'TRAIN', max_samples = max_samples)
     elif run_type == 'TEST':
         inference_loop(net, cfg, device, evaluate, max_samples = max_samples)
 
