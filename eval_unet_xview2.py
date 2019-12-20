@@ -457,7 +457,7 @@ def custom_argparse(parser):
     parser.add_argument('-T',"--eval-type",
                         dest='eval_type',
                         default="final",
-                        choices=['final', 'checkpoints', 'inference', 'predict'],
+                        choices=['final', 'checkpoints', 'inference', 'loc_predict'],
                         help="select an evaluation type")
     return parser
 
@@ -499,7 +499,7 @@ if __name__ == '__main__':
             final_model_evaluation_runner(net, cfg)
         elif args.eval_type == 'inference':
             model_inference(net, cfg)
-        elif args.eval_type == 'predict':
+        elif args.eval_type == 'loc_predict':
             gen_localization_mask(net, cfg)
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
