@@ -3,6 +3,12 @@ MODEL:
   LOSS_TYPE: 'GeneralizedDiceLoss'
   OUT_CHANNELS: 5
   IN_CHANNELS: 4
+  PRETRAINED:
+    ENABLED: False
+    NAME: 'debug' # Name of the pretrained model
+    CP_FILE: 'dice_2xdown.pkl' # Checkpoint file
+    ENCODER_ONLY: True # full, encoder
+    INCLUDE_INPUT_LAYER: False # If true, weights from input layer will be included too (only if they have the same dims
 OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
   TRAIN: ("/storage/yonk/debug_new/train/",)

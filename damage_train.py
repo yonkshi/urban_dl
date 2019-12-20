@@ -1,6 +1,7 @@
 import sys
 from os import path
 import timeit
+from collections import OrderedDict
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -40,6 +41,8 @@ def train_net(net,
     elif cfg.MODEL.LOSS_TYPE == 'GeneralizedDiceLoss':
         criterion = generalized_soft_dice_loss_multi_class
 
+    if cfg.MODEL.PRETRAINED.ENABLED:
+        net = load_pretrained(net, cfg)
     net.to(device)
 
     trfm = build_transforms(cfg, for_training=True, use_gts_mask=cfg.DATASETS.LOCALIZATION_MASK.TRAIN_USE_GTS_MASK)
@@ -160,6 +163,33 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
 
     wandb.log(log_data)
 
+def load_pretrained(net:nn.Module, cfg):
+    p_cfg = cfg.MODEL.PRETRAINED
+    dirs = os.path.abspath(cfg.OUTPUT_DIR).split('/')
+    dirs = dirs[:-2]
+    dirs += ['unet', p_cfg.NAME, p_cfg.CP_FILE] # remove ./dmg/run_name/ -> ./
+    cp_path = os.path.join(dirs)
+
+    loaded_dict = torch.load(cp_path)
+
+    state = OrderedDict()
+    for key, tensor in loaded_dict.items():
+        # Skip output layer
+        if key.startswith('outc'): continue
+        # Skip input layer
+        if not p_cfg.INCLUDE_INPUT_LAYER and key.startswith('inc'): continue
+        # Skip decoder
+        if p_cfg.ENCODER_ONLY and key.startswith('up_seq'): continue
+
+        state[key] = tensor
+
+    # Because merge state dict
+    full_state = net.state_dict()
+    full_state.update(state)
+    net.load_state_dict(full_state)
+
+    print('Pretrained model loaded! ', cp_path, flush=True)
+    return net
 
 def build_transforms(cfg, for_training=False, use_gts_mask = False):
     trfm = []
