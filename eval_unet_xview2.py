@@ -199,7 +199,8 @@ def gen_localization_mask(net, cfg):
 
     def leave_model_signature(path):
         os.makedirs(path, exist_ok=True)
-        with open('model_signature', 'w') as f:
+        signature_path = os.path.join(path, 'model_signature')
+        with open(signature_path, 'w') as f:
             f.writelines([f'{cfg.NAME}, {cfg.CP_FILE}'])
 
     # Training set

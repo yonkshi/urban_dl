@@ -88,12 +88,16 @@ class ImportanceRandomCrop(UniformCrop):
         return input, label, image_path
 
 class IncludeLocalizationMask():
+    def __init__(self, gts_or_pred='pred'):
+        self.gts_or_pred = gts_or_pred
+
     def __call__(self, args):
         input, label, image_path = args
         image_name = os.path.basename(image_path)
         dir_name = os.path.dirname(image_path)
         # Load preprocessed mask if exist
-        mask_path = os.path.join(dir_name, 'label_mask',image_name)
+        subdir = 'loc_predicted' if self.gts_or_pred == 'pred' else 'label_mask'
+        mask_path = os.path.join(dir_name, subdir, image_name)
 
         assert os.path.exists(mask_path), 'Mask data is not generated, please double check'
 
@@ -106,6 +110,7 @@ class IncludeLocalizationMask():
 class StackPreDisasterImage():
     def __init__(self, pre_or_post='pre'):
         self.pre_or_post = pre_or_post
+
     def __call__(self, args):
         input, label, image_path = args
         image_name = os.path.basename(image_path)
