@@ -167,6 +167,55 @@ def model_inference(net, cfg):
 
     return
 
+def gen_localization_mask(net, cfg):
+    '''
+    This method is for generated predicted masks for damage detection
+    :return:
+    '''
+    from PIL import Image
+    THRESHOLD = cfg.THRESH
+
+    def save_to_png(y_true, y_pred, img_filenames):
+        # Y_pred activation
+
+        # interp image if scaling was originally enabled
+        if cfg.AUGMENTATION.RESIZE:
+            upscale_ratio = 1 / cfg.AUGMENTATION.RESIZE_RATIO
+            y_pred = torch.nn.functional.interpolate(y_pred,
+                                                     scale_factor=upscale_ratio,
+                                                     mode='bilinear')
+
+        y_pred = (y_pred > THRESHOLD).type(torch.uint8)
+
+        y_pred = y_pred.squeeze().cpu().numpy()
+        img_filename = img_filenames[0]
+
+
+        os.makedirs(save_dir, exist_ok=True)
+
+        img_save_dir = os.path.join(save_dir, img_filename)
+        im = Image.fromarray(y_pred, mode='L')
+        im.save(img_save_dir)
+
+    def leave_model_signature(path):
+        os.makedirs(path, exist_ok=True)
+        with open('model_signature', 'w') as f:
+            f.writelines([f'{cfg.NAME}, {cfg.CP_FILE}'])
+
+    # Training set
+    train_set = cfg.DATASETS.TRAIN[0]
+    save_dir = os.path.join(train_set, 'loc_predicted')
+    leave_model_signature(save_dir)
+    inference_loop(net, cfg, device, save_to_png)
+
+
+    test_set = cfg.DATASETS.TEST[0]
+    save_dir = os.path.join(test_set, 'loc_predicted')
+    leave_model_signature(save_dir)
+    inference_loop(net, cfg, device, save_to_png)
+
+    return
+
 def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, epoch=0, multi_class=False):
     '''
     Runner that is concerned with training changes
@@ -371,6 +420,7 @@ def setup(args):
     cfg.merge_from_file(f'configs/{args.config_file}.yaml')
     cfg.merge_from_list(args.opts)
     cfg.NAME = args.config_file
+    cfg.CP_FILE = args.resume_from
 
     if args.log_dir: # Override Output dir
         cfg.OUTPUT_DIR = path.join(args.log_dir, args.config_file)
@@ -407,12 +457,7 @@ def custom_argparse(parser):
     parser.add_argument('-T',"--eval-type",
                         dest='eval_type',
                         default="final",
-                        choices=['final', 'checkpoints', 'inference'],
-                        help="select an evaluation type")
-    parser.add_argument("--threshold",
-                        dest='threshold',
-                        default=0.01,
-                        type=float,
+                        choices=['final', 'checkpoints', 'inference', 'predict'],
                         help="select an evaluation type")
     return parser
 
@@ -454,6 +499,8 @@ if __name__ == '__main__':
             final_model_evaluation_runner(net, cfg)
         elif args.eval_type == 'inference':
             model_inference(net, cfg)
+        elif args.eval_type == 'predict':
+            gen_localization_mask(net, cfg)
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
         print('Saved interrupt')
