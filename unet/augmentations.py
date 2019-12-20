@@ -105,7 +105,7 @@ class IncludeLocalizationMask():
         subdir = 'label_mask' if self.use_gts_mask else 'loc_predicted'
         mask_path = os.path.join(dir_name, subdir, image_name)
 
-        assert os.path.exists(mask_path), 'Mask data is not generated, please double check'
+        assert os.path.exists(mask_path), 'Mask data is not generated, please double check \n' + mask_path
 
         mask = cv2.imread(mask_path).astype(np.float32)
         mask = mask[...,0][...,None] # [H, W, 3] -> [H, W, 1]
