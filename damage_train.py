@@ -19,7 +19,7 @@ from experiment_manager.args import default_argument_parser
 from experiment_manager.metrics import MultiClassF1
 from experiment_manager.config import new_config
 from experiment_manager.loss import *
-from eval_unet_xview2 import dmg_model_eval
+from eval_unet_xview2 import inference_loop
 
 # import hp
 
@@ -42,23 +42,8 @@ def train_net(net,
 
     net.to(device)
 
-    trfm = []
-    trfm.append(BGR2RGB())
-    trfm.append(IncludeLocalizationMask())
-    if cfg.AUGMENTATION.INCLUDE_PRE_DISASTER:trfm.append(StackPreDisasterImage())
-    if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
-    if cfg.AUGMENTATION.CROP_TYPE == 'uniform':
-        trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
-
-    trfm.append(Npy2Torch())
-    if cfg.AUGMENTATION.ENABLE_VARI: trfm.append(VARI())
-    trfm = transforms.Compose(trfm)
-
-    # reset the generators
-    dataset = Xview2Detectron2DamageLevelDataset(cfg.DATASETS.TRAIN[0],
-                                      pre_or_post=cfg.DATASETS.PRE_OR_POST,
-                                      include_image_weight=True,
-                                      transform=trfm,)
+    trfm = build_transforms(cfg, for_training=True, use_gts_mask=cfg.DATASETS.LOCALIZATION_MASK.TRAIN_USE_GTS_MASK)
+    dataset = Xview2Detectron2DamageLevelDataset(cfg.DATASETS.TRAIN[0], pre_or_post='post', include_image_weight=True, transform=trfm,)
 
     dataloader_kwargs = {
         'batch_size': cfg.TRAINER.BATCH_SIZE,
@@ -132,6 +117,63 @@ def train_net(net,
         # Evaluation for multiclass F1 score
         dmg_model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
         dmg_model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
+
+def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, epoch=0, multi_class=False):
+    '''
+    Runner that is concerned with training changes
+    :param run_type: 'train' or 'eval'
+    :return:
+    '''
+    measurer = MultiClassF1()
+    def evaluate(y_true, y_pred, img_filename):
+        measurer.add_sample(y_true, y_pred)
+    use_gts_mask = run_type == 'TRAIN' and cfg.DATASETS.LOCALIZATION_MASK.TRAIN_USE_GTS_MASK
+    dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
+
+    trfm = build_transforms(cfg, use_gts_mask = use_gts_mask)
+    dataset = Xview2Detectron2DamageLevelDataset(dset_source, pre_or_post='post', transform=trfm,)
+    inference_loop(net, cfg, device, evaluate, batch_size=cfg.TRAINER.INFERENCE_BATCH_SIZE, run_type='TRAIN',  max_samples = max_samples, dataset = dataset)
+
+    # Summary gathering ===
+
+    print('Computing F1 score ... ', end=' ', flush=True)
+    # Max of the mean F1 score
+
+    total_f1, f1_per_class = measurer.compute_f1(include_bg=False)
+    all_fpr, all_fnr = measurer.compute_basic_metrics()
+    print(total_f1, flush=True)
+
+    set_name = 'test_set' if run_type == 'TEST' else 'training_set'
+    log_data = {f'{set_name} total F1': total_f1,
+               'step': step,
+               'epoch': epoch,
+               }
+
+    damage_levels = ['no-damage', 'minor-damage', 'major-damage', 'destroyed']
+    for f1, dmg in zip(f1_per_class, damage_levels):
+        log_data[f'{set_name} {dmg} f1'] = f1
+
+    damage_levels += ['negative class']
+    for fpr, fnr, dmg in zip(all_fpr, all_fnr, damage_levels):
+        log_data[f'{set_name} {dmg} false negative rate'] = fnr
+        log_data[f'{set_name} {dmg} false positive rate'] = fpr
+
+    wandb.log(log_data)
+
+
+def build_transforms(cfg, for_training=False, use_gts_mask = False):
+    trfm = []
+    trfm.append(BGR2RGB())
+
+    if cfg.DATASETS.LOCALIZATION_MASK.ENABLED: trfm.append(IncludeLocalizationMask(use_gts_mask))
+    if cfg.DATASETS.INCLUDE_PRE_DISASTER: trfm.append(StackPreDisasterImage())
+    if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
+    if cfg.AUGMENTATION.CROP_TYPE == 'uniform' and for_training:
+        trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
+    trfm.append(Npy2Torch())
+    if cfg.AUGMENTATION.ENABLE_VARI: trfm.append(VARI())
+    trfm = transforms.Compose(trfm)
+    return trfm
 
 
 def image_sampling_weight(dataset_metadata):
