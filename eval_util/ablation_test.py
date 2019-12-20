@@ -155,7 +155,7 @@ def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
 
         # print(annotation_set.keys(), flush=True)
         total_area = total_area.item()
-        density = len(dataset_json[index]['annotations'])
+        density = len(dataset_json[index]['pre']['annotations'])
 
         result = {
             'index': index.item(),
@@ -228,11 +228,11 @@ def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
     # Iterate through batch
     for y_pred, TP, TN, FP, FN, img_filename, index in zip(Y_pred, bTP, bTN, bFP, bFN, img_filenames, indices):
         y_pred = y_pred.cpu().numpy()
-        num_buildings = len(dataset_json[index]['annotations'])
+        num_buildings = len(dataset_json[index]['pre']['annotations'])
 
 
         # iterate through buildings
-        for idx, anno in enumerate(dataset_json[index]['annotations']):
+        for idx, anno in enumerate(dataset_json[index]['pre']['annotations']):
             x1, y1, x2, y2 = np.array(anno['bbox']).astype(np.int32)
 
             crop_range = (slice(y1 - 2, y2 + 2), slice(x1 - 2, x2 + 2))  # equiv: [y1-2:y2+2, x1-2:x2+2]
