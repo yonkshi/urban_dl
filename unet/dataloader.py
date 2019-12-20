@@ -119,16 +119,19 @@ class Xview2Detectron2DamageLevelDataset(Xview2Detectron2Dataset):
             building_polygon_xy = np.array(anno['segmentation'][0], dtype=np.int32).reshape(-1, 2)
             buildings_polygons[damage_level].append(building_polygon_xy)
 
-        masks = np.zeros((1024, 1024, NUM_CLASSES, ), dtype=np.uint8)
+        masks = []
         for class_idx, building_poly in enumerate(buildings_polygons):
-            cv2.fillPoly(masks[..., class_idx], building_poly, 1)
-
-        masks = masks.astype(np.float32)
+            mask = np.zeros((1024, 1024,), dtype=np.uint8)
+            cv2.fillPoly(mask, building_poly, 1)
+            masks.append(mask)
+        masks = np.dstack(masks).astype(np.float32)
         if INCLUDE_BACKGROUND:
             positive_px = masks.sum(axis=-1, keepdims=True)
 
             bg = 1 - positive_px
             masks = np.concatenate([masks, bg], axis = -1)
+
+
 
         return masks
 
