@@ -207,7 +207,7 @@ def gen_localization_mask(net, cfg):
     train_set = cfg.DATASETS.TRAIN[0]
     save_dir = os.path.join(train_set, 'loc_predicted')
     leave_model_signature(save_dir)
-    inference_loop(net, cfg, device, save_to_png)
+    inference_loop(net, cfg, device, save_to_png, run_type='TRAIN')
 
 
     test_set = cfg.DATASETS.TEST[0]
