@@ -1,5 +1,5 @@
 _BASE_: "unet_dice.yaml"
-THRESH: 1
+THRESH: 0.52
 MODEL:
   LOSS_TYPE: 'FrankensteinLoss'
   OUT_CHANNELS: 1
