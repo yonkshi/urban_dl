@@ -211,7 +211,7 @@ def build_transforms(cfg, for_training=False, use_gts_mask = False):
 def image_sampling_weight(dataset_metadata):
     print('performing oversampling...', end='', flush=True)
     EMPTY_IMAGE_BASELINE = 1000
-    image_p = np.array([image_desc['image_weight'] for image_desc in dataset_metadata]) + EMPTY_IMAGE_BASELINE
+    image_p = np.array([image_desc['post']['image_weight'] for image_desc in dataset_metadata]) + EMPTY_IMAGE_BASELINE
     print('done', flush=True)
     # normalize to [0., 1.]
     image_p = image_p
