@@ -42,6 +42,40 @@ class triple_conv(nn.Module):
         x = self.conv(x)
         return x
 
+class attention_block(nn.Module):
+
+    def __init__(self, in_ch, out_ch):
+        super().__init__()
+        self.in_ch = in_ch
+        self.out_ch = out_ch
+        self.W2 = nn.Sequential(
+            nn.Conv2d(in_ch // 2, out_ch, kernel_size=1, stride=1, padding=0, bias=False),
+            nn.MaxPool2d(2)
+        )
+
+        self.W1 = nn.Conv2d(in_ch // 2, out_ch, kernel_size=1, stride=1, padding=0, bias=True)
+
+        self.psi =  nn.Sequential(
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=out_ch, out_channels=1, kernel_size=1, stride=1, padding=0, bias=True),
+            nn.Sigmoid(),
+        )
+
+    def forward(self, x1, x2,): # X1 is upstream, X2 is skip
+
+
+        xl_size_orig = x2.size()
+        xl_ = self.W2(x2)
+        x1 = self.W1(x1)
+
+        psi = self.psi(xl_ + x1)
+
+        upsampled_psi = F.interpolate(psi, size=xl_size_orig[2:], mode='bilinear', align_corners=False)
+
+        # scale features with attention
+        attention = upsampled_psi.expand_as(x2)
+
+        return attention * x2
 
 
 class ContextLayer(nn.Module):
@@ -113,6 +147,28 @@ class up(nn.Module):
         x = torch.cat([x2, x1], dim=1)
         x = self.conv(x)
         return x
+
+class attention_up(nn.Module):
+    def __init__(self, in_ch, out_ch, conv_block, bilinear=True, ):
+        super().__init__()
+
+        #  would be a nice idea if the upsampling could be learned too,
+        #  but my machine do not have enough memory to handle all those weights
+        if bilinear:
+            self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+        else:
+            self.up = nn.ConvTranspose2d(in_ch // 2, in_ch // 2, 2, stride=2)
+        self.attention = attention_block(in_ch, out_ch)
+        self.conv = conv_block(in_ch, out_ch)
+        print('in', in_ch, 'out', out_ch)
+
+    def forward(self, x1, x2):
+        x2 = self.attention(x1, x2)
+        x1 = self.up(x1)
+        x = torch.cat([x2, x1], dim=1)
+        x = self.conv(x)
+        return x
+
 
 
 class outconv(nn.Module):

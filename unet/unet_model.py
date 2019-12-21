@@ -25,7 +25,7 @@ class UNet(nn.Module):
         self.multiscale_context_enabled = cfg.MODEL.MULTISCALE_CONTEXT.ENABLED
         self.multiscale_context_type = cfg.MODEL.MULTISCALE_CONTEXT.TYPE
 
-
+        up_block = attention_up if cfg.MODEL.USE_ATTENTION else up
 
         # Variable scale
         down_topo = cfg.MODEL.TOPOLOGY
@@ -39,7 +39,9 @@ class UNet(nn.Module):
             is_not_last_layer = idx != n_layers-1
             in_dim = down_topo[idx]
             out_dim = down_topo[idx+1] if is_not_last_layer else down_topo[idx] # last layer
+
             layer = down(in_dim, out_dim, conv_block)
+
             print(f'down{idx+1}: in {in_dim}, out {out_dim}')
             down_dict[f'down{idx+1}'] = layer
             up_topo.append(out_dim)
@@ -57,7 +59,8 @@ class UNet(nn.Module):
             x2_idx = idx - 1 if is_not_last_layer else idx
             in_dim = up_topo[x1_idx] * 2
             out_dim = up_topo[x2_idx]
-            layer = up(in_dim, out_dim, conv_block, bilinear=cfg.MODEL.SIMPLE_INTERPOLATION)
+
+            layer = up_block(in_dim, out_dim, conv_block, bilinear=cfg.MODEL.SIMPLE_INTERPOLATION)
 
             print(f'up{idx+1}: in {in_dim}, out {out_dim}')
             up_dict[f'up{idx+1}'] = layer

@@ -10,6 +10,7 @@ MODEL:
     ENABLED: False
     TYPE: 'Simple' # [Simple, PyramidSum, ParallelSum]
     DILATION: []
+  USE_ATTENTION: False
   PRETRAINED:
     ENABLED: False
     NAME: '' # Name of the pretrained model

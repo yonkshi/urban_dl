@@ -10,7 +10,7 @@ MODEL:
   TOPOLOGY: [64, 128, 256, 512,]
   BLOCK_TYPE: 'Double' # Double = Double conv, Triple = Triple conv, for greater receptive field
   SIMPLE_INTERPOLATION: False # True: Bilinear interpo, False: Deconv interpo
-
+  USE_ATTENTION: False
   MULTISCALE_CONTEXT: # For U-Net bottleneck context module
     ENABLED: False
     TYPE: 'Simple' # [Simple, PyramidSum, ParallelSum]

@@ -3,6 +3,7 @@ MODEL:
   LOSS_TYPE: 'ComboLoss'
   OUT_CHANNELS: 1
   IN_CHANNELS: 3
+  USE_ATTENTION: True
 OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
   TRAIN: ("/storage/yonk/debug_new/train/",)
