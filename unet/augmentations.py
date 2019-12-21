@@ -4,6 +4,7 @@ import torchvision.transforms.functional as TF
 import cv2
 import numpy as np
 import torch
+from unet.utils.utils import *
 
 class Resize():
 
@@ -107,7 +108,7 @@ class IncludeLocalizationMask():
 
         assert os.path.exists(mask_path), 'Mask data is not generated, please double check \n' + mask_path
 
-        mask = cv2.imread(mask_path).astype(np.float32)
+        mask = imread_cached(mask_path).astype(np.float32)
         mask = mask[...,0][...,None] # [H, W, 3] -> [H, W, 1]
 
         input = np.concatenate([input, mask], axis=-1)
@@ -129,7 +130,7 @@ class StackPreDisasterImage():
 
         # Read image
         cp_image_path = os.path.join(dir_name, cp_image_name)
-        cp_image = cv2.imread(cp_image_path).astype(np.float32)
+        cp_image = imread_cached(cp_image_path).astype(np.float32)
 
         # RGB -> BGR and stack
         cp_image = bgr2rgb(cp_image)

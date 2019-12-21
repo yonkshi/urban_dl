@@ -73,7 +73,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         # Load preprocessed mask if exist
         mask_path = os.path.join(self.dataset_path, 'label_mask',sample_name)
         if os.path.exists(mask_path):
-            mask = cv2.imread(mask_path)[...,0].astype(np.float32)
+            mask = imread_cached(mask_path)[...,0].astype(np.float32)
             return mask
 
         building_polygons = []
@@ -88,7 +88,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
 
     def _process_input(self, image_filename):
         img_path = os.path.join(self.dataset_path, image_filename)
-        img = cv2.imread(img_path)
+        img = imread_cached(img_path)
         return img
 
     def __len__(self):

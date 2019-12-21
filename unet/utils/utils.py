@@ -1,6 +1,12 @@
 import random
 import numpy as np
+import functools
+import cv2
 
+@functools.lru_cache(maxsize= 4000)
+def imread_cached(img_path):
+    img = cv2.imread(img_path)
+    return img
 
 def get_square(img, pos):
     """Extract a left or a right square from ndarray shape : (H, W, C))"""
