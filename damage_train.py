@@ -168,6 +168,8 @@ def load_pretrained(net:nn.Module, cfg):
     dirs = os.path.abspath(cfg.OUTPUT_DIR).split('/')
     dirs = dirs[:-2]
     dirs += ['unet', p_cfg.NAME, p_cfg.CP_FILE] # remove ./dmg/run_name/ -> ./
+
+    print('dirs:', dirs )
     cp_path = os.path.join(dirs)
 
     loaded_dict = torch.load(cp_path)
