@@ -4,7 +4,7 @@ MODEL:
   LOSS_TYPE: 'FrankensteinLoss'
   OUT_CHANNELS: 1
   BLOCK_TYPE: 'Triple'
-  TOPOLOGY: [128, 256, 512, 1024,]
+  TOPOLOGY: [64, 256, 512, 1024,]
 AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'importance'
