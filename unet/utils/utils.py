@@ -3,7 +3,7 @@ import numpy as np
 import functools
 import cv2
 
-@functools.lru_cache(maxsize= 2000)
+@functools.lru_cache(maxsize= 300)
 def imread_cached(img_path):
     img = cv2.imread(img_path)
     return img
