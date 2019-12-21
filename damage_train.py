@@ -40,6 +40,8 @@ def train_net(net,
         criterion = soft_dice_loss_multi_class
     elif cfg.MODEL.LOSS_TYPE == 'GeneralizedDiceLoss':
         criterion = generalized_soft_dice_loss_multi_class
+    elif cfg.MODEL.LOSS_TYPE == 'JaccardLikeLoss':
+        criterion = jaccard_like_loss_multi_class
 
     if cfg.MODEL.PRETRAINED.ENABLED:
         net = load_pretrained(net, cfg)

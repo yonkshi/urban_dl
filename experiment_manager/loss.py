@@ -39,6 +39,20 @@ def generalized_soft_dice_loss_multi_class(input:torch.Tensor, y:torch.Tensor):
     loss = 1 - (2. * intersection / denom)
     return loss
 
+def jaccard_like_loss_multi_class(input:torch.Tensor, y:torch.Tensor):
+    p = torch.softmax(input, dim=1)
+    eps = 1e-6
+
+    # TODO [B, C, H, W] -> [C, B, H, W] because softdice includes all pixels
+
+    sum_dims= (0, 2, 3) # Batch, height, width
+
+    intersection = (y * p).sum(dim=sum_dims)
+    denom =  (y ** 2 + p ** 2).sum(dim=sum_dims) + (y*p).sum(dim=sum_dims) + eps
+
+    loss = 1 - (2. * intersection / denom).mean()
+    return loss
+
 def jaccard_like_loss(input:torch.Tensor, target:torch.Tensor):
     input_sigmoid = torch.sigmoid(input)
     eps = 1e-6
