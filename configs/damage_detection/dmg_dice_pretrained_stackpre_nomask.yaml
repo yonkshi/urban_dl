@@ -1,6 +1,7 @@
 _BASE_: "damage_base.yaml"
 MODEL:
   IN_CHANNELS: 6
+  BLOCK_TYPE: 'Triple'
   PRETRAINED:
     ENABLED: True
     NAME: 'frankenstein_oversample_3conv' # Name of the pretrained model
