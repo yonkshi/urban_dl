@@ -79,10 +79,12 @@ def inference_loop2(net, cfg, device,
 
     dataset_length = np.minimum(len(dataset), max_samples)
     with torch.no_grad():
-        for step, (imgs, y_label, sample_name, index) in enumerate(dataloader):
+        for step, batch in enumerate(dataloader):
 
-            imgs = imgs.to(device)
-            y_label = y_label.to(device)
+            imgs = batch['x'].to(device)
+            y_label = batch['y'].to(device)
+            sample_name = batch['img_name']
+            index = batch['index']
 
             y_pred = net(imgs)
 

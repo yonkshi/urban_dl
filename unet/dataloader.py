@@ -26,6 +26,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
                  include_index=False,
                  include_image_weight = False,
                  transform = None,
+                 include_edge_mask= False,
 
                  ):
         super().__init__()
@@ -43,6 +44,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         self.include_image_weight = include_image_weight
         self.transform = transform
         self.pre_or_post = pre_or_post
+        self.include_edge_mask = include_edge_mask
 
 
     def __getitem__(self, index):
@@ -57,15 +59,24 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
             image_path = os.path.join(self.dataset_path, sample_name)
             input, label, _ = self.transform([input, label, image_path])
 
-        ret = [input, label, sample_name]
+
+        ret = {
+            'x': input,
+            'y': label,
+            'img_name':sample_name,
+        }
+
         if self.include_index:
-            ret += [index]
+            ret['index'] = index
         if self.include_image_weight:
             # Used for oversampling stats
             if hasattr(data_sample, 'image_weight'):
-                ret += [data_sample['image_weight']]
+                ret['image_weight'] = data_sample['image_weight']
             else:
-                ret += [label.sum()]
+                ret['image_weight'] = label.sum()
+        if self.include_edge_mask:
+            ret['edge_mask'] = self._load_edge_mask(sample_name)
+
         return ret
 
     def _extract_label(self, annotations_set, sample_name):
@@ -91,10 +102,19 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         img = imread_cached(img_path)
         return img
 
+    def _load_edge_mask(self, sample_name):
+        '''
+        loading edge mask for loss computation
+        :return:
+        '''
+        return 0
+
     def __len__(self):
         return self.length
 
 class Xview2Detectron2DamageLevelDataset(Xview2Detectron2Dataset):
+
+
 
     def _extract_label(self, annotations_set, sample_name):
         # TODO This data can be preprocessed

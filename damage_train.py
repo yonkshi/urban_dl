@@ -80,10 +80,13 @@ def train_net(net,
         net.train()
         loss_set, f1_set = [], []
         positive_pixels_set = [] # Used to evaluated image over sampling techniques
-        for i, (x, y_gts, sample_name, image_weight) in enumerate(dataloader):
+        for i, batch in enumerate(dataloader):
+            x = batch['x'].to(device)
+            y_gts = batch['y'].to(device)
+            image_weight = batch['image_weight']
+
             optimizer.zero_grad()
-            x = x.to(device)
-            y_gts = y_gts.to(device)
+
             y_pred = net(x)
             loss = criterion(y_pred, y_gts)
             epoch_loss += loss.item()
@@ -93,6 +96,7 @@ def train_net(net,
 
             loss_set.append(loss.item())
             positive_pixels_set.extend(image_weight.cpu().numpy())
+
             if global_step % 10000 == 0 and global_step > 0:
                 check_point_name = f'cp_{global_step}.pkl'
                 save_path = os.path.join(log_path, check_point_name)

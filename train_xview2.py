@@ -133,14 +133,12 @@ def train_net(net,
         mAP_set_train, mAUC_set_train, maxF1_train = [],[],[]
         loss_set, f1_set = [], []
         positive_pixels_set = [] # Used to evaluated image over sampling techniques
-        for i, (x, y_gts, sample_name, image_weight) in enumerate(dataloader):
-            # visualize_image(imgs, y_label, y_label, sample_name)
-            # print('max_gpu_usage',torch.cuda.max_memory_allocated() / 10e9, ', max_GPU_cache_isage', torch.cuda.max_memory_cached()/10e9)
+        for i, batch in enumerate(dataloader):
             optimizer.zero_grad()
 
-            x = x.to(device)
-
-            y_gts = y_gts.to(device)
+            x = batch['x'].to(device)
+            y_gts = batch['y'].to(device)
+            image_weight = batch['image_weight']
 
             y_pred = net(x)
 
