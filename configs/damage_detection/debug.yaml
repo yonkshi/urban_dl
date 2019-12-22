@@ -1,6 +1,6 @@
 _BASE_: "damage_base.yaml"
 MODEL:
-  LOSS_TYPE: 'GeneralizedDiceLoss'
+  LOSS_TYPE: 'ComboLoss'
   OUT_CHANNELS: 5
   IN_CHANNELS: 7
   PRETRAINED:

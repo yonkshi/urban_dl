@@ -42,6 +42,8 @@ def train_net(net,
         criterion = generalized_soft_dice_loss_multi_class
     elif cfg.MODEL.LOSS_TYPE == 'JaccardLikeLoss':
         criterion = jaccard_like_loss_multi_class
+    elif cfg.MODEL.LOSS_TYPE == 'ComboLoss':
+        criterion = combo_loss
 
     if cfg.MODEL.PRETRAINED.ENABLED:
         net = load_pretrained(net, cfg)
@@ -216,6 +218,11 @@ def build_transforms(cfg, for_training=False, use_gts_mask = False):
     if cfg.AUGMENTATION.ENABLE_VARI: trfm.append(VARI())
     trfm = transforms.Compose(trfm)
     return trfm
+
+def combo_loss(p, y):
+    y_ = y.argmax(dim=1).long()
+    loss = F.cross_entropy(p, y_) + soft_dice_loss_multi_class(p, y)
+    return loss
 
 
 def image_sampling_weight(dataset_metadata):
