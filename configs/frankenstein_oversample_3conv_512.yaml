@@ -5,9 +5,9 @@ MODEL:
   OUT_CHANNELS: 1
   BLOCK_TYPE: 'Triple'
 TRAINER:
-  BATCH_SIZE: 14
+  BATCH_SIZE: 12
 DATALOADER:
-  NUM_WORKER: 14
+  NUM_WORKER: 12
 AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'importance'
