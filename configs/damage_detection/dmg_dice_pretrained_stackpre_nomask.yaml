@@ -19,7 +19,7 @@ DATALOADER:
 AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'uniform'
-  CROP_SIZE: 256512
+  CROP_SIZE: 512
 
 
 
