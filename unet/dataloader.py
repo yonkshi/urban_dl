@@ -27,6 +27,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
                  include_image_weight = False,
                  transform = None,
                  include_edge_mask= False,
+                 use_clahe = False
 
                  ):
         super().__init__()
@@ -45,6 +46,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         self.transform = transform
         self.pre_or_post = pre_or_post
         self.include_edge_mask = include_edge_mask
+        self.use_clahe = use_clahe
 
 
     def __getitem__(self, index):
@@ -101,7 +103,10 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         return mask
 
     def _process_input(self, image_filename):
-        img_path = os.path.join(self.dataset_path, image_filename)
+        if self.use_clahe:
+            img_path = os.path.join(self.dataset_path,'clahe', image_filename)
+        else:
+            img_path = os.path.join(self.dataset_path, image_filename)
         img = imread_cached(img_path)
         return img
 

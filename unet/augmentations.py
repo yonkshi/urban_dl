@@ -24,7 +24,12 @@ class Resize():
 class VARI():
     def __call__(self, args):
         input, label, image_path = args
-
+        image_name = os.path.basename(image_path)
+        dir_name = os.path.dirname(image_path)
+        vari_path = os.path.join(dir_name, 'vari' ,image_name)
+        if os.path.exists(vari_path):
+            mask = imread_cached(vari_path).astype(np.float32)
+            return mask
         # TODO load existing VARI chanel
         # Input is in BGR
         assert input.shape[1] == input.shape[2] and torch.is_tensor(input), 'invalid tensor, did you forget to put VARI after Np2Torch?'

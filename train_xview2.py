@@ -99,7 +99,7 @@ def train_net(net,
     elif cfg.AUGMENTATION.CROP_TYPE == 'importance':
         trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
     trfm.append(Npy2Torch())
-    if cfg.AUGMENTATION.ENABLE_VARI: trfm.append(VARI())
+    if cfg.DATASETS.USE_CLAHE_VARI: trfm.append(VARI())
     trfm = transforms.Compose(trfm)
 
     # reset the generators
@@ -108,6 +108,8 @@ def train_net(net,
                                       include_image_weight=True,
                                       transform=trfm,
                                       include_edge_mask=use_edge_loss,
+                                      use_clahe=cfg.DATASETS.USE_CLAHE_VARI,
+
                                       )
 
     dataloader_kwargs = {

@@ -54,7 +54,7 @@ def train_net(net,
     net.to(device)
 
     trfm = build_transforms(cfg, for_training=True, use_gts_mask=cfg.DATASETS.LOCALIZATION_MASK.TRAIN_USE_GTS_MASK)
-    dataset = Xview2Detectron2DamageLevelDataset(cfg.DATASETS.TRAIN[0], pre_or_post='post', include_image_weight=True, transform=trfm,)
+    dataset = Xview2Detectron2DamageLevelDataset(cfg.DATASETS.TRAIN[0], pre_or_post='post', include_image_weight=True, transform=trfm)
 
     dataloader_kwargs = {
         'batch_size': cfg.TRAINER.BATCH_SIZE,

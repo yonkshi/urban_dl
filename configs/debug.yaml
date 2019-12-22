@@ -9,6 +9,7 @@ DATASETS:
   TRAIN: ("/storage/yonk/debug_new/train/",)
   TEST: ("/storage/yonk/debug_new/test/",)
   INFERENCE: ("/storage/yonk/debug_new/test/",)
+  USE_CLAHE_VARI: True
 TRAINER:
   LR: 0.001
   BATCH_SIZE: 8
