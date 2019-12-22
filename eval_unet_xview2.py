@@ -117,7 +117,57 @@ def model_checkpoints_eval_runner(net, cfg):
         # TEST SET EVALUATION
         model_eval(net, cfg, device, run_type='TEST', step=cp_num)
 
-def model_inference(net, cfg):
+def localization_inference(net, cfg):
+    '''
+    This method is for running inference on the actual dataset
+    :return:
+    '''
+    inference_dataset = cfg.DATASETS.INFERENCE[0]
+    THRESHOLD = cfg.THRESH
+    dataset = SimpleInferenceDataset(inference_dataset, downsample_scale= cfg.AUGMENTATION.RESIZE_RATIO)
+    from PIL import Image
+
+    def save_to_png(y_true, y_pred, img_filenames):
+        # Y_pred activation
+
+        # interp image if scaling was originally enabled
+        if cfg.AUGMENTATION.RESIZE:
+            upscale_ratio = 1 / cfg.AUGMENTATION.RESIZE_RATIO
+            y_pred = torch.nn.functional.interpolate(y_pred,
+                                                     scale_factor=upscale_ratio,
+                                                     mode='bilinear')
+
+        y_pred = (y_pred > THRESHOLD).type(torch.uint8)
+
+        y_pred = y_pred.squeeze().cpu().numpy()
+        img_filename = img_filenames[0]
+        inference_dir = os.path.join(cfg.OUTPUT_DIR, 'predictions')
+        os.makedirs(inference_dir, exist_ok=True)
+
+
+
+        if img_filename.startswith('test'): # for the real dataset
+            test, pre, num_png = str.split(img_filename, '_')
+            num, png = str.split(num_png, '.')
+            test_localization_num_pred = '_'.join([test,'localization', num, 'prediction'])
+            img_filename = test_localization_num_pred + '.png'
+
+            test_damage_num_pred = '_'.join([test, 'damage', num, 'prediction'])
+            dmg_img_filename = test_damage_num_pred + '.png'
+
+        img_save_dir = os.path.join(inference_dir, img_filename)
+        dmg_img_save_dir = os.path.join(inference_dir, dmg_img_filename)
+        im = Image.fromarray(y_pred, mode='L')
+        im.save(img_save_dir)
+        im.save(dmg_img_save_dir)
+
+
+
+    inference_loop(net, cfg, device, save_to_png, dataset=dataset)
+
+    return
+
+def damage_level_inference(net, cfg):
     '''
     This method is for running inference on the actual dataset
     :return:
@@ -440,7 +490,7 @@ if __name__ == '__main__':
             )
             final_model_evaluation_runner(net, cfg)
         elif args.eval_type == 'inference':
-            model_inference(net, cfg)
+            localization_inference(net, cfg)
         elif args.eval_type == 'loc_predict':
             gen_localization_mask(net, cfg)
     except KeyboardInterrupt:
