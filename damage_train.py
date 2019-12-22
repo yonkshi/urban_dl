@@ -210,6 +210,8 @@ def build_transforms(cfg, for_training=False, use_gts_mask = False):
     if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
     if cfg.AUGMENTATION.CROP_TYPE == 'uniform' and for_training:
         trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
+    elif cfg.AUGMENTATION.CROP_TYPE == 'importance':
+        trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
     trfm.append(Npy2Torch())
     if cfg.AUGMENTATION.ENABLE_VARI: trfm.append(VARI())
     trfm = transforms.Compose(trfm)
