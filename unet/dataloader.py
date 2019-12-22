@@ -54,6 +54,10 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         input =self._process_input(sample_name)
         label = self._extract_label(data_sample['annotations'], sample_name)
         # label = label[None, ...] # C x H x W
+        if self.include_edge_mask:
+            # Edge mask is attached to the
+            edge_mask = self._load_edge_mask(sample_name)
+            label = np.concatenate([edge_mask, label], axis=-1)
 
         if self.transform:
             image_path = os.path.join(self.dataset_path, sample_name)
@@ -74,8 +78,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
                 ret['image_weight'] = data_sample['image_weight']
             else:
                 ret['image_weight'] = label.sum()
-        if self.include_edge_mask:
-            ret['edge_mask'] = self._load_edge_mask(sample_name)
+
 
         return ret
 
@@ -84,7 +87,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         # Load preprocessed mask if exist
         mask_path = os.path.join(self.dataset_path, 'label_mask',sample_name)
         if os.path.exists(mask_path):
-            mask = imread_cached(mask_path)[...,0].astype(np.float32)
+            mask = imread_cached(mask_path)[...,[0]].astype(np.float32)
             return mask
 
         building_polygons = []
@@ -92,7 +95,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
             building_polygon_xy = np.array(anno['segmentation'][0], dtype=np.int32).reshape(-1, 2)
             building_polygons.append(building_polygon_xy)
 
-        mask2 = np.zeros((1024, 1024), dtype=np.uint8)
+        mask2 = np.zeros((1024, 1024, 1), dtype=np.uint8)
         cv2.fillPoly(mask2, building_polygons, 1)
         mask = mask2.astype(np.float32)
         return mask
@@ -104,10 +107,13 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
 
     def _load_edge_mask(self, sample_name):
         '''
-        loading edge mask for loss computation
+        loading edge mask for edge loss computation
         :return:
         '''
-        return 0
+        edge_mask_path = os.path.join(self.dataset_path, 'edge_loss_weight_mask', sample_name + '.npz')
+        edge_mask = np.load(edge_mask_path)['arr_0'] # arr_0 is the default name for array, kind of stupid
+        edge_mask = edge_mask[..., None, ]
+        return edge_mask
 
     def __len__(self):
         return self.length

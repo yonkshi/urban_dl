@@ -41,9 +41,7 @@ class Npy2Torch():
     def __call__(self, args):
         input, label, image_path = args
         input_t = TF.to_tensor(input)
-        if len(label.shape) > 2:
-            # Label is multi class
-            label = TF.to_tensor(label)
+        label = TF.to_tensor(label)
         return input_t, label, image_path
 class BGR2RGB():
     def __call__(self, args):
@@ -80,6 +78,17 @@ class ImportanceRandomCrop(UniformCrop):
         BALANCING_FACTOR = 200
 
         random_crops = [self.random_crop(input, label) for i in range(SAMPLE_SIZE)]
+        # TODO Multi class vs edge mask
+        weights = []
+        for input, label in random_crops:
+            if label.shape[2] >= 4:
+                # Damage detection, multi class, excluding backround
+                weights.append(label[...,:-1].sum())
+            elif label.shape[2] > 1:
+                # Edge Mask, excluding edge masks
+                weights.append(label[...,0].sum())
+            else:
+                weights.append(label.sum())
         crop_weights = np.array([label.sum() for input, label in random_crops]) + BALANCING_FACTOR
         crop_weights = crop_weights / crop_weights.sum()
 

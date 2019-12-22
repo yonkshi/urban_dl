@@ -217,7 +217,7 @@ def gen_localization_mask(net, cfg):
 
     return
 
-def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, epoch=0, multi_class=False):
+def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, epoch=0):
     '''
     Runner that is concerned with training changes
     :param run_type: 'train' or 'eval'
@@ -228,10 +228,7 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, ep
     y_true_set = []
     y_pred_set = []
 
-    if multi_class:
-        measurer = MultiClassF1(F1_THRESH)
-    else:
-        measurer = MultiThresholdMetric(F1_THRESH)
+    measurer = MultiThresholdMetric(F1_THRESH)
     def evaluate(y_true, y_pred, img_filename):
         y_true = y_true.detach()
         y_pred = y_pred.detach()
@@ -263,24 +260,24 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, ep
     print(maxF1.item(), flush=True)
 
 
-    # Due to interpolation
-    y_true_set = torch.cat(y_true_set, dim = 0).round()
-    y_pred_set = torch.cat(y_pred_set, dim=0)
-
-    y_true_set, y_pred_set = downsample_dataset_for_eval(y_true_set, y_pred_set)
-
-    y_true_np = to_numpy(y_true_set.flatten())
-    y_pred_np = to_numpy(y_pred_set.flatten())
-
-    # Average Precision
-    print('Computing AP score ... ', end='', flush=True)
-    ap = average_precision_score(y_true_np, y_pred_np)
-    print(ap)
+    # # Due to interpolation
+    # y_true_set = torch.cat(y_true_set, dim = 0).round()
+    # y_pred_set = torch.cat(y_pred_set, dim=0)
+    #
+    # y_true_set, y_pred_set = downsample_dataset_for_eval(y_true_set, y_pred_set)
+    #
+    # y_true_np = to_numpy(y_true_set.flatten())
+    # y_pred_np = to_numpy(y_pred_set.flatten())
+    #
+    # # Average Precision
+    # print('Computing AP score ... ', end='', flush=True)
+    # ap = average_precision_score(y_true_np, y_pred_np)
+    # print(ap)
 
     set_name = 'test_set' if run_type == 'TEST' else 'training_set'
     wandb.log({f'{set_name} max F1': maxF1,
                f'{set_name} argmax F1': argmaxF1,
-               f'{set_name} Average Precision': ap,
+               # f'{set_name} Average Precision': ap,
                f'{set_name} false positive rate': best_fpr,
                f'{set_name} false negative rate': best_fnr,
                'step': step,

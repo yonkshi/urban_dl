@@ -42,7 +42,7 @@ class MultiThresholdMetric():
         # self._y_true = self._y_true[None,:, None, ...] # [Thresh, B,  C, ...]
 
     def add_sample(self, y_true:torch.Tensor, y_pred):
-        y_true = y_true.bool()[None,:, None, ...] # [Thresh, B,  C, ...]
+        y_true = y_true.bool()[None,...] # [Thresh, B,  C, ...]
         y_pred = y_pred[None, ...]  # [Thresh, B, C, ...]
         y_pred_offset = (y_pred - self._thresholds + 0.5).round().bool()
 

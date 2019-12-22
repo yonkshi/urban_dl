@@ -76,6 +76,8 @@ def train_net(net,
         criterion = lambda pred, gts: 2 * F.binary_cross_entropy_with_logits(pred, gts) + soft_dice_loss(pred, gts)
     elif cfg.MODEL.LOSS_TYPE == 'FrankensteinLoss':
         criterion = lambda pred, gts: F.binary_cross_entropy_with_logits(pred, gts) + jaccard_like_balanced_loss(pred, gts)
+    elif cfg.MODEL.LOSS_TYPE == 'FrankensteinEdgeLoss':
+        criterion = FrankensteinEdgeLoss
 
 
     if torch.cuda.device_count() > 1:
@@ -87,6 +89,7 @@ def train_net(net,
     global_step = 0
     epochs = cfg.TRAINER.EPOCHS
 
+    use_edge_loss = cfg.MODEL.LOSS_TYPE == 'FrankensteinEdgeLoss'
 
     trfm = []
     trfm.append(BGR2RGB())
@@ -103,7 +106,9 @@ def train_net(net,
     dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0],
                                       pre_or_post=cfg.DATASETS.PRE_OR_POST,
                                       include_image_weight=True,
-                                      transform=trfm,)
+                                      transform=trfm,
+                                      include_edge_mask=use_edge_loss,
+                                      )
 
     dataloader_kwargs = {
         'batch_size': cfg.TRAINER.BATCH_SIZE,
@@ -140,15 +145,22 @@ def train_net(net,
             y_gts = batch['y'].to(device)
             image_weight = batch['image_weight']
 
+
             y_pred = net(x)
 
             if cfg.MODEL.LOSS_TYPE == 'CrossEntropyLoss':
                 # y_pred = y_pred # Cross entropy loss doesn't like single channel dimension
                 y_gts = y_gts.long()# Cross entropy loss requires a long as target
+
+            if use_edge_loss:
+                # TODO
+                edge_mask = y_gts[:,[-1]]
+                y_gts = y_gts[:,[0]]
+                loss = criterion(y_pred, y_gts, edge_mask, cfg.TRAINER.EDGE_LOSS_SCALE)
             else:
-                # For BCE loss, label needs to match the dimensions of network output
-                y_gts = y_gts.unsqueeze(1)
-            loss = criterion(y_pred, y_gts)
+                loss = criterion(y_pred, y_gts)
+
+
             epoch_loss += loss.item()
 
             loss.backward()
@@ -185,13 +197,6 @@ def train_net(net,
 
                 loss_set = []
                 positive_pixels_set = []
-                # f1_set = []
-                # if global_step % 1000 == 0:
-                #     figure, plt = visualize_image(x, y_pred, y_gts, sample_name)
-                #     wandb.log({"output_image": plt})
-                #     writer.add_figure('output_image/train', figure, global_step)
-
-                optimizer.zero_grad()
 
                 start = stop
 
@@ -203,7 +208,12 @@ def train_net(net,
             model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
             model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
 
-
+def FrankensteinEdgeLoss(p, y, neg_edge_mask, lambda_factor=1):
+    p2 = torch.sigmoid(p)
+    ce = y * p2.log() + (1-y) * (1-p2).log() * neg_edge_mask * lambda_factor
+    ce_loss = -ce.mean()
+    loss = ce_loss + jaccard_like_balanced_loss(p, y)
+    return loss
 
 def image_sampling_weight(dataset_metadata):
     print('performing oversampling...', end='', flush=True)
@@ -237,61 +247,6 @@ def gpu_stats():
 
     return int(max_memory_allocated), int(max_memory_cached)
 
-
-def visualize_image(input_image, output_segmentation, gt_segmentation, sample_name):
-
-    # TODO This is slow, consider making this working in a background thread. Or making the entire tensorboardx work in a background thread
-    gs = gridspec.GridSpec(nrows=2, ncols=2)
-    fig = plt.figure(figsize=(5, 5))
-    fig.subplots_adjust(wspace=0, hspace=0)
-
-    # input image
-    img = toNp(input_image)
-    # img = img[...,[2,1,0]] * 4.5 # BGR -> RGB and brighten
-    img = np.clip(img, 0, 1)
-    ax0 = fig.add_subplot(gs[0,0])
-    ax0.set_title(sample_name[0])
-    ax0.imshow(img)
-    ax0.axis('off')
-
-    # output segments
-    out_seg = toNp(output_segmentation)
-    out_seg_argmax = np.argmax(out_seg, axis=-1)
-    ax1 = fig.add_subplot(gs[1, 0])
-    print(out_seg_argmax.shape)
-    ax1.imshow(out_seg_argmax.squeeze(), cmap = lulc_cmap, norm=lulc_norm,)
-    ax1.set_title('output')
-    ax1.axis('off')
-
-    # ground truth
-    gt = toNp_vanilla(gt_segmentation)
-    ax2 = fig.add_subplot(gs[1, 1])
-    ax2.imshow(gt.squeeze(), cmap=lulc_cmap, norm=lulc_norm,)
-    ax2.set_title('ground_truth')
-    ax2.axis('off')
-
-    fig.tight_layout()
-    plt.tight_layout()
-    return fig, plt
-
-def toNp_vanilla(t:torch.Tensor):
-    return t[0,...].cpu().detach().numpy()
-
-def toNp(t:torch.Tensor):
-    # Pick the first item in batch
-    return to_H_W_C(t)[0,...].cpu().detach().numpy()
-
-def to_C_H_W(t:torch.Tensor):
-    # From [B, H, W, C] to [B, C, H, W]
-    if len(t.shape) <= 3: return t # if [B, H. W] then do nothing
-    assert t.shape[1] == t.shape[2] and t.shape[3] != t.shape[2], 'are you sure this tensor is in [B, H, W, C] format?'
-    return t.permute(0,3,1,2)
-
-def to_H_W_C(t:torch.Tensor):
-    # From [B, C, H, W] to [B, H, W, C]
-    if len(t.shape) <= 3: return t # if [B, H. W] then do nothing
-    assert t.shape[1] != t.shape[2], 'are you sure this tensor is in [B, C, H, W] format?'
-    return t.permute(0,2,3,1)
 
 def setup(args):
     cfg = new_config()
