@@ -215,6 +215,7 @@ def FrankensteinEdgeLoss(p, y, neg_edge_mask, lambda_factor=1):
 
     # loss2 = y - p >= 0
     # ce_loss_reference = F.binary_cross_entropy_with_logits(p, y, reduction='none')
+    F.nll_loss()
     loss = ce_loss + jaccard_like_balanced_loss(p, y)
     return loss
 
