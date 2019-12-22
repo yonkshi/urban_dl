@@ -110,6 +110,7 @@ def train_net(net,
         'num_workers': cfg.DATALOADER.NUM_WORKER,
         'shuffle':cfg.DATALOADER.SHUFFLE,
         'drop_last': True,
+        'pin_memory': True,
     }
 
     # sampler
