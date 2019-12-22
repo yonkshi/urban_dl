@@ -209,10 +209,9 @@ def train_net(net,
             model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
 
 def FrankensteinEdgeLoss(p, y, neg_edge_mask, lambda_factor=1):
-    p2 = torch.sigmoid(p).clamp(1e-6)
-    # p_log = torch.nn.LogSigmoid()(p)
-    ce = y * p2.log() + (1-y) * (1-p2).log() * neg_edge_mask * lambda_factor
-    ce_loss = -ce.mean()
+    p2 = torch.sigmoid(p).clamp(1e-7)
+    ce = y * p2.log() + (1-y) * (1-p2).log() * neg_edge_mask
+    ce_loss = -ce.mean() * lambda_factor
 
     # loss2 = y - p >= 0
     # ce_loss_reference = F.binary_cross_entropy_with_logits(p, y, reduction='none')
