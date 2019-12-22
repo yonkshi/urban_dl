@@ -4,6 +4,10 @@ MODEL:
   LOSS_TYPE: 'FrankensteinLoss'
   OUT_CHANNELS: 1
   BLOCK_TYPE: 'Triple'
+TRAINER:
+  BATCH_SIZE: 14
+DATALOADER:
+  NUM_WORKER: 14
 AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'importance'
