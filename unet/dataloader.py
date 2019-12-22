@@ -111,7 +111,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         :return:
         '''
         edge_mask_path = os.path.join(self.dataset_path, 'edge_loss_weight_mask', sample_name + '.npz')
-        if os.path.exists(edge_mask_path):
+        if not os.path.exists(edge_mask_path):
             # empty files have no edges
             edge_mask = np.ones((1024, 1024, 1)) / 20
             return edge_mask.astype(np.float32)
