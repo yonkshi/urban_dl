@@ -45,6 +45,10 @@ def train_net(net,
 
     if cfg.MODEL.PRETRAINED.ENABLED:
         net = load_pretrained(net, cfg)
+
+    if torch.cuda.device_count() > 1:
+        print(torch.cuda.device_count(), " GPUs!")
+        net = nn.DataParallel(net)
     net.to(device)
 
     trfm = build_transforms(cfg, for_training=True, use_gts_mask=cfg.DATASETS.LOCALIZATION_MASK.TRAIN_USE_GTS_MASK)

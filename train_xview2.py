@@ -76,6 +76,11 @@ def train_net(net,
         criterion = lambda pred, gts: 2 * F.binary_cross_entropy_with_logits(pred, gts) + soft_dice_loss(pred, gts)
     elif cfg.MODEL.LOSS_TYPE == 'FrankensteinLoss':
         criterion = lambda pred, gts: F.binary_cross_entropy_with_logits(pred, gts) + jaccard_like_balanced_loss(pred, gts)
+
+
+    if torch.cuda.device_count() > 1:
+        print(torch.cuda.device_count(), " GPUs!")
+        net = nn.DataParallel(net)
     net.to(device)
 
     __benchmark_init()
