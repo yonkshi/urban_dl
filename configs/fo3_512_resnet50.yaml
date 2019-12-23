@@ -6,6 +6,7 @@ MODEL:
   BLOCK_TYPE: 'Triple'
   RESNET:
     ENABLED: True
+    TYPE: 'resnet50'
 TRAINER:
   BATCH_SIZE: 10
 DATALOADER:
