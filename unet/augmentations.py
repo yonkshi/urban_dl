@@ -30,7 +30,6 @@ class VARI():
         if os.path.exists(vari_path):
             mask = imread_cached(vari_path).astype(np.float32)
             return mask
-        # TODO load existing VARI chanel
         # Input is in BGR
         assert input.shape[1] == input.shape[2] and torch.is_tensor(input), 'invalid tensor, did you forget to put VARI after Np2Torch?'
         R = input[0]

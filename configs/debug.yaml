@@ -1,15 +1,16 @@
 _BASE_: "base.yaml"
 MODEL:
-  LOSS_TYPE: 'FrankensteinEdgeLoss'
+  LOSS_TYPE: 'FrankensteinLoss'
   OUT_CHANNELS: 1
   IN_CHANNELS: 3
-  USE_ATTENTION: True
+  RESNET:
+    ENABLED: True
 OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
   TRAIN: ("/storage/yonk/debug_new/train/",)
   TEST: ("/storage/yonk/debug_new/test/",)
   INFERENCE: ("/storage/yonk/debug_new/test/",)
-  USE_CLAHE_VARI: True
+  USE_CLAHE_VARI: False
 TRAINER:
   LR: 0.001
   BATCH_SIZE: 8

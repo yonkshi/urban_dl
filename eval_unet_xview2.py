@@ -124,7 +124,7 @@ def localization_inference(net, cfg):
     '''
     inference_dataset = cfg.DATASETS.INFERENCE[0]
     THRESHOLD = cfg.THRESH
-    dataset = SimpleInferenceDataset(inference_dataset, downsample_scale= cfg.AUGMENTATION.RESIZE_RATIO, )
+    dataset = SimpleInferenceDataset(inference_dataset, downsample_scale= cfg.AUGMENTATION.RESIZE_RATIO, filter='test_pre')
     from PIL import Image
 
     def save_to_png(y_true, y_pred, img_filenames):
@@ -174,6 +174,8 @@ def damage_level_inference(net, cfg):
     '''
     inference_dataset = cfg.DATASETS.INFERENCE[0]
     THRESHOLD = cfg.THRESH
+    # TODO Transforms for loading pre images
+    # TODO Transform for generate masks and load masks (If the loc model has predictions, then use that instead)
     dataset = SimpleInferenceDataset(inference_dataset, downsample_scale= cfg.AUGMENTATION.RESIZE_RATIO)
     from PIL import Image
 

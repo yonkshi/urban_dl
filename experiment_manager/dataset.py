@@ -7,18 +7,19 @@ class SimpleInferenceDataset(torch.utils.data.Dataset):
     '''
     A dataset objects that lists
     '''
-    def __init__(self, dataset_path, file_extension='.png', downsample_scale=None):
+    def __init__(self, dataset_path, file_extension='.png', downsample_scale=None, filter=None):
 
         image_files = []
 
         for filename in os.listdir(dataset_path):
-            if filename.endswith(file_extension):
+            if filename.endswith(file_extension) and filter in filename:
                 image_files.append(filename)
 
         self.image_files = image_files
         self.length = len(image_files)
         self.dataset_path = dataset_path
         self.downsample_scale = downsample_scale
+        self.filter = filter
 
     def __getitem__(self, index):
         label = np.zeros(1)
