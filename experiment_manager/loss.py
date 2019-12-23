@@ -26,7 +26,7 @@ def soft_dice_loss_multi_class(input:torch.Tensor, y:torch.Tensor):
 
 def generalized_soft_dice_loss_multi_class(input:torch.Tensor, y:torch.Tensor):
     p = torch.softmax(input, dim=1)
-    eps = 1e-6
+    eps = 1e-12
 
     # TODO [B, C, H, W] -> [C, B, H, W] because softdice includes all pixels
 
@@ -34,7 +34,7 @@ def generalized_soft_dice_loss_multi_class(input:torch.Tensor, y:torch.Tensor):
     ysum = y.sum(dim=sum_dims)
     wc = 1 / (ysum ** 2).clamp(eps)
     intersection = ((y * p).sum(dim=sum_dims) * wc).sum()
-    denom =  ((ysum + p.sum(dim=sum_dims)).clamp(eps) * wc).sum()
+    denom =  ((ysum + p.sum(dim=sum_dims)) * wc).sum()
 
     loss = 1 - (2. * intersection / denom)
     return loss
