@@ -280,12 +280,22 @@ if __name__ == '__main__':
 
     out_channels = cfg.MODEL.OUT_CHANNELS
     if cfg.MODEL.BACKBONE.ENABLED:
-        net = smp.Unet(cfg.MODEL.BACKBONE.TYPE,
-                       encoder_weights=None,
-                       decoder_channels = [512,256,128,64,32],
-                       in_channels= cfg.MODEL.IN_CHANNELS,
-                       classes=cfg.MODEL.OUT_CHANNELS
-        )
+        if cfg.MODEL.COMPLEX_ARCHITECTURE.ENABLED:
+            if cfg.MODEL.COMPLEX_ARCHITECTURE.TYPE == 'pspnet':
+                net = smp.PSPNet(cfg.MODEL.BACKBONE.TYPE,
+                               encoder_weights=None,
+                               encoder_depth=3,
+                               in_channels=cfg.MODEL.IN_CHANNELS,
+                               classes=cfg.MODEL.OUT_CHANNELS
+                               )
+        else:
+            net = smp.Unet(cfg.MODEL.BACKBONE.TYPE,
+                           encoder_weights=None,
+                           encoder_depth=5,
+                           decoder_channels = [512,256,128,64,32],
+                           in_channels= cfg.MODEL.IN_CHANNELS,
+                           classes=cfg.MODEL.OUT_CHANNELS
+            )
     else:
         net = UNet(cfg)
 

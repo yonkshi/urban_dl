@@ -12,9 +12,9 @@ MODEL:
 
   BACKBONE:
     ENABLED: True
-    TYPE: 'resnet50dmg'
+    TYPE: 'resnet50'
   COMPLEX_ARCHITECTURE:
-    ENABLED: False
+    ENABLED: True
     TYPE: 'pspnet'
 
 OUTPUT_BASE_DIR: ('logs/')
