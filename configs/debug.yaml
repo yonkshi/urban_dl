@@ -3,7 +3,7 @@ MODEL:
   LOSS_TYPE: 'FrankensteinLoss'
   OUT_CHANNELS: 1
   IN_CHANNELS: 3
-  RESNET:
+  BACKBONE:
     ENABLED: True
 OUTPUT_BASE_DIR: ('logs/')
 DATASETS:

@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from torch import optim
 from torch.utils import data as torch_data
 from torchvision import transforms, utils
-
+import segmentation_models_pytorch as smp
 from tabulate import tabulate
 import wandb
 
@@ -279,7 +279,15 @@ if __name__ == '__main__':
     cfg = setup(args)
 
     out_channels = cfg.MODEL.OUT_CHANNELS
-    net = UNet(cfg)
+    if cfg.MODEL.BACKBONE.ENABLED:
+        net = smp.Unet(cfg.MODEL.BACKBONE.TYPE,
+                       encoder_weights=None,
+                       decoder_channels = [512,256,128,64,32],
+                       in_channels= cfg.MODEL.IN_CHANNELS,
+                       classes=cfg.MODEL.OUT_CHANNELS
+        )
+    else:
+        net = UNet(cfg)
 
     if args.resume and args.resume_from:
         full_model_path = path.join(cfg.OUTPUT_DIR, args.model_path)

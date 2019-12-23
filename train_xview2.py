@@ -276,8 +276,8 @@ if __name__ == '__main__':
     cfg = setup(args)
 
     out_channels = cfg.MODEL.OUT_CHANNELS
-    if cfg.MODEL.RESNET.ENABLED:
-        net = smp.Unet(cfg.MODEL.RESNET.TYPE,
+    if cfg.MODEL.BACKBONE.ENABLED:
+        net = smp.Unet(cfg.MODEL.BACKBONE.TYPE,
                        encoder_weights=None,
                        decoder_channels = [512,256,128,64,32],
         )

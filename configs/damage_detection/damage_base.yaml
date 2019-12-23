@@ -17,6 +17,12 @@ MODEL:
     CP_FILE: '' # Checkpoint file
     ENCODER_ONLY: False # full, encoder
     INCLUDE_INPUT_LAYER: False # If true, weights from input layer will be included too (only if they have the same dims
+  BACKBONE:
+    ENABLED: False
+    TYPE: 'resnet34'
+  COMPLEX_ARCHITECTURE:
+    ENABLED: False
+    TYPE: 'pspnet'
 THRESH: 0.1 # Best threshold (only to be filled after running final model evaluation)
 DATASETS:
   TRAIN: ("/local_storage/datasets/xview2/full_new/train/",)

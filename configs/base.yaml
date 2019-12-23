@@ -15,7 +15,7 @@ MODEL:
     ENABLED: False
     TYPE: 'Simple' # [Simple, PyramidSum, ParallelSum]
     DILATION: []
-  RESNET:
+  BACKBONE:
     ENABLED: False
     TYPE: 'resnet34'
 THRESH: 0.01 # Best threshold (only to be filled after running final model evaluation)

@@ -4,7 +4,7 @@ MODEL:
   LOSS_TYPE: 'FrankensteinLoss'
   OUT_CHANNELS: 1
   BLOCK_TYPE: 'Triple'
-  RESNET:
+  BACKBONE:
     ENABLED: True
     TYPE: 'resnet50'
 TRAINER:
