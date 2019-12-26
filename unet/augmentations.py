@@ -1,6 +1,7 @@
 import os
 
 import torchvision.transforms.functional as TF
+
 import cv2
 import numpy as np
 import torch
@@ -72,7 +73,6 @@ class UniformCrop():
         input, label, image_path = args
         input, label = self.random_crop(input, label)
         return input, label, image_path
-
 
 class ImportanceRandomCrop(UniformCrop):
     def __call__(self, args):
@@ -150,6 +150,24 @@ class StackPreDisasterImage():
         input = np.concatenate([input, cp_image], axis=-1)
         return input, label, image_path
 
+class RandomFlipRotate():
+    def __call__(self, args):
+        input, label, image_path = args
+        _hflip = np.random.choice([True, False])
+        _vflip = np.random.choice([True, False])
+        _rot = np.random.choice([0,1,2,3])
 
+        if _hflip:
+            input = np.flip(input, axis=0)
+            label = np.flip(label, axis=0)
+
+        if _vflip:
+            input = np.flip(input, axis=1)
+            label = np.flip(label, axis=1)
+
+        input = np.rot90(input, _rot)
+        label = np.rot90(label, _rot)
+
+        return input, label, image_path
 def bgr2rgb(img):
     return img[..., [2,1,0]]
