@@ -165,8 +165,8 @@ class RandomFlipRotate():
             input = np.flip(input, axis=1)
             label = np.flip(label, axis=1)
 
-        input = np.rot90(input, _rot)
-        label = np.rot90(label, _rot)
+        input = np.rot90(input, _rot).copy()
+        label = np.rot90(label, _rot).copy()
 
         return input, label, image_path
 def bgr2rgb(img):
