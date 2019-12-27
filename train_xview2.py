@@ -93,13 +93,14 @@ def train_net(net,
 
     trfm = []
     trfm.append(BGR2RGB())
+    if cfg.DATASETS.USE_CLAHE_VARI: trfm.append(VARI())
     if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
     if cfg.AUGMENTATION.CROP_TYPE == 'uniform':
         trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
     elif cfg.AUGMENTATION.CROP_TYPE == 'importance':
         trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
     if cfg.AUGMENTATION.RANDOM_FLIP_ROTATE: trfm.append(RandomFlipRotate())
-    if cfg.DATASETS.USE_CLAHE_VARI: trfm.append(VARI())
+
     trfm.append(Npy2Torch())
     trfm = transforms.Compose(trfm)
 
