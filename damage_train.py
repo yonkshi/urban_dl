@@ -243,7 +243,7 @@ def build_transforms(cfg, for_training=False, use_gts_mask = False):
     trfm = transforms.Compose(trfm)
     return trfm
 
-def combo_loss(p, y, class_weights):
+def combo_loss(p, y, class_weights=None):
     y_ = y.argmax(dim=1).long()
     loss = F.cross_entropy(p, y_, weight=class_weights) + soft_dice_loss_multi_class(p, y)
     return loss
