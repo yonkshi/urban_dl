@@ -29,8 +29,9 @@ class VARI():
         dir_name = os.path.dirname(image_path)
         vari_path = os.path.join(dir_name, 'clahe_vari' ,image_name)
         if os.path.exists(vari_path):
-            mask = imread_cached(vari_path).astype(np.float32)
-            return mask
+            mask = imread_cached(vari_path).astype(np.float32)[...,[0]]
+            input_t = np.concatenate([input, mask], axis=-1)
+            return input_t, label, image_path
         # Input is in BGR
         assert input.shape[1] == input.shape[2] and torch.is_tensor(input), 'invalid tensor, did you forget to put VARI after Np2Torch?'
         R = input[0]

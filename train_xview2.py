@@ -99,8 +99,8 @@ def train_net(net,
     elif cfg.AUGMENTATION.CROP_TYPE == 'importance':
         trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
     if cfg.AUGMENTATION.RANDOM_FLIP_ROTATE: trfm.append(RandomFlipRotate())
-    trfm.append(Npy2Torch())
     if cfg.DATASETS.USE_CLAHE_VARI: trfm.append(VARI())
+    trfm.append(Npy2Torch())
     trfm = transforms.Compose(trfm)
 
     # reset the generators
