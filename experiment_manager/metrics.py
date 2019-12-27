@@ -87,7 +87,7 @@ class MultiThresholdMetric():
         return 2 * self.precision * self.recall / denom
 
 class MultiClassF1():
-    def __init__(self, include_background = False):
+    def __init__(self, ignore_last_class = False):
 
         # FIXME Does not operate properly
 
@@ -99,13 +99,18 @@ class MultiClassF1():
         '''
 
         self._data_dims = (0, 2, 3) # For a B/W image, it should be [Thresh, B, C, H, W],
-        self.include_background = include_background
+        self.ignore_last_class = ignore_last_class
         self.TP = 0
         self.TN = 0
         self.FP = 0
         self.FN = 0
 
     def add_sample(self, y_true:torch.Tensor, y_pred):
+        if self.ignore_last_class:
+            # Ignore background classes
+            y_true = y_true[:,:-1]
+            y_pred = y_pred[:, :-1]
+
         y_true = y_true.bool() # [B,  C, ...]
         # Make y_pred one hot along dim C
         y_pred_argmax = torch.argmax(y_pred, dim=1, keepdim=True)  # [B, C, ...]

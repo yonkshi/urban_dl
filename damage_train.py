@@ -57,9 +57,13 @@ def train_net(net,
         print(torch.cuda.device_count(), " GPUs!")
         net = nn.DataParallel(net)
     net.to(device)
-
+    bg_class = cfg.MODEL.BACKGROUND.TYPE
     trfm = build_transforms(cfg, for_training=True, use_gts_mask=cfg.DATASETS.LOCALIZATION_MASK.TRAIN_USE_GTS_MASK)
-    dataset = Xview2Detectron2DamageLevelDataset(cfg.DATASETS.TRAIN[0], pre_or_post='post', include_image_weight=True, transform=trfm)
+    dataset = Xview2Detectron2DamageLevelDataset(cfg.DATASETS.TRAIN[0],
+                                                 pre_or_post='post',
+                                                 include_image_weight=True,
+                                                 background_class=bg_class,
+                                                 transform=trfm)
 
     dataloader_kwargs = {
         'batch_size': cfg.TRAINER.BATCH_SIZE,
@@ -147,15 +151,27 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
     :param run_type: 'train' or 'eval'
     :return:
     '''
-    measurer = MultiClassF1()
-    def evaluate(y_true, y_pred, img_filename):
+    measurer = MultiClassF1(ignore_last_class=cfg.MODEL.BACKGROUND.TYPE=='new-class')
+    def evaluate(x, y_true, y_pred, img_filename):
+        if not cfg.MODEL.BACKGROUND.MASK_OUTPUT:
+            # No background class, manually mask out background
+            localization_mask = x[:,[3]] # 3 is a hard coded mask index
+            y_pred = localization_mask * y_pred
         measurer.add_sample(y_true, y_pred)
     use_gts_mask = run_type == 'TRAIN' and cfg.DATASETS.LOCALIZATION_MASK.TRAIN_USE_GTS_MASK
     dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
 
     trfm = build_transforms(cfg, use_gts_mask = use_gts_mask)
-    dataset = Xview2Detectron2DamageLevelDataset(dset_source, pre_or_post='post', transform=trfm,)
-    inference_loop(net, cfg, device, evaluate, batch_size=cfg.TRAINER.INFERENCE_BATCH_SIZE, run_type='TRAIN',  max_samples = max_samples, dataset = dataset)
+    dataset = Xview2Detectron2DamageLevelDataset(dset_source,
+                                                 pre_or_post='post',
+                                                 transform=trfm,
+                                                 background_class=None,)
+    inference_loop(net, cfg, device, evaluate,
+                   batch_size=cfg.TRAINER.INFERENCE_BATCH_SIZE,
+                   run_type='TRAIN',
+                   max_samples = max_samples,
+                   dataset = dataset,
+                   callback_include_x=True)
 
     # Summary gathering ===
 

@@ -1,7 +1,7 @@
 _BASE_: "damage_base.yaml"
 MODEL:
-  LOSS_TYPE: 'ComboLoss'
-  OUT_CHANNELS: 5
+  LOSS_TYPE: 'SoftDiceMulticlassLoss'
+  OUT_CHANNELS: 4
   IN_CHANNELS: 7
 #  PRETRAINED:
 #    ENABLED: False
@@ -16,6 +16,11 @@ MODEL:
   COMPLEX_ARCHITECTURE:
     ENABLED: True
     TYPE: 'pspnet'
+  BACKGROUND:   # Include background class in the inference
+    TYPE: 'no-damage' # 'new-class', 'no-damage', 'None'
+    MASK_OUTPUT: True
+    MASKED_GRADIENT: False
+
 
 OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
@@ -29,9 +34,6 @@ DATASETS:
 TRAINER:
   LR: 0.001
   BATCH_SIZE: 8
-  CE_CLASS_BALANCE:
-    ENABLED: True
-    WEIGHTS: [0.036552, 0.0040245, 0.003355, 0.003686, 0.95238]
 DATALOADER:
   NUM_WORKER: 0
 AUGMENTATION:

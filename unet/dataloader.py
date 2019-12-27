@@ -130,13 +130,18 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
 
 class Xview2Detectron2DamageLevelDataset(Xview2Detectron2Dataset):
 
-
+    def __init__(self, file_path,
+                 pre_or_post,
+                 background_class = 'new-channel',
+                 *args, **kwargs
+                 ):
+        super().__init__(file_path, pre_or_post, *args, **kwargs)
+        self.background_class = background_class
 
     def _extract_label(self, annotations_set, sample_name):
         # TODO This data can be preprocessed
         # TODO Resolve overlapping data in preprocessed data
         NUM_CLASSES = 4
-        INCLUDE_BACKGROUND = True
 
         buildings_polygons = [[] for _ in range(NUM_CLASSES)]
 
@@ -161,13 +166,16 @@ class Xview2Detectron2DamageLevelDataset(Xview2Detectron2Dataset):
             cv2.fillPoly(mask, building_poly, 1)
             masks.append(mask)
         masks = np.dstack(masks).astype(np.float32)
-        if INCLUDE_BACKGROUND:
+        if self.background_class == 'new-class':
             positive_px = masks.sum(axis=-1, keepdims=True)
-
             bg = 1 - positive_px
             masks = np.concatenate([masks, bg], axis = -1)
-
-
+        elif self.background_class == 'no-damage':
+            # all the background pixels grouped with no-damage
+            positive_px = masks[..., 1:].sum(axis=-1)
+            masks[..., 0] = 1 - positive_px
+        else:
+            masks = masks
 
         return masks
 

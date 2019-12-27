@@ -23,9 +23,9 @@ MODEL:
   COMPLEX_ARCHITECTURE:
     ENABLED: False
     TYPE: 'pspnet'
-  MASKED_OUTPUT:
-    ENABLED: False
-    MASKED_OUTPUT: False
+  BACKGROUND:   # Include background class in the inference
+    TYPE: 'new-class' # 'new-class', 'no-damage', 'None'
+    MASK_OUTPUT: False
     MASKED_GRADIENT: False
 
 THRESH: 0.1 # Best threshold (only to be filled after running final model evaluation)
