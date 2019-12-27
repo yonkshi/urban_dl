@@ -105,6 +105,13 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
     def _process_input(self, image_filename):
         if self.use_clahe:
             img_path = os.path.join(self.dataset_path,'clahe', image_filename)
+            img = imread_cached(img_path)
+            if img is None:
+                # For whatever reason the image can be blank
+                img_path = os.path.join(self.dataset_path, image_filename)
+                img = imread_cached(img_path)
+            return img
+
         else:
             img_path = os.path.join(self.dataset_path, image_filename)
         img = imread_cached(img_path)
