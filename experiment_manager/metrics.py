@@ -108,8 +108,8 @@ class MultiClassF1():
     def add_sample(self, y_true:torch.Tensor, y_pred):
         if self.ignore_last_class:
             # Ignore background classes
-            y_true = y_true[:,:-1]
             y_pred = y_pred[:, :-1]
+            y_true = y_true[:, :-1]
 
         y_true = y_true.bool() # [B,  C, ...]
         # Make y_pred one hot along dim C

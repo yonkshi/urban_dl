@@ -162,10 +162,11 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
     dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
 
     trfm = build_transforms(cfg, use_gts_mask = use_gts_mask)
+    bg_class = 'new-class' if cfg.MODEL.BACKGROUND.TYPE == 'new-class' else None
     dataset = Xview2Detectron2DamageLevelDataset(dset_source,
                                                  pre_or_post='post',
                                                  transform=trfm,
-                                                 background_class=None,)
+                                                 background_class=bg_class,)
     inference_loop(net, cfg, device, evaluate,
                    batch_size=cfg.TRAINER.INFERENCE_BATCH_SIZE,
                    run_type='TRAIN',
