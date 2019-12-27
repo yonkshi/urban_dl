@@ -47,6 +47,7 @@ def train_net(net,
         criterion = combo_loss
         weighted_criterion = cfg.TRAINER.CE_CLASS_BALANCE.ENABLED
         weights = 1 / torch.tensor(cfg.TRAINER.CE_CLASS_BALANCE.WEIGHTS)
+        weights = weights.cuda()
 
 
     if cfg.MODEL.PRETRAINED.ENABLED:
