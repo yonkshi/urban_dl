@@ -4,8 +4,8 @@ MODEL:
   OUT_CHANNELS: 4
   IN_CHANNELS: 7
   BACKGROUND:   # Include background class in the inference
-    TYPE: 'new-class' # 'new-class', 'no-damage', 'None'
-    MASK_OUTPUT: False
+    TYPE: 'no-damage' # 'new-class', 'no-damage', 'None'
+    MASK_OUTPUT: True
     MASKED_GRADIENT: False
 DATASETS:
   LOCALIZATION_MASK:
