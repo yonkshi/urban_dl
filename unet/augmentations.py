@@ -27,7 +27,7 @@ class VARI():
         input, label, image_path = args
         image_name = os.path.basename(image_path)
         dir_name = os.path.dirname(image_path)
-        vari_path = os.path.join(dir_name, 'vari' ,image_name)
+        vari_path = os.path.join(dir_name, 'clahe_vari' ,image_name)
         if os.path.exists(vari_path):
             mask = imread_cached(vari_path).astype(np.float32)
             return mask
