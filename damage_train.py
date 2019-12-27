@@ -34,6 +34,7 @@ def train_net(net,
     optimizer = optim.Adam(net.parameters(),
                            lr=cfg.TRAINER.LR,
                            weight_decay=0.0005)
+    weighted_criterion = False
     if cfg.MODEL.LOSS_TYPE == 'CrossEntropyLoss':
         criterion = cross_entropy_loss
     elif cfg.MODEL.LOSS_TYPE == 'SoftDiceMulticlassLoss':
@@ -44,6 +45,9 @@ def train_net(net,
         criterion = jaccard_like_loss_multi_class
     elif cfg.MODEL.LOSS_TYPE == 'ComboLoss':
         criterion = combo_loss
+        weighted_criterion = cfg.TRAINER.CE_CLASS_BALANCE.ENABLED
+        weights = 1 / torch.tensor(cfg.TRAINER.CE_CLASS_BALANCE.WEIGHTS)
+
 
     if cfg.MODEL.PRETRAINED.ENABLED:
         net = load_pretrained(net, cfg)
@@ -90,7 +94,10 @@ def train_net(net,
             optimizer.zero_grad()
 
             y_pred = net(x)
-            loss = criterion(y_pred, y_gts)
+            if weighted_criterion:
+                loss = criterion(y_pred, y_gts, weights)
+            else:
+                loss = criterion(y_pred, y_gts)
             epoch_loss += loss.item()
 
             loss.backward()
@@ -219,9 +226,9 @@ def build_transforms(cfg, for_training=False, use_gts_mask = False):
     trfm = transforms.Compose(trfm)
     return trfm
 
-def combo_loss(p, y):
+def combo_loss(p, y, class_weights):
     y_ = y.argmax(dim=1).long()
-    loss = F.cross_entropy(p, y_) + soft_dice_loss_multi_class(p, y)
+    loss = F.cross_entropy(p, y_, weight=class_weights) + soft_dice_loss_multi_class(p, y)
     return loss
 
 

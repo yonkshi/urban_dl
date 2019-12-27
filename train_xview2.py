@@ -77,8 +77,7 @@ def train_net(net,
         criterion = lambda pred, gts: 2 * F.binary_cross_entropy_with_logits(pred, gts) + soft_dice_loss(pred, gts)
     elif cfg.MODEL.LOSS_TYPE == 'FrankensteinLoss':
         criterion = lambda pred, gts: F.binary_cross_entropy_with_logits(pred, gts) + jaccard_like_balanced_loss(pred, gts)
-    elif cfg.MODEL.LOSS_TYPE == 'FrankensteinEdgeLoss':
-        criterion = FrankensteinEdgeLoss
+
 
 
     if torch.cuda.device_count() > 1:
@@ -211,17 +210,6 @@ def train_net(net,
             # Evaluation after every other epoch
             model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
             model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
-
-def FrankensteinEdgeLoss(p, y, neg_edge_mask, lambda_factor=1):
-    p2 = torch.sigmoid(p).clamp(1e-7)
-    ce = y * p2.log() + (1-y) * (1-p2).log() * neg_edge_mask
-    ce_loss = -ce.mean() * lambda_factor
-
-    # loss2 = y - p >= 0
-    # ce_loss_reference = F.binary_cross_entropy_with_logits(p, y, reduction='none')
-    F.nll_loss()
-    loss = ce_loss + jaccard_like_balanced_loss(p, y)
-    return loss
 
 def image_sampling_weight(dataset_metadata):
     print('performing oversampling...', end='', flush=True)
