@@ -367,8 +367,8 @@ def inference_loop(net, cfg, device,
         trfm = []
         if cfg.AUGMENTATION.RESIZE: trfm.append( Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
         trfm.append(BGR2RGB())
+        if cfg.DATASETS.USE_CLAHE_VARI: trfm.append(VARI())
         trfm.append(Npy2Torch())
-        if cfg.AUGMENTATION.ENABLE_VARI: trfm.append(VARI())
         trfm = transforms.Compose(trfm)
 
         dataset = Xview2Detectron2Dataset(dset_source, pre_or_post=cfg.DATASETS.PRE_OR_POST, transform=trfm)
