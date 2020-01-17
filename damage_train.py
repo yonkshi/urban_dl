@@ -10,7 +10,9 @@ from torch.utils import data as torch_data
 from torchvision import transforms, utils
 import segmentation_models_pytorch as smp
 from tabulate import tabulate
+from sklearn.metrics import confusion_matrix as confmatrix
 import wandb
+import matplotlib.pyplot as plt
 
 from unet import UNet
 from unet.dataloader import Xview2Detectron2DamageLevelDataset
@@ -145,19 +147,28 @@ def train_net(net,
         dmg_model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
         dmg_model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
 
-def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, epoch=0, multi_class=False):
+def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, epoch=0, use_confusion_matrix=False):
     '''
     Runner that is concerned with training changes
     :param run_type: 'train' or 'eval'
     :return:
     '''
     measurer = MultiClassF1(ignore_last_class=cfg.MODEL.BACKGROUND.TYPE=='new-class')
+
+    confusion_matrix_with_bg = []
+    confusion_matrix = []
     def evaluate(x, y_true, y_pred, img_filename):
         if not cfg.MODEL.BACKGROUND.MASK_OUTPUT:
             # No background class, manually mask out background
             localization_mask = x[:,[3]] # 3 is a hard coded mask index
             y_pred = localization_mask * y_pred
         measurer.add_sample(y_true, y_pred)
+        if use_confusion_matrix:
+            y_true_flat = y_true.argmax(dim=1).cpu().detach().flatten().numpy()
+            y_pred_flat = y_pred.argmax(dim=1).cpu().detach().flatten().numpy()
+            labels = [0, 1, 2, 3, 4] # 5 classes
+            _mat = confmatrix(y_true_flat, y_pred_flat, labels = labels)
+            confusion_matrix_with_bg.append(_mat)
     use_gts_mask = run_type == 'TRAIN' and cfg.DATASETS.LOCALIZATION_MASK.TRAIN_USE_GTS_MASK
     dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
 
@@ -197,6 +208,27 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
     for fpr, fnr, dmg in zip(all_fpr, all_fnr, damage_levels):
         log_data[f'{set_name} {dmg} false negative rate'] = fnr
         log_data[f'{set_name} {dmg} false positive rate'] = fpr
+
+
+    # Plot confusion matrix
+    if use_confusion_matrix:
+        confusion_matrix_with_bg = np.sum(confusion_matrix_with_bg, axis=0)
+        normalized_cm = confusion_matrix_with_bg / confusion_matrix_with_bg.sum(axis=0, keepdims=True)
+        labels = ['background','no-damage', 'minor-damage', 'major-damage', 'destroyed']
+
+        fig, ax = plt.subplots()
+
+        ax.matshow(normalized_cm, cmap='Blues')
+
+        ax.set_yticks(np.arange(5))
+
+        ax.set_yticklabels(labels)
+        plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+                 rotation_mode="anchor")
+        fig.tight_layout()
+        plt.title('confusion matrix')
+        plt.savefig('test.png')
+        log_data['confusion_matrix'] = plt
 
     wandb.log(log_data)
 
@@ -334,17 +366,28 @@ if __name__ == '__main__':
 
     print('=== Runnning on device: p', device)
 
-    wandb.init(
-        name=cfg.NAME,
-        project='urban_dl',
-        tags=['run', 'dmg'],
-    )
+
     torch.manual_seed(cfg.SEED)
     np.random.seed(cfg.SEED)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     try:
-        train_net(net, cfg)
+
+        if args.eval_only:
+            wandb.init(
+                name=cfg.NAME,
+                project='urban_dl',
+                tags=['eval', 'dmg'],
+            )
+            dmg_model_eval(net, cfg, device, run_type='TEST', max_samples=10000,  use_confusion_matrix=True)
+        else:
+            wandb.init(
+                name=cfg.NAME,
+                project='urban_dl',
+                tags=['run', 'dmg'],
+                reinit=True
+            )
+            train_net(net, cfg)
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
         print('Saved interrupt')

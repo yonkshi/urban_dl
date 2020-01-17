@@ -1,9 +1,5 @@
 from eval_unet_xview2 import inference_loop
-
-import sys
-import os
 from os import path, listdir
-from os.path import join, isfile
 import json
 import argparse
 
