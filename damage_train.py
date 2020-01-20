@@ -167,7 +167,7 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
             y_true_flat = y_true.argmax(dim=1).cpu().detach().flatten().numpy()
             y_pred_flat = y_pred.argmax(dim=1).cpu().detach().flatten().numpy()
             labels = [0, 1, 2, 3, 4] # 5 classes
-            _mat = confmatrix(y_true_flat, y_pred_flat, labels = labels, normalize='all')
+            _mat = confmatrix(y_true_flat, y_pred_flat, labels = labels)
             confusion_matrix_with_bg.append(_mat)
     use_gts_mask = run_type == 'TRAIN' and cfg.DATASETS.LOCALIZATION_MASK.TRAIN_USE_GTS_MASK
     dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
@@ -213,6 +213,7 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
     # Plot confusion matrix
     if use_confusion_matrix:
         normalized_cm = np.mean(confusion_matrix_with_bg, axis=0)
+        print('confusion_matrix', normalized_cm)
         # normalized_cm = confusion_matrix_with_bg / confusion_matrix_with_bg.sum(axis=0, keepdims=True)
         labels = ['background','no-damage', 'minor-damage', 'major-damage', 'destroyed']
 
@@ -227,7 +228,7 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
                  rotation_mode="anchor")
         fig.tight_layout()
         plt.title('confusion matrix')
-        plt.savefig('dmg_confusion_matrix.png')
+        plt.savefig('dmg_non_normalized_confusion_matrix.png')
         log_data['confusion_matrix'] = plt
 
     wandb.log(log_data)
