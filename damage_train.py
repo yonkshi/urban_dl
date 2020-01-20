@@ -164,8 +164,8 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
             y_pred = localization_mask * y_pred
         measurer.add_sample(y_true, y_pred)
         if use_confusion_matrix:
-            y_true_flat = y_true.argmax(dim=1).cpu().detach().numpy()
-            y_pred_flat = y_pred.argmax(dim=1).cpu().detach().numpy()
+            y_true_flat = y_true.argmax(dim=1).cpu().detach().flatten().numpy()
+            y_pred_flat = y_pred.argmax(dim=1).cpu().detach().flatten().numpy()
             labels = [0, 1, 2, 3, 4] # 5 classes
             _mat = confmatrix(y_true_flat, y_pred_flat, labels = labels, normalize = 'true')
             confusion_matrix_with_bg.append(_mat)
