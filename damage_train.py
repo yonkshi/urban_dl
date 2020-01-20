@@ -383,9 +383,14 @@ if __name__ == '__main__':
     else:
         net = UNet(cfg)
 
-    if args.resume and args.resume_from:
-        full_model_path = path.join(cfg.OUTPUT_DIR, args.model_path)
-        net.load_state_dict(torch.load(full_model_path))
+    if args.resume_from:
+        full_model_path = path.join(cfg.OUTPUT_DIR, args.resume_from)
+        # Removing the module.** in front of keys
+        filtered_dict = {}
+        for k, v in torch.load(full_model_path).items():
+            k = '.'.join(k.split('.')[1:])
+            filtered_dict[k] = v
+        net.load_state_dict(filtered_dict)
         print('Model loaded from {}'.format(full_model_path))
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

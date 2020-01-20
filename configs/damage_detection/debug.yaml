@@ -10,10 +10,10 @@ MODEL:
 #    INCLUDE_INPUT_LAYER: False # If true, weights from input layer will be included too (only if they have the same dims
 
   BACKBONE:
-    ENABLED: True
+    ENABLED: False
     TYPE: 'resnet50'
   COMPLEX_ARCHITECTURE:
-    ENABLED: True
+    ENABLED: False
     TYPE: 'pspnet'
   BACKGROUND:   # Include background class in the inference
     TYPE: 'new-class' # 'new-class', 'no-damage', 'None'
