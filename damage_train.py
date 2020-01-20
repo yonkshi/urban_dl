@@ -229,7 +229,7 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
                  rotation_mode="anchor")
         fig.tight_layout()
         plt.title('confusion matrix')
-        plt.savefig(cfg.OUTPUT_DIR + '/dmg_confusion_matrix.png')
+        plt.savefig(f'{cfg.OUTPUT_DIR}/dmg_{run_type}_confusion_matrix.png')
         log_data['confusion_matrix'] = plt
 
     wandb.log(log_data)
@@ -381,7 +381,8 @@ if __name__ == '__main__':
                 project='urban_dl',
                 tags=['eval', 'dmg'],
             )
-            dmg_model_eval(net, cfg, device, run_type='TEST', max_samples=10000,  use_confusion_matrix=True)
+            dmg_model_eval(net, cfg, device, run_type='TEST', max_samples=1000,  use_confusion_matrix=True)
+            dmg_model_eval(net, cfg, device, run_type='TRAIN', max_samples=1000, use_confusion_matrix=True)
         else:
             wandb.init(
                 name=cfg.NAME,
