@@ -224,7 +224,7 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
         ax.set_yticks(np.arange(5))
 
         ax.set_yticklabels(labels)
-        ax.set_xticklabels(labels)
+        ax.set_xticklabels([''] + labels)
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
                  rotation_mode="anchor")
         fig.tight_layout()
