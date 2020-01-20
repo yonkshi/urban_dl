@@ -238,8 +238,9 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
     # Plot confusion matrix
     if use_confusion_matrix:
         normalized_cm = np.sum(confusion_matrix_with_bg, axis=0)
+        print('confusion_matrix ', normalized_cm)
         normalized_cm = normalized_cm / normalized_cm.sum(axis=-1, keepdims=True)
-        print('confusion_matrix', normalized_cm)
+        print('confusion_matrix normalized', normalized_cm)
         # normalized_cm = confusion_matrix_with_bg / confusion_matrix_with_bg.sum(axis=0, keepdims=True)
         labels = ['no-damage', 'minor-damage', 'major-damage', 'destroyed', 'background',]
 
