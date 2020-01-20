@@ -41,6 +41,8 @@ def train_net(net,
         criterion = cross_entropy_loss
     elif cfg.MODEL.LOSS_TYPE == 'SoftDiceMulticlassLoss':
         criterion = soft_dice_loss_multi_class
+    elif cfg.MODEL.LOSS_TYPE == 'SoftDiceMulticlassLossDebug':
+        criterion = soft_dice_loss_multi_class_debug
     elif cfg.MODEL.LOSS_TYPE == 'GeneralizedDiceLoss':
         criterion = generalized_soft_dice_loss_multi_class
     elif cfg.MODEL.LOSS_TYPE == 'JaccardLikeLoss':
@@ -92,6 +94,7 @@ def train_net(net,
 
         net.train()
         loss_set, f1_set = [], []
+        loss_component_set = []
         positive_pixels_set = [] # Used to evaluated image over sampling techniques
         for i, batch in enumerate(dataloader):
             x = batch['x'].to(device)
@@ -104,13 +107,14 @@ def train_net(net,
             if weighted_criterion:
                 loss = criterion(y_pred, y_gts, weights)
             else:
-                loss = criterion(y_pred, y_gts)
+                loss, loss_component = criterion(y_pred, y_gts) # TODO DELETE loss_component, debug only
             epoch_loss += loss.item()
 
             loss.backward()
             optimizer.step()
 
             loss_set.append(loss.item())
+            loss_component_set.append(loss_component.cpu().detach().numpy())
             positive_pixels_set.extend(image_weight.cpu().numpy())
 
             if global_step % 10000 == 0 and global_step > 0:
@@ -128,13 +132,21 @@ def train_net(net,
                 print(f'step {global_step},  avg loss: {np.mean(loss_set):.4f}, cuda mem: {max_mem} MB, cuda cache: {max_cache} MB, time: {time_per_n_batches:.2f}s',
                       flush=True)
 
-                wandb.log({
+                log_data = {
                     'loss': np.mean(loss_set),
                     'gpu_memory': max_mem,
                     'time': time_per_n_batches,
                     'total_positive_pixels': np.mean(positive_pixels_set),
                     'step': global_step,
-                })
+                }
+
+                # TODO ---- Below are for debugging cls only ----
+                loss_component_mean = np.mean(loss_component_set, axis=0)
+                for comp_loss, cls in zip(loss_component_mean, ['no-dmg', 'minor-dmg', 'major-dmg', 'destroyed', 'bg']):
+                    log_data[f'train_{cls}_F1'] = comp_loss
+                # TODO ---- END ----
+
+                wandb.log(log_data)
 
                 loss_set = []
                 positive_pixels_set = []
@@ -144,10 +156,10 @@ def train_net(net,
             global_step += 1
 
         # Evaluation for multiclass F1 score
-        dmg_model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
+        dmg_model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch, include_component_f1=True)
         dmg_model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
 
-def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, epoch=0, use_confusion_matrix=False):
+def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, epoch=0, use_confusion_matrix=False, include_component_f1=False):
     '''
     Runner that is concerned with training changes
     :param run_type: 'train' or 'eval'
@@ -157,12 +169,20 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
 
     confusion_matrix_with_bg = []
     confusion_matrix = []
+    component_f1 = []
     def evaluate(x, y_true, y_pred, img_filename):
         if not cfg.MODEL.BACKGROUND.MASK_OUTPUT:
             # No background class, manually mask out background
             localization_mask = x[:,[3]] # 3 is a hard coded mask index
             y_pred = localization_mask * y_pred
         measurer.add_sample(y_true, y_pred)
+
+        # === Component F1 score
+        if include_component_f1:
+            loss, loss_component = soft_dice_loss_multi_class_debug(y_pred, y_true)
+            component_f1.append(loss_component.cpu().detach().numpy())
+
+        # === Confusion Matrix stuff
         if use_confusion_matrix:
             y_true_flat = y_true.argmax(dim=1).cpu().detach().flatten().numpy()
             y_pred_flat = y_pred.argmax(dim=1).cpu().detach().flatten().numpy()
@@ -199,6 +219,11 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
                'step': step,
                'epoch': epoch,
                }
+
+    if include_component_f1:
+        loss_component_mean = np.mean(component_f1, axis=0)
+        for comp_loss, cls in zip(loss_component_mean, ['no-dmg', 'minor-dmg', 'major-dmg', 'destroyed', 'bg']):
+            log_data[f'{run_type}_{cls}_F1'] = comp_loss
 
     damage_levels = ['no-damage', 'minor-damage', 'major-damage', 'destroyed']
     for f1, dmg in zip(f1_per_class, damage_levels):
@@ -283,7 +308,6 @@ def combo_loss(p, y, class_weights=None):
     y_ = y.argmax(dim=1).long()
     loss = F.cross_entropy(p, y_, weight=class_weights) + soft_dice_loss_multi_class(p, y)
     return loss
-
 
 def image_sampling_weight(dataset_metadata):
     print('performing oversampling...', end='', flush=True)
