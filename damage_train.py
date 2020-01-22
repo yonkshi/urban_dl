@@ -171,7 +171,7 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
     confusion_matrix = []
     component_f1 = []
     def evaluate(x, y_true, y_pred, img_filename):
-        if not cfg.MODEL.BACKGROUND.MASK_OUTPUT:
+        if cfg.MODEL.BACKGROUND.MASK_OUTPUT:
             # No background class, manually mask out background
             localization_mask = x[:,[3]] # 3 is a hard coded mask index
             y_pred = localization_mask * y_pred
@@ -185,7 +185,7 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
         # === Confusion Matrix stuff
         if use_confusion_matrix:
             y_true_flat = y_true.argmax(dim=1).cpu().detach().flatten().numpy()
-            y_pred_flat = y_pred.argmax(dim=1).cpu().detach().flatten().numpy()
+            y_pred_flat = torch.softmax(y_pred, dim=1).argmax(dim=1).cpu().detach().flatten().numpy()
             labels = [0, 1, 2, 3, 4] # 5 classes
             _mat = confmatrix(y_true_flat, y_pred_flat, labels = labels)
             confusion_matrix_with_bg.append(_mat)
