@@ -223,7 +223,7 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
     if include_component_f1:
         loss_component_mean = np.mean(component_f1, axis=0)
         for comp_loss, cls in zip(loss_component_mean, ['no-dmg', 'minor-dmg', 'major-dmg', 'destroyed', 'bg']):
-            log_data[f'{run_type}_{cls}_F1'] = comp_loss
+            log_data[f'{run_type}_{cls}_soft_dice'] = comp_loss
 
     damage_levels = ['no-damage', 'minor-damage', 'major-damage', 'destroyed']
     for f1, dmg in zip(f1_per_class, damage_levels):

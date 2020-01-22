@@ -31,7 +31,7 @@ def soft_dice_loss_multi_class_debug(input:torch.Tensor, y:torch.Tensor):
     intersection = (y * p).sum(dim=sum_dims)
     denom =  (y.sum(dim=sum_dims) + p.sum(dim=sum_dims)).clamp(eps)
 
-    loss = 1 - (4. * intersection / denom).mean()
+    loss = 1 - (2. * intersection / denom).mean()
     loss_components = 1 - 2 * intersection/denom
     return loss, loss_components
 
