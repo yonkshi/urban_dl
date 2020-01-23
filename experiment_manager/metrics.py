@@ -108,8 +108,11 @@ class MultiClassF1():
     def add_sample(self, y_true:torch.Tensor, y_pred):
         if self.ignore_last_class:
             # Ignore background classes
+
             y_pred = y_pred[:, :-1]
             y_true = y_true[:, :-1]
+            y_true_mask = y_true[:, [-1]]
+
 
         y_true = y_true.bool() # [B,  C, ...]
         # Make y_pred one hot along dim C
@@ -117,8 +120,8 @@ class MultiClassF1():
         y_pred = torch.zeros_like(y_pred, dtype=torch.bool).scatter_(1, y_pred_argmax,True)
 
         self.TP += (y_true & y_pred).sum(dim=self._data_dims).float()
-        self.TN += (~y_true & ~y_pred).sum(dim=self._data_dims).float()
-        self.FP += (~y_true & y_pred).sum(dim=self._data_dims).float()
+        self.TN += ((~y_true & ~y_pred) & y_true_mask).sum(dim=self._data_dims).float()
+        self.FP += ((~y_true & y_pred) & y_true_mask).sum(dim=self._data_dims).float()
         self.FN += (y_true & ~y_pred).sum(dim=self._data_dims).float()
 
 
