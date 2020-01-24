@@ -120,8 +120,8 @@ class MultiClassF1():
         y_pred = torch.zeros_like(y_pred, dtype=torch.bool).scatter_(1, y_pred_argmax,True)
 
         self.TP += (y_true & y_pred).sum(dim=self._data_dims).float()
-        self.TN += ((~y_true & ~y_pred) & y_true_mask).sum(dim=self._data_dims).float()
-        self.FP += ((~y_true & y_pred) & y_true_mask).sum(dim=self._data_dims).float()
+        self.TN += ((~y_true & ~y_pred) * y_true_mask).sum(dim=self._data_dims).float()
+        self.FP += ((~y_true & y_pred) * y_true_mask).sum(dim=self._data_dims).float()
         self.FN += (y_true & ~y_pred).sum(dim=self._data_dims).float()
 
 
