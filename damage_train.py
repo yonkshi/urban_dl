@@ -248,6 +248,10 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
 
         ax.matshow(normalized_cm, cmap='Blues')
 
+        for (i, j), z in np.ndenumerate(normalized_cm):
+            ax.text(j, i, '{:0.1f}'.format(z), ha='center', va='center',
+                    bbox=dict(boxstyle='round', facecolor='white', edgecolor='0.3'))
+
         ax.set_yticks(np.arange(5))
 
         ax.set_yticklabels(labels)
