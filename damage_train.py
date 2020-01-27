@@ -114,7 +114,7 @@ def train_net(net,
             optimizer.step()
 
             loss_set.append(loss.item())
-            loss_component_set.append(loss_component.cpu().detach().numpy())
+            # loss_component_set.append(loss_component.cpu().detach().numpy())
             positive_pixels_set.extend(image_weight.cpu().numpy())
 
             if global_step % 10000 == 0 and global_step > 0:
@@ -141,9 +141,9 @@ def train_net(net,
                 }
 
                 # TODO ---- Below are for debugging cls only ----
-                loss_component_mean = np.mean(loss_component_set, axis=0)
-                for comp_loss, cls in zip(loss_component_mean, ['no-dmg', 'minor-dmg', 'major-dmg', 'destroyed', 'bg']):
-                    log_data[f'train_{cls}_F1'] = comp_loss
+                # loss_component_mean = np.mean(loss_component_set, axis=0)
+                # for comp_loss, cls in zip(loss_component_mean, ['no-dmg', 'minor-dmg', 'major-dmg', 'destroyed', 'bg']):
+                #     log_data[f'train_{cls}_F1'] = comp_loss
                 # TODO ---- END ----
 
                 wandb.log(log_data)
@@ -156,7 +156,7 @@ def train_net(net,
             global_step += 1
 
         # Evaluation for multiclass F1 score
-        dmg_model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch, include_component_f1=True)
+        dmg_model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
         dmg_model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
 
 def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, epoch=0, use_confusion_matrix=False, include_component_f1=False):
