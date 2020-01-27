@@ -12,7 +12,6 @@ import json
 from PIL import Image, ImageDraw
 import cv2
 from unet.utils import *
-from debug_tools import __benchmark_init, benchmark
 import pycocotools.mask as mask_utils
 
 
