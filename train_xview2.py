@@ -22,7 +22,6 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 from tabulate import tabulate
 import wandb
 
-from debug_tools import __benchmark_init, benchmark
 from unet import UNet
 from unet.dataloader import Xview2Detectron2Dataset
 from unet.augmentations import *
@@ -84,8 +83,6 @@ def train_net(net,
         print(torch.cuda.device_count(), " GPUs!")
         net = nn.DataParallel(net)
     net.to(device)
-
-    __benchmark_init()
     global_step = 0
     epochs = cfg.TRAINER.EPOCHS
 

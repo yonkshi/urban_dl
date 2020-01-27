@@ -15,7 +15,6 @@ from os import makedirs
 from torch.utils import data as torch_data
 from torchvision import transforms, utils
 from tabulate import tabulate
-from debug_tools import __benchmark_init, benchmark
 
 from unet import UNet
 from unet.dataloader import Xview2Detectron2Dataset, Xview2Detectron2DamageLevelDataset
