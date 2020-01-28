@@ -107,7 +107,7 @@ def train_net(net,
             if weighted_criterion:
                 loss = criterion(y_pred, y_gts, weights)
             else:
-                loss, loss_component = criterion(y_pred, y_gts) # TODO DELETE loss_component, debug only
+                loss = criterion(y_pred, y_gts)
             epoch_loss += loss.item()
 
             loss.backward()
