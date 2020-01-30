@@ -2,7 +2,6 @@ _BASE_: "damage_base.yaml"
 MODEL:
   LOSS_TYPE: 'ComboLoss'
   IN_CHANNELS: 7
-  USE_ATTENTION: True
 DATASETS:
   LOCALIZATION_MASK:
     ENABLED: True
