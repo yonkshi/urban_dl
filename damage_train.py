@@ -237,9 +237,9 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
 
     # Plot confusion matrix
     if use_confusion_matrix:
-        normalized_cm = np.sum(confusion_matrix_with_bg, axis=0)
-        print('confusion_matrix ', normalized_cm)
-        normalized_cm = normalized_cm / normalized_cm.sum(axis=-1, keepdims=True)
+        cm = np.sum(confusion_matrix_with_bg, axis=0)
+        print('confusion_matrix ', cm)
+        normalized_cm = cm / cm.sum(axis=-1, keepdims=True)
         print('confusion_matrix normalized', normalized_cm)
         # normalized_cm = confusion_matrix_with_bg / confusion_matrix_with_bg.sum(axis=0, keepdims=True)
         labels = ['no-damage', 'minor-damage', 'major-damage', 'destroyed', 'background',]
@@ -249,12 +249,13 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
         ax.matshow(normalized_cm, cmap='Blues')
 
         for (i, j), z in np.ndenumerate(normalized_cm):
-            ax.text(j, i, '{:0.1f}'.format(z), ha='center', va='center',
+            true_value = cm[i,j]
+            ax.text(j, i, '{:0.3f}\n{}'.format(z, true_value), ha='center', va='center',
                     bbox=dict(boxstyle='round', facecolor='white', edgecolor='0.3'))
-
-        ax.set_yticks(np.arange(5))
-
-        ax.set_yticklabels(labels)
+        ax.autoscale(False)
+        # ax.set_yticks(np.arange(5))
+        #
+        ax.set_yticklabels([''] + labels)
         ax.set_xticklabels([''] + labels)
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
                  rotation_mode="anchor")
