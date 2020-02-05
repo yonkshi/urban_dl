@@ -450,7 +450,7 @@ def custom_argparse(parser):
     parser.add_argument('-T',"--eval-type",
                         dest='eval_type',
                         default="final",
-                        choices=['final', 'checkpoints', 'inference', 'loc_predict'],
+                        choices=['p', 'checkpoints', 'inference', 'loc_predict'],
                         help="select an evaluation type")
     return parser
 
