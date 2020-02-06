@@ -6,8 +6,8 @@ MODEL:
   BLOCK_TYPE: 'Triple'
   USE_ATTENTION: True
 DATASETS:
-  TRAIN: ("/local_storage/datasets/xview2/full_new/train/",)
-  TEST: ("/local_storage/datasets/xview2/full_new/test/",)
+  TRAIN: ("/local_storage/datasets/xview2/scientific_reports/train/",)
+  TEST: ("/local_storage/datasets/xview2/scientific_reports/test/",)
 AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'importance'
