@@ -1,0 +1,17 @@
+_BASE_: "unet_dice.yaml"
+THRESH: 0.52
+MODEL:
+  LOSS_TYPE: 'FrankensteinLoss'
+  OUT_CHANNELS: 1
+  BLOCK_TYPE: 'Triple'
+  USE_ATTENTION: True
+DATASETS:
+  TRAIN: ("/Midgard/home/pshi/datasets/xview2/scientific_reports/train/",)
+  TEST: ("/Midgard/home/pshi/datasets/xview2/scientific_reports/test/",)
+AUGMENTATION:
+  # Random cropping of the images
+  CROP_TYPE: 'importance'
+  CROP_SIZE: 256
+  IMAGE_OVERSAMPLING_TYPE: 'simple'
+  RANDOM_FLIP_ROTATE: True
+
