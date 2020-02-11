@@ -5,6 +5,7 @@ import torchvision.transforms.functional as TF
 import cv2
 import numpy as np
 import torch
+from scipy import ndimage
 from unet.utils.utils import *
 
 class Resize():
@@ -156,7 +157,7 @@ class RandomFlipRotate():
         input, label, image_path = args
         _hflip = np.random.choice([True, False])
         _vflip = np.random.choice([True, False])
-        _rot = np.random.choice([0,1,2,3])
+        _rot = np.random.randint(0, 360)
 
         if _hflip:
             input = np.flip(input, axis=0)
@@ -166,9 +167,8 @@ class RandomFlipRotate():
             input = np.flip(input, axis=1)
             label = np.flip(label, axis=1)
 
-        input = np.rot90(input, _rot).copy()
-        label = np.rot90(label, _rot).copy()
-
+        input = ndimage.rotate(input, _rot, reshape=False).copy()
+        label = ndimage.rotate(label, _rot, reshape=False).copy()
         return input, label, image_path
 def bgr2rgb(img):
     return img[..., [2,1,0]]

@@ -305,6 +305,8 @@ def build_transforms(cfg, for_training=False, use_gts_mask = False):
         trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
     elif cfg.AUGMENTATION.CROP_TYPE == 'importance':
         trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
+    if cfg.AUGMENTATION.RANDOM_FLIP_ROTATE:
+        trfm.append(RandomFlipRotate())
     trfm.append(Npy2Torch())
     if cfg.AUGMENTATION.ENABLE_VARI: trfm.append(VARI())
     trfm = transforms.Compose(trfm)

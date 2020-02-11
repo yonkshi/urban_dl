@@ -61,6 +61,7 @@ AUGMENTATION:
   CROP_SIZE: 1024
   IMAGE_OVERSAMPLING_TYPE: 'none' # [none, simple]
   ENABLE_VARI: False # False NDVI for detecting vegetation
+  RANDOM_FLIP_ROTATE: False
 
 
 
