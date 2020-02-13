@@ -101,6 +101,22 @@ def train_net(net,
             y_gts = batch['y'].to(device)
             image_weight = batch['image_weight']
 
+            # # TODO DEBUG
+            # xtest  = x.cpu().permute(0,2,3,1).contiguous().numpy()
+            # ytest = y_gts.cpu().permute(0,2,3,1).contiguous().numpy()
+            # testy = ytest[0, ..., 1:4] # ignore bg
+            # plt.imshow(testy)
+            # plt.savefig('test_y.png')
+            #
+            # postx = xtest[0, ..., :3]
+            # plt.imshow(postx)
+            # plt.savefig('test_post.png')
+            #
+            # prex = xtest[0, ..., 4:7]
+            # plt.imshow(prex)
+            # plt.savefig('test_pre.png')
+            # # TODO END DEBUGn
+
             optimizer.zero_grad()
 
             y_pred = net(x)
@@ -139,12 +155,6 @@ def train_net(net,
                     'total_positive_pixels': np.mean(positive_pixels_set),
                     'step': global_step,
                 }
-
-                # TODO ---- Below are for debugging cls only ----
-                # loss_component_mean = np.mean(loss_component_set, axis=0)
-                # for comp_loss, cls in zip(loss_component_mean, ['no-dmg', 'minor-dmg', 'major-dmg', 'destroyed', 'bg']):
-                #     log_data[f'train_{cls}_F1'] = comp_loss
-                # TODO ---- END ----
 
                 wandb.log(log_data)
 

@@ -1,6 +1,6 @@
 _BASE_: "damage_base.yaml"
 MODEL:
-  LOSS_TYPE: 'SoftDiceMulticlassLossDebug'
+  LOSS_TYPE: 'SoftDiceMulticlassLoss'
   IN_CHANNELS: 7
 #  PRETRAINED:
 #    ENABLED: False
