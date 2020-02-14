@@ -40,14 +40,24 @@ def final_model_evaluation_runner(net, cfg):
     y_true_set = []
     y_pred_set = []
     measurer = MultiThresholdMetric(F1_THRESH)
+    diaster_type_measurers = {}
 
-    def evaluate(y_true, y_pred, img_filename):
+    def evaluate(y_true, y_pred, img_filenames):
         y_true = y_true.detach()
         y_pred = y_pred.detach()
         y_true_set.append(y_true.cpu())
         y_pred_set.append(y_pred.cpu())
 
         measurer.add_sample(y_true, y_pred)
+
+        # ==== Find Threshold per damage level
+        for idx, img_filename in enumerate(img_filenames):
+            disaster_type = img_filename.split('_')[0]
+            if disaster_type not in diaster_type_measurers.keys():
+                diaster_type_measurers[disaster_type] = MultiThresholdMetric(F1_THRESH)
+
+            diaster_type_measurers[disaster_type].add_sample(y_true[[idx],...], y_pred[[idx],...])
+
 
     inference_loop(net, cfg, device, evaluate)
 
@@ -75,6 +85,21 @@ def final_model_evaluation_runner(net, cfg):
         'total False Negative': measurer.FN.cpu(),
         'total False Positive': measurer.FP.cpu(),
                })
+
+    for disaster_type, m in diaster_type_measurers.items():
+        f1 = m.compute_f1().cpu().numpy()
+
+        plt.plot(np.arange(0, 100, 1, dtype=np.int32), f1)
+        plt.ylabel('f1 score')
+        plt.xlabel('threshold ')
+        plt.title('F1 vs threshold curve')
+
+        print(f'{disaster_type} max F1', f1.max())
+
+        wandb.log({
+            f'disaster-{disaster_type}': plt
+
+        })
 
     print('computing ROC curve', flush=True)
     # ROC curve
@@ -288,6 +313,7 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, ep
 
         measurer.add_sample(y_true, y_pred)
 
+
     if run_type == 'TRAIN':
         inference_loop(net, cfg, device, evaluate, run_type= 'TRAIN', max_samples = max_samples)
     elif run_type == 'TEST':
@@ -309,21 +335,6 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, ep
     best_fpr = fpr[argmaxF1]
     best_fnr = fnr[argmaxF1]
     print(maxF1.item(), flush=True)
-
-
-    # # Due to interpolation
-    # y_true_set = torch.cat(y_true_set, dim = 0).round()
-    # y_pred_set = torch.cat(y_pred_set, dim=0)
-    #
-    # y_true_set, y_pred_set = downsample_dataset_for_eval(y_true_set, y_pred_set)
-    #
-    # y_true_np = to_numpy(y_true_set.flatten())
-    # y_pred_np = to_numpy(y_pred_set.flatten())
-    #
-    # # Average Precision
-    # print('Computing AP score ... ', end='', flush=True)
-    # ap = average_precision_score(y_true_np, y_pred_np)
-    # print(ap)
 
     set_name = 'test_set' if run_type == 'TEST' else 'training_set'
     wandb.log({f'{set_name} max F1': maxF1,
@@ -450,7 +461,7 @@ def custom_argparse(parser):
     parser.add_argument('-T',"--eval-type",
                         dest='eval_type',
                         default="final",
-                        choices=['p', 'checkpoints', 'inference', 'loc_predict'],
+                        choices=['p', 'checkpoints', 'inference', 'loc_predict', 'final'],
                         help="select an evaluation type")
     return parser
 

@@ -176,11 +176,12 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
     :return:
     '''
     measurer = MultiClassF1(ignore_last_class=cfg.MODEL.BACKGROUND.TYPE=='new-class')
+    diaster_type_measurers = {}
 
     confusion_matrix_with_bg = []
     confusion_matrix = []
     component_f1 = []
-    def evaluate(x, y_true, y_pred, img_filename):
+    def evaluate(x, y_true, y_pred, img_filenames):
         if cfg.MODEL.BACKGROUND.MASK_OUTPUT:
             # No background class, manually mask out background
             localization_mask = x[:,[3]] # 3 is a hard coded mask index
@@ -199,6 +200,14 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
             labels = [0, 1, 2, 3, 4] # 5 classes
             _mat = confmatrix(y_true_flat, y_pred_flat, labels = labels)
             confusion_matrix_with_bg.append(_mat)
+
+        # === Breakdown by image class
+        # Disaster type
+        # for img_filename in img_filenames:
+        #     disaster_type = img_filename.split('_')[0]
+        #     if disaster_type not in diaster_type_measurers:
+        #         diaster_type_measurers[disaster_type] = MultiClassF1(ignore_last_class=cfg.MODEL.BACKGROUND.TYPE=='new-class')
+
     use_gts_mask = run_type == 'TRAIN' and cfg.DATASETS.LOCALIZATION_MASK.TRAIN_USE_GTS_MASK
     dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
 
