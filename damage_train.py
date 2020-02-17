@@ -169,7 +169,13 @@ def train_net(net,
         dmg_model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
         dmg_model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
 
-def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, epoch=0, use_confusion_matrix=False, include_component_f1=False):
+def dmg_model_eval(net, cfg, device,
+                   run_type='TEST',
+                   max_samples = 1000,
+                   step=0, epoch=0,
+                   use_confusion_matrix=False,
+                   include_component_f1=False,
+                   include_disaster_type_breakdown = False)
     '''
     Runner that is concerned with training changes
     :param run_type: 'train' or 'eval'
@@ -201,12 +207,14 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
             _mat = confmatrix(y_true_flat, y_pred_flat, labels = labels)
             confusion_matrix_with_bg.append(_mat)
 
-        # === Breakdown by image class
+        #=== Breakdown by image class
         # Disaster type
-        # for img_filename in img_filenames:
-        #     disaster_type = img_filename.split('_')[0]
-        #     if disaster_type not in diaster_type_measurers:
-        #         diaster_type_measurers[disaster_type] = MultiClassF1(ignore_last_class=cfg.MODEL.BACKGROUND.TYPE=='new-class')
+        if include_disaster_type_breakdown:
+            for i, img_filename in enumerate(img_filenames):
+                disaster_type = img_filename.split('_')[0]
+                if disaster_type not in diaster_type_measurers:
+                    diaster_type_measurers[disaster_type] = MultiClassF1(ignore_last_class=cfg.MODEL.BACKGROUND.TYPE=='new-class')
+                diaster_type_measurers[disaster_type].add_sample(y_true[[i]], y_pred[[i]])
 
     use_gts_mask = run_type == 'TRAIN' and cfg.DATASETS.LOCALIZATION_MASK.TRAIN_USE_GTS_MASK
     dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
@@ -238,6 +246,14 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
                'step': step,
                'epoch': epoch,
                }
+
+    if include_disaster_type_breakdown:
+        for disaster_type, m in diaster_type_measurers.items():
+            f1 = m.compute_f1(include_bg=False).cpu().numpy()
+            print(f'disaster_{disaster_type}_f1', f1)
+            wandb.log({
+                f'disaster-{disaster_type}-f1': f1
+            })
 
     if include_component_f1:
         loss_component_mean = np.mean(component_f1, axis=0)
@@ -438,7 +454,7 @@ if __name__ == '__main__':
                 project='urban_dl',
                 tags=['eval', 'dmg'],
             )
-            dmg_model_eval(net, cfg, device, run_type='TEST', max_samples=1000,  use_confusion_matrix=True)
+            dmg_model_eval(net, cfg, device, run_type='TEST', max_samples=1000,  use_confusion_matrix=True, include_disaster_type_breakdown=True)
             dmg_model_eval(net, cfg, device, run_type='TRAIN', max_samples=1000, use_confusion_matrix=True)
         else:
             wandb.init(

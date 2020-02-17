@@ -6,8 +6,8 @@ MODEL:
   BLOCK_TYPE: 'Triple'
   USE_ATTENTION: True
 DATASETS:
-  TRAIN: ("/Midgard/home/pshi/datasets/xview2/scientific_reports/train/",)
-  TEST: ("/Midgard/home/pshi/datasets/xview2/scientific_reports/test/",)
+  TRAIN: ("/Midgard/Data/pshi/datasets/xview2/scientific_reports/train/",)
+  TEST: ("/Midgard/Data/pshi/datasets/xview2/scientific_reports/test/",)
 AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'importance'
