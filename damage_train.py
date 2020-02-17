@@ -249,7 +249,7 @@ def dmg_model_eval(net, cfg, device,
 
     if include_disaster_type_breakdown:
         for disaster_type, m in diaster_type_measurers.items():
-            f1 = m.compute_f1(include_bg=False).cpu().numpy()
+            f1 = m.compute_f1(include_bg=False)[0].cpu().numpy()
             print(f'disaster_{disaster_type}_f1', f1)
             wandb.log({
                 f'disaster-{disaster_type}-f1': f1
