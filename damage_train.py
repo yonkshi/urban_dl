@@ -175,7 +175,7 @@ def dmg_model_eval(net, cfg, device,
                    step=0, epoch=0,
                    use_confusion_matrix=False,
                    include_component_f1=False,
-                   include_disaster_type_breakdown = False)
+                   include_disaster_type_breakdown = False):
     '''
     Runner that is concerned with training changes
     :param run_type: 'train' or 'eval'
