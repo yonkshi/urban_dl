@@ -185,7 +185,7 @@ def dmg_model_eval(net, cfg, device,
     diaster_type_measurers = {}
 
     confusion_matrix_with_bg = []
-    confusion_matrix = []
+    confusion_matrices_by_disaster_type = {}
     component_f1 = []
     def evaluate(x, y_true, y_pred, img_filenames):
         if cfg.MODEL.BACKGROUND.MASK_OUTPUT:
@@ -201,20 +201,27 @@ def dmg_model_eval(net, cfg, device,
 
         # === Confusion Matrix stuff
         if use_confusion_matrix:
-            y_true_flat = y_true.argmax(dim=1).cpu().detach().flatten().numpy()
-            y_pred_flat = torch.softmax(y_pred, dim=1).argmax(dim=1).cpu().detach().flatten().numpy()
+            y_true_flat = y_true.argmax(dim=1).cpu().detach().numpy()
+            y_pred_flat = torch.softmax(y_pred, dim=1).argmax(dim=1).cpu().detach().numpy()
             labels = [0, 1, 2, 3, 4] # 5 classes
-            _mat = confmatrix(y_true_flat, y_pred_flat, labels = labels)
+            _mat = confmatrix(y_true_flat.flatten(), y_pred_flat.flatten(), labels = labels)
             confusion_matrix_with_bg.append(_mat)
 
         #=== Breakdown by image class
         # Disaster type
         if include_disaster_type_breakdown:
             for i, img_filename in enumerate(img_filenames):
+                # Compute F1
                 disaster_type = img_filename.split('_')[0]
                 if disaster_type not in diaster_type_measurers:
-                    diaster_type_measurers[disaster_type] = MultiClassF1(ignore_last_class=cfg.MODEL.BACKGROUND.TYPE=='new-class')
+                    diaster_type_measurers[disaster_type] = MultiClassF1(ignore_last_class=cfg.MODEL.BACKGROUND.TYPE == 'new-class')
+                    confusion_matrices_by_disaster_type[disaster_type] = 0
                 diaster_type_measurers[disaster_type].add_sample(y_true[[i]], y_pred[[i]])
+
+                # Compute Confusion Matrix
+                if use_confusion_matrix:
+                    _mat = confmatrix(y_true_flat[i].flatten(), y_pred_flat[i].flatten(), labels=labels)
+                    confusion_matrices_by_disaster_type[disaster_type] += _mat
 
     use_gts_mask = run_type == 'TRAIN' and cfg.DATASETS.LOCALIZATION_MASK.TRAIN_USE_GTS_MASK
     dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
@@ -255,6 +262,12 @@ def dmg_model_eval(net, cfg, device,
                 f'disaster-{disaster_type}-f1': f1
             })
 
+    if include_disaster_type_breakdown and use_confusion_matrix:
+        for disaster_type, cm in confusion_matrices_by_disaster_type.items():
+            name = f'disaster {disaster_type}'
+            plot_confmtx(name, cm)
+            log_data[name] = plt
+
     if include_component_f1:
         loss_component_mean = np.mean(component_f1, axis=0)
         for comp_loss, cls in zip(loss_component_mean, ['no-dmg', 'minor-dmg', 'major-dmg', 'destroyed', 'bg']):
@@ -273,33 +286,47 @@ def dmg_model_eval(net, cfg, device,
     # Plot confusion matrix
     if use_confusion_matrix:
         cm = np.sum(confusion_matrix_with_bg, axis=0)
-        print('confusion_matrix ', cm)
-        normalized_cm = cm / cm.sum(axis=-1, keepdims=True)
-        print('confusion_matrix normalized', normalized_cm)
-        # normalized_cm = confusion_matrix_with_bg / confusion_matrix_with_bg.sum(axis=0, keepdims=True)
-        labels = ['no-damage', 'minor-damage', 'major-damage', 'destroyed', 'background',]
-
-        fig, ax = plt.subplots()
-
-        ax.matshow(normalized_cm, cmap='Blues')
-
-        for (i, j), z in np.ndenumerate(normalized_cm):
-            true_value = cm[i,j]
-            ax.text(j, i, '{:0.3f}\n{}'.format(z, true_value), ha='center', va='center',
-                    bbox=dict(boxstyle='round', facecolor='white', edgecolor='0.3'))
-        ax.autoscale(False)
-        # ax.set_yticks(np.arange(5))
-        #
-        ax.set_yticklabels([''] + labels)
-        ax.set_xticklabels([''] + labels)
-        plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
-                 rotation_mode="anchor")
-        fig.tight_layout()
-        plt.title('confusion matrix')
-        plt.savefig(f'{cfg.OUTPUT_DIR}/dmg_{run_type}_confusion_matrix_raw.png')
+        plot_confmtx(name=run_type, confusion_matrix=cm)
         log_data['confusion_matrix'] = plt
 
     wandb.log(log_data)
+
+def plot_confmtx(name, confusion_matrix):
+    '''
+    Plots and saves the confusion matrix into the run directory
+    :param name:
+    :param confusion_matrix:
+    :return:
+    '''
+    print('confusion_matrix ', confusion_matrix)
+    normalized_cm = confusion_matrix / confusion_matrix.sum(axis=-1, keepdims=True)
+    print('confusion_matrix normalized', normalized_cm)
+    # normalized_cm = confusion_matrix_with_bg / confusion_matrix_with_bg.sum(axis=0, keepdims=True)
+    labels = ['no-damage', 'minor-damage', 'major-damage', 'destroyed', 'background', ]
+
+    fig, ax = plt.subplots()
+
+    ax.matshow(normalized_cm, cmap='Blues')
+
+    for (i, j), z in np.ndenumerate(normalized_cm):
+        true_value = confusion_matrix[i, j]
+        ax.text(j, i, '{:0.3f}\n{}'.format(z, true_value), ha='center', va='center',
+                bbox=dict(boxstyle='round', facecolor='white', edgecolor='0.3'))
+    ax.autoscale(False)
+    # ax.set_yticks(np.arange(5))
+    #
+    ax.set_yticklabels([''] + labels)
+    ax.set_xticklabels([''] + labels)
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+             rotation_mode="anchor")
+    fig.tight_layout()
+    plt.title(f'{name} confusion matrix')
+
+    directory = f'{cfg.OUTPUT_DIR}/confusion_matrices/'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    plt.savefig( path.join(directory, f'{name}.png') )
 
 def load_pretrained(net:nn.Module, cfg):
     p_cfg = cfg.MODEL.PRETRAINED
