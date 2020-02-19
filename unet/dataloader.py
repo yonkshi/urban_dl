@@ -5,6 +5,8 @@
 import os
 import torch
 import json
+from pathlib import Path
+from imageio import imread
 from unet.utils import *
 
 
@@ -178,3 +180,112 @@ class Xview2Detectron2DamageLevelDataset(Xview2Detectron2Dataset):
 
         return masks
 
+
+
+class UrbanExtractionDataset(torch.utils.data.Dataset):
+    '''
+    Dataset for Urban Extraction style labelled Dataset
+    '''
+    def __init__(self, root_dir: Path, # path to folder with subfolder images and labels and a metadata file
+                 product_name: str,
+                 include_index: bool = False, # index of sample
+                 transform: list = None # list of transformations
+                 ):
+        super().__init__()
+
+        self.root_dir = root_dir
+        self.product_name = product_name
+
+        # directories for images and labels
+        self.images_dir = root_dir / 'images/'
+        self.labels_dir = root_dir / 'labels/'
+
+        # loading metadata and subsetting it to cities, year and product
+        metadata_file = root_dir / 'metadata.json'
+        self.dataset_metadata = self._load_metadata(metadata_file)
+
+        self.length = len(self.dataset_metadata)
+        print('dataset length', self.length)
+
+        self.include_index = include_index
+        self.transform = transform
+
+    def __getitem__(self, index):
+
+        # loading metadata of sample
+        metadata_sample = self.dataset_metadata[index]
+
+        # loading image and corresponding label
+        sample_id = metadata_sample['sample_id']
+        # TODO: X and y are probably not numpy arrays -> convert to required type
+        image = self._load_file(sample_id, self.product_name)
+        label = self._load_file(sample_id, 'label')
+
+        # crop image to (1024, 1024)
+
+        sample = {
+            'image': image, # numpy.array (m, n, 3)
+            'label': label, # numpy.array (m, n, 1)
+            'id': sample_id, # identifier of sample
+            'urban_percentage': metadata_sample['urban_percentage'] # just copying from metadata
+        }
+
+        if self.include_index:
+            sample['index'] = index
+
+        if self.transform:
+            sample = self.transform(sample)
+
+        return sample
+
+    # getter function for image or label files
+    def _load_file(self, file_id: str, product_name: str):
+
+        # construct file name and check for its existence
+        file_dir = self.labels_dir if product_name == 'label' else self.images_dir
+        file = file_dir / f'{file_id}_{product_name}.png'
+        if not file.exists():
+            raise FileNotFoundError(f'Cannot find file {file}')
+
+        # loading file
+        file_data = np.array(imread(file))
+        # TODO: find better solution for file size
+        file_data = file_data[:1024,:1024,:]
+        if product_name == 'label':
+            file_data = file_data[:,:,0] / 255
+            file_data = file_data.astype(int)
+            return file_data[:,:,None]
+        else:
+            file_data = file_data[:,:,:3] / 255
+            return file_data
+
+    # helper function to load metadata from .json file
+    def _load_metadata(self, file:Path):
+        # TODO: check if all data is available
+        with open(file) as f:
+            metadata = json.load(f)
+        # TODO: change metadata format to meet requirements
+        print(metadata)
+        return metadata
+
+    def __len__(self):
+        return self.length
+
+
+if __name__ == '__main__':
+
+    data_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/test_dataset/')
+    train_dir = data_dir / 'train'
+    test_dir = data_dir / 'test'
+
+    dataset = UrbanExtractionDataset(train_dir, 'S2FC', True)
+
+    index = 100
+
+    sample = dataset.__getitem__(index)
+    image = sample['image']
+    label = sample['label']
+    print(f'Image {index} ({type(image)})')
+    print(f'Shape: {image.shape}, Range: [{np.amin(image)}, {np.amax(image)}], Type: {image.dtype}')
+    print(f'Label {index} ({type(label)})')
+    print(f'Shape: {label.shape}, Range: [{np.amin(label)}, {np.amax(label)}] Type: {label.dtype}')
