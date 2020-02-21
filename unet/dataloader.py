@@ -192,7 +192,7 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
                  transform: list = None # list of transformations
                  ):
         super().__init__()
-
+        root_dir = Path(root_dir)
         self.root_dir = root_dir
         self.product_name = product_name
 
@@ -221,20 +221,27 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
         image = self._load_file(sample_id, self.product_name)
         label = self._load_file(sample_id, 'label')
 
+
+        # compute total number of urban pixels
+        # image_weight = np.sum(label)
+
         # crop image to (1024, 1024)
+        if self.transform:
+            image,label,sample_id, = self.transform((image,label,sample_id,))
+
 
         sample = {
-            'image': image, # numpy.array (m, n, 3)
-            'label': label, # numpy.array (m, n, 1)
-            'id': sample_id, # identifier of sample
-            'urban_percentage': metadata_sample['urban_percentage'] # just copying from metadata
+            'x': image.float(), # numpy.array (m, n, 3)
+            'y': label.float(), # numpy.array (m, n, 1)
+            'img_name': sample_id, # identifier of sample
+            'image_weight': np.float(metadata_sample['img_weight'])
+            # 'urban_percentage': image_weight # just copying from metadata
         }
 
         if self.include_index:
             sample['index'] = index
 
-        if self.transform:
-            sample = self.transform(sample)
+
 
         return sample
 
@@ -246,6 +253,7 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
         file = file_dir / f'{file_id}_{product_name}.png'
         if not file.exists():
             raise FileNotFoundError(f'Cannot find file {file}')
+
 
         # loading file
         file_data = np.array(imread(file))
@@ -259,13 +267,14 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
             file_data = file_data[:,:,:3] / 255
             return file_data
 
+
     # helper function to load metadata from .json file
     def _load_metadata(self, file:Path):
         # TODO: check if all data is available
         with open(file) as f:
             metadata = json.load(f)
         # TODO: change metadata format to meet requirements
-        print(metadata)
+        # print(metadata)
         return metadata
 
     def __len__(self):

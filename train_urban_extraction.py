@@ -18,6 +18,7 @@ import segmentation_models_pytorch as smp
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from experiment_manager.metrics import MultiThresholdMetric
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from tabulate import tabulate
 import wandb
@@ -30,7 +31,7 @@ from experiment_manager.metrics import f1_score
 from experiment_manager.args import default_argument_parser
 from experiment_manager.config import new_config
 from experiment_manager.loss import soft_dice_loss, soft_dice_loss_balanced, jaccard_like_loss, jaccard_like_balanced_loss
-from eval_unet_xview2 import model_eval
+from eval_unet_xview2 import inference_loop
 
 # import hp
 
@@ -90,19 +91,18 @@ def train_net(net,
 
     # transformations
     trfm = []
-    trfm.append(BGR2RGB())
-
-    if cfg.DATASETS.USE_CLAHE_VARI: trfm.append(VARI())
-
-    if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
-
+    # trfm.append(BGR2RGB())
+    #
+    # if cfg.DATASETS.USE_CLAHE_VARI: trfm.append(VARI())
+    #
+    # if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
+    #
     if cfg.AUGMENTATION.CROP_TYPE == 'uniform':
         trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
     elif cfg.AUGMENTATION.CROP_TYPE == 'importance':
         trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
-
-    if cfg.AUGMENTATION.RANDOM_FLIP_ROTATE: trfm.append(RandomFlipRotate())
-
+    #
+    # if cfg.AUGMENTATION.RANDOM_FLIP_ROTATE: trfm.append(RandomFlipRotate())
     trfm.append(Npy2Torch())
     trfm = transforms.Compose(trfm)
 
@@ -110,7 +110,6 @@ def train_net(net,
     dataset = UrbanExtractionDataset(root_dir = cfg.DATASETS.TRAIN[0],
                                      product_name = 'S2FC', # move to config file
                                      include_index = True,
-                                     include_image_weight = True,
                                      transform = trfm)
 
     dataloader_kwargs = {
@@ -144,8 +143,8 @@ def train_net(net,
         for i, batch in enumerate(dataloader):
             optimizer.zero_grad()
 
-            x = batch['image'].to(device)
-            y_gts = batch['label'].to(device)
+            x = batch['x'].to(device)
+            y_gts = batch['y'].to(device)
             # TODO: this is probably wrong
             image_weight = batch['image_weight']
 
@@ -218,10 +217,76 @@ def image_sampling_weight(dataset_metadata):
     # all
     SCALE_FACTOR = 9000
     EMPTY_IMAGE_BASELINE = 1000
-    urban_percentages = [float(sample_metadata['urban_percentage']) for sample_metadata in dataset_metadata]
-    image_p = np.array([int(p * SCALE_FACTOR) for p in urban_percentages]) + EMPTY_IMAGE_BASELINE
+    urban_percentages = np.array([float(sample_metadata['img_weight']) for sample_metadata in dataset_metadata]) + EMPTY_IMAGE_BASELINE
+    # image_p = np.array([int(p * SCALE_FACTOR) for p in urban_percentages]) + EMPTY_IMAGE_BASELINE
     print('done', flush=True)
-    return image_p
+    return urban_percentages
+
+def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, epoch=0):
+    '''
+    Runner that is concerned with training changes
+    :param run_type: 'train' or 'eval'
+    :return:
+    '''
+
+    F1_THRESH = torch.linspace(0, 1, 100).to(device)
+    y_true_set = []
+    y_pred_set = []
+
+    measurer = MultiThresholdMetric(F1_THRESH)
+    def evaluate(y_true, y_pred, img_filename):
+        y_true = y_true.detach()
+        y_pred = y_pred.detach()
+        y_true_set.append(y_true.cpu())
+        y_pred_set.append(y_pred.cpu())
+
+        measurer.add_sample(y_true, y_pred)
+
+    # transformations
+    trfm = []
+    trfm.append(Npy2Torch())
+    trfm = transforms.Compose(trfm)
+
+    if run_type == 'TRAIN':
+        dataset = UrbanExtractionDataset(root_dir=cfg.DATASETS.TRAIN[0],
+                                         product_name='S2FC',  # move to config file
+                                         include_index=True,
+                                         transform=trfm)
+
+        inference_loop(net, cfg, device, evaluate, run_type= 'TRAIN', max_samples = max_samples, dataset=dataset)
+    elif run_type == 'TEST':
+        dataset = UrbanExtractionDataset(root_dir=cfg.DATASETS.TEST[0],
+                                         product_name='S2FC',  # move to config file
+                                         include_index=True,
+                                         transform=trfm)
+        inference_loop(net, cfg, device, evaluate, max_samples = max_samples, dataset=dataset)
+
+    # Summary gathering ===
+
+    print('Computing F1 score ', end=' ', flush=True)
+    # Max of the mean F1 score
+
+    # measurer = MultiThresholdMetric(y_true_set, y_pred_set, F1_THRESH)
+    # Max F1
+
+
+    f1 = measurer.compute_f1()
+    fpr, fnr = measurer.compute_basic_metrics()
+    maxF1 = f1.max()
+    argmaxF1 = f1.argmax()
+    best_fpr = fpr[argmaxF1]
+    best_fnr = fnr[argmaxF1]
+    print(maxF1.item(), flush=True)
+
+    set_name = 'test_set' if run_type == 'TEST' else 'training_set'
+    wandb.log({f'{set_name} max F1': maxF1,
+               f'{set_name} argmax F1': argmaxF1,
+               # f'{set_name} Average Precision': ap,
+               f'{set_name} false positive rate': best_fpr,
+               f'{set_name} false negative rate': best_fnr,
+               'step': step,
+               'epoch': epoch,
+               })
 
 class LULC(enum.Enum):
     BACKGROUND = (0, 'Background', 'black')
