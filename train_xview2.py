@@ -235,7 +235,7 @@ def frankenstein_edge_loss(y_pred, y_gts, edge_mask, scale):
     ce = F.binary_cross_entropy_with_logits(y_pred, y_gts)
     jaccard = jaccard_like_balanced_loss(y_pred, y_gts)
     y_pred_sigmoid = torch.sigmoid(y_pred)
-    edge_ce = -(y_gts * y_pred_sigmoid.log() + (1 - y_gts) * (1-y_pred_sigmoid).log()) * edge_mask.float()
+    edge_ce = -(y_gts * y_pred_sigmoid.log() + (1 - y_gts) * (1-y_pred_sigmoid).log())#  * edge_mask.float() * scale
     edge_ce = edge_ce.mean()
 
 
