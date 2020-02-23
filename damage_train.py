@@ -120,8 +120,10 @@ def train_net(net,
             optimizer.zero_grad()
 
             y_pred = net(x)
+            ce_loss = 0
+            dice_loss = 0
             if weighted_criterion:
-                loss = criterion(y_pred, y_gts, weights)
+                loss, (ce_loss, dice_loss) = criterion(y_pred, y_gts, weights)
             else:
                 loss = criterion(y_pred, y_gts)
             epoch_loss += loss.item()
@@ -150,6 +152,8 @@ def train_net(net,
 
                 log_data = {
                     'loss': np.mean(loss_set),
+                    'ce_component_loss': ce_loss,
+                    'dice_component_loss': dice_loss,
                     'gpu_memory': max_mem,
                     'time': time_per_n_batches,
                     'total_positive_pixels': np.mean(positive_pixels_set),
@@ -376,8 +380,10 @@ def build_transforms(cfg, for_training=False, use_gts_mask = False):
 
 def combo_loss(p, y, class_weights=None):
     y_ = y.argmax(dim=1).long()
-    loss = F.cross_entropy(p, y_, weight=class_weights) + soft_dice_loss_multi_class(p, y)
-    return loss
+    ce = F.cross_entropy(p, y_, weight=class_weights)
+    dice = soft_dice_loss_multi_class(p, y)
+    loss =  ce + dice
+    return loss, (ce, dice)
 
 def image_sampling_weight(dataset_metadata):
     print('performing oversampling...', end='', flush=True)

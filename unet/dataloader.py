@@ -74,6 +74,8 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
                 ret['image_weight'] = label.sum()
 
 
+
+
         return ret
 
     def _extract_label(self, annotations_set, sample_name):

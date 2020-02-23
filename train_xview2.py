@@ -76,6 +76,8 @@ def train_net(net,
         criterion = lambda pred, gts: 2 * F.binary_cross_entropy_with_logits(pred, gts) + soft_dice_loss(pred, gts)
     elif cfg.MODEL.LOSS_TYPE == 'FrankensteinLoss':
         criterion = lambda pred, gts: F.binary_cross_entropy_with_logits(pred, gts) + jaccard_like_balanced_loss(pred, gts)
+    elif cfg.MODEL.LOSS_TYPE == 'FrankensteinEdgeLoss':
+        criterion = frankenstein_edge_loss
 
 
 
@@ -154,10 +156,15 @@ def train_net(net,
                 y_gts = y_gts.long()# Cross entropy loss requires a long as target
 
             if use_edge_loss:
-                # TODO
-                edge_mask = y_gts[:,[-1]]
-                y_gts = y_gts[:,[0]]
-                loss = criterion(y_pred, y_gts, edge_mask, cfg.TRAINER.EDGE_LOSS_SCALE)
+                edge_mask = y_gts[:,[0]]
+                y_gts = y_gts[:, 1:]
+                loss, ce_loss, jaccard_loss, edge_loss = criterion(y_pred, y_gts, edge_mask, cfg.TRAINER.EDGE_LOSS_SCALE)
+                wandb.log({
+                    'ce_loss': ce_loss,
+                    'jaccard_loss': jaccard_loss,
+                    'edge_loss': edge_loss,
+                    'step':global_step,
+                })
             else:
                 loss = criterion(y_pred, y_gts)
 
@@ -218,27 +225,23 @@ def image_sampling_weight(dataset_metadata):
     image_p = image_p
     return image_p
 
-class LULC(enum.Enum):
-    BACKGROUND = (0, 'Background', 'black')
-    NO_DATA = (1, 'No Data', 'white')
-    NO_DAMAGE = (2, 'No damage', 'xkcd:lime')
-    MINOR_DAMAGE = (3, 'Minor Damage', 'yellow')
-    MAJOR_DAMAGE = (4, 'Major Damage', 'orange')
-    DESTROYED = (5, 'Destroyed', 'red')
-
-    def __init__(self, val1, val2, val3):
-        self.id = val1
-        self.class_name = val2
-        self.color = val3
-
-lulc_cmap = ListedColormap([entry.color for entry in LULC])
-lulc_norm = BoundaryNorm(np.arange(-0.5, 6, 1), lulc_cmap.N)
 
 def gpu_stats():
     max_memory_allocated = torch.cuda.max_memory_allocated() / 1e6 # bytes to MB
     max_memory_cached = torch.cuda.max_memory_cached() /1e6
     return int(max_memory_allocated), int(max_memory_cached)
 
+def frankenstein_edge_loss(y_pred, y_gts, edge_mask, scale):
+    ce = F.binary_cross_entropy_with_logits(y_pred, y_gts)
+    jaccard = jaccard_like_balanced_loss(y_pred, y_gts)
+    y_pred_sigmoid = torch.sigmoid(y_pred)
+    edge_ce = -(y_gts * y_pred_sigmoid.log() + (1 - y_gts) * (1-y_pred_sigmoid).log()) * edge_mask.float()
+    edge_ce = edge_ce.mean()
+
+
+    loss = ce + jaccard + edge_ce
+
+    return loss, ce, jaccard, edge_ce
 
 def setup(args):
     cfg = new_config()
