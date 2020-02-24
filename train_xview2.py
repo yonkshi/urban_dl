@@ -234,8 +234,10 @@ def gpu_stats():
 def frankenstein_edge_loss(y_pred, y_gts, edge_mask, scale):
     ce = F.binary_cross_entropy_with_logits(y_pred, y_gts)
     jaccard = jaccard_like_balanced_loss(y_pred, y_gts)
-    y_pred_sigmoid = torch.sigmoid(y_pred)
-    edge_ce = -(y_gts * y_pred_sigmoid.log() + (1 - y_gts) * (1-y_pred_sigmoid).log())#  * edge_mask.float() * scale
+    a = (-y_pred).clamp(0)
+    edge_ce = (1 - y_gts)*y_pred + a + torch.log(a.exp() + torch.exp(-y_pred-a))
+    # y_pred_sigmoid = torch.sigmoid(y_pred)
+    # edge_ce = -(y_gts * y_pred_sigmoid.log() + (1 - y_gts) * (1-y_pred_sigmoid).log())#  * edge_mask.float() * scale
     edge_ce = edge_ce.mean()
 
 
