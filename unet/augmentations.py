@@ -172,3 +172,26 @@ class RandomFlipRotate():
         return input, label, image_path
 def bgr2rgb(img):
     return img[..., [2,1,0]]
+
+
+class AddLabelChannels():
+
+    def __init__(self, kernel_size=5, method='erotion'):
+        self.kernel = np.ones((kernel_size, kernel_size), np.uint8)
+        self.method = method
+
+    def __call__(self, args):
+        input, label, image_path = args
+
+        if self.method == 'erosion':
+
+            new_label = label[:,:,0]
+            label_edge = np.abs(label[:, :, 0] - cv2.erode(label[:, :, 0], self.kernel, iterations=1))
+            new_label += label_edge
+
+        elif self.method == 'dilation':
+
+            label_edge = np.abs(label[:, :, 0] - cv2.dilate(label[:, :, 0], self.kernel, iterations=1))
+            new_label = 2*label_edge + label[:,:,0]
+
+        return input, new_label, image_path
