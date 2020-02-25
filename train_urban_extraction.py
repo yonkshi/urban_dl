@@ -315,7 +315,7 @@ def gpu_stats():
 
 def setup(args):
     cfg = new_config()
-    cfg.merge_from_file(f'configs/{args.config_file}.yaml')
+    cfg.merge_from_file(f'configs/urban_extraction/{args.config_file}.yaml')
     cfg.merge_from_list(args.opts)
     cfg.NAME = args.config_file
 
