@@ -6,7 +6,6 @@ import os
 import torch
 import json
 from pathlib import Path
-from imageio import imread
 from unet.utils import *
 
 
