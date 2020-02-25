@@ -199,7 +199,8 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
         self.root_dir = root_dir
         self.s1_dir = root_dir / 'sentinel1'
         self.s2_dir = root_dir / 'sentinel2'
-        self.label_dir = root_dir / cfg.LABEL
+        self.label_dir = root_dir / cfg.DATALOADER.LABEL
+        self.cfg = cfg
 
         # loading metadata of dataset
         with open(str(root_dir / 'metadata.json')) as f:
@@ -229,7 +230,7 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
 
         s1_file = self.s1_dir / f'S1_{city}_{self.year}_{patch_id}.tif'
         s2_file = self.s2_dir / f'S2_{city}_{self.year}_{patch_id}.tif'
-        label_file = self.label_dir / f'{str(cfg.LABEL).upper()}_{city}_{patch_id}.tif'
+        label_file = self.label_dir / f'{str(self.cfg.DATALOADER.LABEL).upper()}_{city}_{patch_id}.tif'
 
         # loading images and corresponding label
         if not any(self.s1_feature_selection):  # only sentinel 2 features

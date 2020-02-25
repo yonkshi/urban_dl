@@ -36,6 +36,9 @@ DATALOADER:
   NUM_WORKER: 1
   SHUFFLE: True
   LEGACY_MASK_RASTERIZATION: False
+  S1_FEATURES: []
+  S2_FEATURES: ['Blue_median', 'Green_median', 'Red_median', 'NIR_median']
+  LABEL: 'guf'
 
 AUGMENTATION:
   # Random cropping of the images
