@@ -266,7 +266,8 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
 
     def _get_feature_selection(self, features, selection):
         feature_selection = [False for _ in range(len(features))]
-        for feature in selection:
-            i = feature_selection.index(feature)
+        for i, feature in enumerate(selection):
+
+            i = features.index(feature)
             feature_selection[i] = True
         return feature_selection
