@@ -18,19 +18,20 @@ import segmentation_models_pytorch as smp
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from experiment_manager.metrics import MultiThresholdMetric
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from tabulate import tabulate
 import wandb
 
 from unet import UNet
-from unet.dataloader import Xview2Detectron2Dataset
+from unet.dataloader import UrbanExtractionDataset
 from unet.augmentations import *
 
 from experiment_manager.metrics import f1_score
 from experiment_manager.args import default_argument_parser
 from experiment_manager.config import new_config
 from experiment_manager.loss import soft_dice_loss, soft_dice_loss_balanced, jaccard_like_loss, jaccard_like_balanced_loss
-from eval_unet_xview2 import model_eval
+from eval_unet_xview2 import inference_loop
 
 # import hp
 
@@ -88,28 +89,30 @@ def train_net(net,
 
     use_edge_loss = cfg.MODEL.LOSS_TYPE == 'FrankensteinEdgeLoss'
 
+    # transformations
     trfm = []
-    trfm.append(BGR2RGB())
-    if cfg.DATASETS.USE_CLAHE_VARI: trfm.append(VARI())
-    if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
+    # trfm.append(BGR2RGB())
+    #
+    # if cfg.DATASETS.USE_CLAHE_VARI: trfm.append(VARI())
+    #
+    # if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
+    #
     if cfg.AUGMENTATION.CROP_TYPE == 'uniform':
         trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
     elif cfg.AUGMENTATION.CROP_TYPE == 'importance':
         trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
-    if cfg.AUGMENTATION.RANDOM_FLIP_ROTATE: trfm.append(RandomFlipRotate())
-
+    #
+    # if cfg.AUGMENTATION.RANDOM_FLIP_ROTATE: trfm.append(RandomFlipRotate())
     trfm.append(Npy2Torch())
     trfm = transforms.Compose(trfm)
 
     # reset the generators
-    dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0],
-                                      pre_or_post=cfg.DATASETS.PRE_OR_POST,
-                                      include_image_weight=True,
-                                      transform=trfm,
-                                      include_edge_mask=use_edge_loss,
-                                      use_clahe=cfg.DATASETS.USE_CLAHE_VARI,
-
-                                      )
+    dataset = UrbanExtractionDataset(
+        cfg=cfg,
+        root_dir=cfg.DATASETS.TRAIN[0],
+        include_index=True,
+        transform=trfm
+    )
 
     dataloader_kwargs = {
         'batch_size': cfg.TRAINER.BATCH_SIZE,
@@ -121,7 +124,7 @@ def train_net(net,
 
     # sampler
     if cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE == 'simple':
-        image_p = image_sampling_weight(dataset.dataset_metadata)
+        image_p = image_sampling_weight(dataset.metadata['samples'])
         sampler = torch_data.WeightedRandomSampler(weights=image_p, num_samples=len(image_p))
         dataloader_kwargs['sampler'] = sampler
         dataloader_kwargs['shuffle'] = False
@@ -144,6 +147,7 @@ def train_net(net,
 
             x = batch['x'].to(device)
             y_gts = batch['y'].to(device)
+            # TODO: this is probably wrong
             image_weight = batch['image_weight']
 
 
@@ -209,14 +213,83 @@ def train_net(net,
             model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
             model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
 
-def image_sampling_weight(dataset_metadata):
+def image_sampling_weight(samples_metadata):
+    # TODO: No idea how to change this
     print('performing oversampling...', end='', flush=True)
     EMPTY_IMAGE_BASELINE = 1000
-    image_p = np.array([image_desc['pre']['image_weight'] for image_desc in dataset_metadata]) + EMPTY_IMAGE_BASELINE
+    sampling_weights = np.array([float(sample['img_weight']) for sample in samples_metadata]) + EMPTY_IMAGE_BASELINE
+    # image_p = np.array([int(p * SCALE_FACTOR) for p in urban_percentages]) + EMPTY_IMAGE_BASELINE
     print('done', flush=True)
-    # normalize to [0., 1.]
-    image_p = image_p
-    return image_p
+    return sampling_weights
+
+def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, epoch=0):
+    '''
+    Runner that is concerned with training changes
+    :param run_type: 'train' or 'eval'
+    :return:
+    '''
+
+    F1_THRESH = torch.linspace(0, 1, 100).to(device)
+    y_true_set = []
+    y_pred_set = []
+
+    measurer = MultiThresholdMetric(F1_THRESH)
+    def evaluate(y_true, y_pred, img_filename):
+        y_true = y_true.detach()
+        y_pred = y_pred.detach()
+        y_true_set.append(y_true.cpu())
+        y_pred_set.append(y_pred.cpu())
+
+        measurer.add_sample(y_true, y_pred)
+
+    # transformations
+    trfm = []
+    trfm.append(Npy2Torch())
+    trfm = transforms.Compose(trfm)
+
+    if run_type == 'TRAIN':
+        dataset = UrbanExtractionDataset(
+            cfg=cfg,
+            root_dir=cfg.DATASETS.TRAIN[0],
+            include_index=True,
+            transform=trfm
+        )
+        inference_loop(net, cfg, device, evaluate, run_type= 'TRAIN', max_samples = max_samples, dataset=dataset)
+    elif run_type == 'TEST':
+        dataset = UrbanExtractionDataset(
+            cfg=cfg,
+            root_dir=cfg.DATASETS.TEST[0],
+            include_index=True,
+            transform=trfm
+        )
+        inference_loop(net, cfg, device, evaluate, max_samples = max_samples, dataset=dataset)
+
+    # Summary gathering ===
+
+    print('Computing F1 score ', end=' ', flush=True)
+    # Max of the mean F1 score
+
+    # measurer = MultiThresholdMetric(y_true_set, y_pred_set, F1_THRESH)
+    # Max F1
+
+
+    f1 = measurer.compute_f1()
+    fpr, fnr = measurer.compute_basic_metrics()
+    maxF1 = f1.max()
+    argmaxF1 = f1.argmax()
+    best_fpr = fpr[argmaxF1]
+    best_fnr = fnr[argmaxF1]
+    print(maxF1.item(), flush=True)
+
+    set_name = 'test_set' if run_type == 'TEST' else 'training_set'
+    wandb.log({f'{set_name} max F1': maxF1,
+               f'{set_name} argmax F1': argmaxF1,
+               # f'{set_name} Average Precision': ap,
+               f'{set_name} false positive rate': best_fpr,
+               f'{set_name} false negative rate': best_fnr,
+               'step': step,
+               'epoch': epoch,
+               })
 
 class LULC(enum.Enum):
     BACKGROUND = (0, 'Background', 'black')
@@ -255,6 +328,7 @@ def setup(args):
     if args.data_dir:
         cfg.DATASETS.TRAIN = (args.data_dir,)
     return cfg
+
 
 if __name__ == '__main__':
     args = default_argument_parser().parse_known_args()[0]

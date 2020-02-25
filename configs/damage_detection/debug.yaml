@@ -1,6 +1,6 @@
 _BASE_: "damage_base.yaml"
 MODEL:
-  LOSS_TYPE: 'SoftDiceMulticlassLossDebug'
+  LOSS_TYPE: 'SoftDiceMulticlassLoss'
   IN_CHANNELS: 7
 #  PRETRAINED:
 #    ENABLED: False
@@ -39,6 +39,6 @@ AUGMENTATION:
   CROP_TYPE: 'importance'
   CROP_SIZE: 512
   IMAGE_OVERSAMPLING_TYPE: 'simple'
-
+  RANDOM_FLIP_ROTATE: True
 
 

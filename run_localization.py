@@ -10,27 +10,26 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch import optim
-from torch.utils import data as torch_data
 from torch.nn import functional as F
-from torchvision import transforms, utils
-from tensorboardX import SummaryWriter
 import segmentation_models_pytorch as smp
 
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from tabulate import tabulate
 import wandb
+from pytorch_lightning import Trainer
+
 
 from unet import UNet
 from unet.dataloader import Xview2Detectron2Dataset
 from unet.augmentations import *
+from unet.localization import LocalizationModel
 
-from experiment_manager.metrics import f1_score
 from experiment_manager.args import default_argument_parser
 from experiment_manager.config import new_config
 from experiment_manager.loss import soft_dice_loss, soft_dice_loss_balanced, jaccard_like_loss, jaccard_like_balanced_loss
-from eval_unet_xview2 import model_eval
+
+
+
 
 # import hp
 
@@ -38,7 +37,6 @@ def train_net(net,
               cfg):
 
     log_path = cfg.OUTPUT_DIR
-    writer = SummaryWriter(log_path)
 
     run_config = {}
     run_config['CONFIG_NAME'] = cfg.NAME
@@ -77,137 +75,12 @@ def train_net(net,
     elif cfg.MODEL.LOSS_TYPE == 'FrankensteinLoss':
         criterion = lambda pred, gts: F.binary_cross_entropy_with_logits(pred, gts) + jaccard_like_balanced_loss(pred, gts)
 
-
-
-    if torch.cuda.device_count() > 1:
-        print(torch.cuda.device_count(), " GPUs!")
-        net = nn.DataParallel(net)
     net.to(device)
-    global_step = 0
-    epochs = cfg.TRAINER.EPOCHS
+    localization_net = LocalizationModel(net, criterion, cfg)
+    # TODO Count number of GPUs
+    trainer = Trainer(gpus=1, max_epochs=100)
+    trainer.fit(localization_net)
 
-    use_edge_loss = cfg.MODEL.LOSS_TYPE == 'FrankensteinEdgeLoss'
-
-    trfm = []
-    trfm.append(BGR2RGB())
-    if cfg.DATASETS.USE_CLAHE_VARI: trfm.append(VARI())
-    if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
-    if cfg.AUGMENTATION.CROP_TYPE == 'uniform':
-        trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
-    elif cfg.AUGMENTATION.CROP_TYPE == 'importance':
-        trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
-    if cfg.AUGMENTATION.RANDOM_FLIP_ROTATE: trfm.append(RandomFlipRotate())
-
-    trfm.append(Npy2Torch())
-    trfm = transforms.Compose(trfm)
-
-    # reset the generators
-    dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0],
-                                      pre_or_post=cfg.DATASETS.PRE_OR_POST,
-                                      include_image_weight=True,
-                                      transform=trfm,
-                                      include_edge_mask=use_edge_loss,
-                                      use_clahe=cfg.DATASETS.USE_CLAHE_VARI,
-
-                                      )
-
-    dataloader_kwargs = {
-        'batch_size': cfg.TRAINER.BATCH_SIZE,
-        'num_workers': cfg.DATALOADER.NUM_WORKER,
-        'shuffle':cfg.DATALOADER.SHUFFLE,
-        'drop_last': True,
-        'pin_memory': True,
-    }
-
-    # sampler
-    if cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE == 'simple':
-        image_p = image_sampling_weight(dataset.dataset_metadata)
-        sampler = torch_data.WeightedRandomSampler(weights=image_p, num_samples=len(image_p))
-        dataloader_kwargs['sampler'] = sampler
-        dataloader_kwargs['shuffle'] = False
-
-    dataloader = torch_data.DataLoader(dataset, **dataloader_kwargs)
-
-
-    for epoch in range(epochs):
-        start = timeit.default_timer()
-        print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
-        epoch_loss = 0
-
-        net.train()
-        # mean AP, mean AUC, max F1
-        mAP_set_train, mAUC_set_train, maxF1_train = [],[],[]
-        loss_set, f1_set = [], []
-        positive_pixels_set = [] # Used to evaluated image over sampling techniques
-        for i, batch in enumerate(dataloader):
-            optimizer.zero_grad()
-
-            x = batch['x'].to(device)
-            y_gts = batch['y'].to(device)
-            image_weight = batch['image_weight']
-
-
-            y_pred = net(x)
-
-            if cfg.MODEL.LOSS_TYPE == 'CrossEntropyLoss':
-                # y_pred = y_pred # Cross entropy loss doesn't like single channel dimension
-                y_gts = y_gts.long()# Cross entropy loss requires a long as target
-
-            if use_edge_loss:
-                # TODO
-                edge_mask = y_gts[:,[-1]]
-                y_gts = y_gts[:,[0]]
-                loss = criterion(y_pred, y_gts, edge_mask, cfg.TRAINER.EDGE_LOSS_SCALE)
-            else:
-                loss = criterion(y_pred, y_gts)
-
-
-            epoch_loss += loss.item()
-
-            loss.backward()
-            optimizer.step()
-
-            loss_set.append(loss.item())
-            positive_pixels_set.extend(image_weight.cpu().numpy())
-
-            if global_step % 100 == 0 or global_step == 0:
-                # time per 100 steps
-                stop = timeit.default_timer()
-                time_per_n_batches= stop - start
-
-                if global_step % 10000 == 0 and global_step > 0:
-                    check_point_name = f'cp_{global_step}.pkl'
-                    save_path = os.path.join(log_path, check_point_name)
-                    torch.save(net.state_dict(), save_path)
-
-                # Averaged loss and f1 writer
-
-                # writer.add_scalar('f1/train', np.mean(f1_set), global_step)
-
-                max_mem, max_cache = gpu_stats()
-                print(f'step {global_step},  avg loss: {np.mean(loss_set):.4f}, cuda mem: {max_mem} MB, cuda cache: {max_cache} MB, time: {time_per_n_batches:.2f}s',
-                      flush=True)
-
-                wandb.log({
-                    'loss': np.mean(loss_set),
-                    'gpu_memory': max_mem,
-                    'time': time_per_n_batches,
-                    'total_positive_pixels': np.mean(positive_pixels_set),
-                    'step': global_step,
-                })
-
-                loss_set = []
-                positive_pixels_set = []
-
-                start = stop
-
-            # torch.cuda.empty_cache()
-            global_step += 1
-
-        if epoch % 2 == 0:
-            # Evaluation after every other epoch
-            model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
-            model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
 
 def image_sampling_weight(dataset_metadata):
     print('performing oversampling...', end='', flush=True)

@@ -101,6 +101,22 @@ def train_net(net,
             y_gts = batch['y'].to(device)
             image_weight = batch['image_weight']
 
+            # # TODO DEBUG
+            # xtest  = x.cpu().permute(0,2,3,1).contiguous().numpy()
+            # ytest = y_gts.cpu().permute(0,2,3,1).contiguous().numpy()
+            # testy = ytest[0, ..., 1:4] # ignore bg
+            # plt.imshow(testy)
+            # plt.savefig('test_y.png')
+            #
+            # postx = xtest[0, ..., :3]
+            # plt.imshow(postx)
+            # plt.savefig('test_post.png')
+            #
+            # prex = xtest[0, ..., 4:7]
+            # plt.imshow(prex)
+            # plt.savefig('test_pre.png')
+            # # TODO END DEBUGn
+
             optimizer.zero_grad()
 
             y_pred = net(x)
@@ -140,12 +156,6 @@ def train_net(net,
                     'step': global_step,
                 }
 
-                # TODO ---- Below are for debugging cls only ----
-                # loss_component_mean = np.mean(loss_component_set, axis=0)
-                # for comp_loss, cls in zip(loss_component_mean, ['no-dmg', 'minor-dmg', 'major-dmg', 'destroyed', 'bg']):
-                #     log_data[f'train_{cls}_F1'] = comp_loss
-                # TODO ---- END ----
-
                 wandb.log(log_data)
 
                 loss_set = []
@@ -159,18 +169,25 @@ def train_net(net,
         dmg_model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
         dmg_model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
 
-def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, epoch=0, use_confusion_matrix=False, include_component_f1=False):
+def dmg_model_eval(net, cfg, device,
+                   run_type='TEST',
+                   max_samples = 1000,
+                   step=0, epoch=0,
+                   use_confusion_matrix=False,
+                   include_component_f1=False,
+                   include_disaster_type_breakdown = False):
     '''
     Runner that is concerned with training changes
     :param run_type: 'train' or 'eval'
     :return:
     '''
     measurer = MultiClassF1(ignore_last_class=cfg.MODEL.BACKGROUND.TYPE=='new-class')
+    diaster_type_measurers = {}
 
     confusion_matrix_with_bg = []
     confusion_matrix = []
     component_f1 = []
-    def evaluate(x, y_true, y_pred, img_filename):
+    def evaluate(x, y_true, y_pred, img_filenames):
         if cfg.MODEL.BACKGROUND.MASK_OUTPUT:
             # No background class, manually mask out background
             localization_mask = x[:,[3]] # 3 is a hard coded mask index
@@ -189,6 +206,16 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
             labels = [0, 1, 2, 3, 4] # 5 classes
             _mat = confmatrix(y_true_flat, y_pred_flat, labels = labels)
             confusion_matrix_with_bg.append(_mat)
+
+        #=== Breakdown by image class
+        # Disaster type
+        if include_disaster_type_breakdown:
+            for i, img_filename in enumerate(img_filenames):
+                disaster_type = img_filename.split('_')[0]
+                if disaster_type not in diaster_type_measurers:
+                    diaster_type_measurers[disaster_type] = MultiClassF1(ignore_last_class=cfg.MODEL.BACKGROUND.TYPE=='new-class')
+                diaster_type_measurers[disaster_type].add_sample(y_true[[i]], y_pred[[i]])
+
     use_gts_mask = run_type == 'TRAIN' and cfg.DATASETS.LOCALIZATION_MASK.TRAIN_USE_GTS_MASK
     dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
 
@@ -220,6 +247,14 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
                'epoch': epoch,
                }
 
+    if include_disaster_type_breakdown:
+        for disaster_type, m in diaster_type_measurers.items():
+            f1 = m.compute_f1(include_bg=False)[0]
+            print(f'disaster_{disaster_type}_f1', f1)
+            wandb.log({
+                f'disaster-{disaster_type}-f1': f1
+            })
+
     if include_component_f1:
         loss_component_mean = np.mean(component_f1, axis=0)
         for comp_loss, cls in zip(loss_component_mean, ['no-dmg', 'minor-dmg', 'major-dmg', 'destroyed', 'bg']):
@@ -237,9 +272,9 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
 
     # Plot confusion matrix
     if use_confusion_matrix:
-        normalized_cm = np.sum(confusion_matrix_with_bg, axis=0)
-        print('confusion_matrix ', normalized_cm)
-        normalized_cm = normalized_cm / normalized_cm.sum(axis=-1, keepdims=True)
+        cm = np.sum(confusion_matrix_with_bg, axis=0)
+        print('confusion_matrix ', cm)
+        normalized_cm = cm / cm.sum(axis=-1, keepdims=True)
         print('confusion_matrix normalized', normalized_cm)
         # normalized_cm = confusion_matrix_with_bg / confusion_matrix_with_bg.sum(axis=0, keepdims=True)
         labels = ['no-damage', 'minor-damage', 'major-damage', 'destroyed', 'background',]
@@ -249,12 +284,13 @@ def dmg_model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0
         ax.matshow(normalized_cm, cmap='Blues')
 
         for (i, j), z in np.ndenumerate(normalized_cm):
-            ax.text(j, i, '{:0.1f}'.format(z), ha='center', va='center',
+            true_value = cm[i,j]
+            ax.text(j, i, '{:0.3f}\n{}'.format(z, true_value), ha='center', va='center',
                     bbox=dict(boxstyle='round', facecolor='white', edgecolor='0.3'))
-
-        ax.set_yticks(np.arange(5))
-
-        ax.set_yticklabels(labels)
+        ax.autoscale(False)
+        # ax.set_yticks(np.arange(5))
+        #
+        ax.set_yticklabels([''] + labels)
         ax.set_xticklabels([''] + labels)
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
                  rotation_mode="anchor")
@@ -304,6 +340,8 @@ def build_transforms(cfg, for_training=False, use_gts_mask = False):
         trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
     elif cfg.AUGMENTATION.CROP_TYPE == 'importance':
         trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
+    if cfg.AUGMENTATION.RANDOM_FLIP_ROTATE:
+        trfm.append(RandomFlipRotate())
     trfm.append(Npy2Torch())
     if cfg.AUGMENTATION.ENABLE_VARI: trfm.append(VARI())
     trfm = transforms.Compose(trfm)
@@ -416,7 +454,7 @@ if __name__ == '__main__':
                 project='urban_dl',
                 tags=['eval', 'dmg'],
             )
-            dmg_model_eval(net, cfg, device, run_type='TEST', max_samples=1000,  use_confusion_matrix=True)
+            dmg_model_eval(net, cfg, device, run_type='TEST', max_samples=1000,  use_confusion_matrix=True, include_disaster_type_breakdown=True)
             dmg_model_eval(net, cfg, device, run_type='TRAIN', max_samples=1000, use_confusion_matrix=True)
         else:
             wandb.init(
