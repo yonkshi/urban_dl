@@ -29,13 +29,13 @@ from unet.augmentations import *
 from experiment_manager.metrics import f1_score
 from experiment_manager.args import default_argument_parser
 from experiment_manager.config import new_config
-from experiment_manager.loss import soft_dice_loss, soft_dice_loss_balanced, jaccard_like_loss, jaccard_like_balanced_loss
+from experiment_manager.loss import soft_dice_loss, soft_dice_loss_balanced, jaccard_like_loss, jaccard_like_balanced_loss, jaccard_like_loss_multi_class
 from eval_unet_xview2 import model_eval
+
 
 # import hp
 
-def train_net(net,
-              cfg):
+def train_net(net, cfg):
 
     log_path = cfg.OUTPUT_DIR
     writer = SummaryWriter(log_path)
@@ -54,16 +54,17 @@ def train_net(net,
              }
     print(tabulate(table, headers='keys', tablefmt="fancy_grid", ))
 
-
     optimizer = optim.Adam(net.parameters(),
-                          lr=cfg.TRAINER.LR,
-                          weight_decay=0.0005)
+                           lr=cfg.TRAINER.LR,
+                           weight_decay=0.0005)
+
     if cfg.MODEL.LOSS_TYPE == 'BCEWithLogitsLoss':
         criterion = nn.BCEWithLogitsLoss()
     elif cfg.MODEL.LOSS_TYPE == 'CrossEntropyLoss':
-        balance_weight = [cfg.MODEL.NEGATIVE_WEIGHT, cfg.MODEL.POSITIVE_WEIGHT]
+        if cfg.MODEL.OUT_CHANNELS == 2:
+            balance_weight = [cfg.MODEL.NEGATIVE_WEIGHT, cfg.MODEL.POSITIVE_WEIGHT]
         balance_weight = torch.tensor(balance_weight).float().to(device)
-        criterion = nn.CrossEntropyLoss(weight = balance_weight)
+        criterion = nn.CrossEntropyLoss(weight=balance_weight)
     elif cfg.MODEL.LOSS_TYPE == 'SoftDiceLoss':
         criterion = soft_dice_loss
     elif cfg.MODEL.LOSS_TYPE == 'SoftDiceBalancedLoss':
@@ -76,10 +77,10 @@ def train_net(net,
         criterion = lambda pred, gts: 2 * F.binary_cross_entropy_with_logits(pred, gts) + soft_dice_loss(pred, gts)
     elif cfg.MODEL.LOSS_TYPE == 'FrankensteinLoss':
         criterion = lambda pred, gts: F.binary_cross_entropy_with_logits(pred, gts) + jaccard_like_balanced_loss(pred, gts)
-    elif cfg.MODEL.LOSS_TYPE == 'FrankensteinEdgeLoss':
-        criterion = frankenstein_edge_loss
-
-
+    elif cfg.MODEL.LOSS_TYPE == 'Frankenstein4Classes':
+        balance_weight = [cfg.MODEL.NEGATIVE_WEIGHT, cfg.MODEL.EDGE_WEIGHT, cfg.MODEL.EDGE_WEIGHT, cfg.MODEL.POSITIVE_WEIGHT]
+        balance_weight = torch.tensor(balance_weight).float().to(device)
+        criterion = lambda pred, gts: F.cross_entropy(pred, collapse_label(gts, device), weight=balance_weight) + jaccard_like_loss_multi_class(pred, gts)
 
     if torch.cuda.device_count() > 1:
         print(torch.cuda.device_count(), " GPUs!")
@@ -90,6 +91,8 @@ def train_net(net,
 
     use_edge_loss = cfg.MODEL.LOSS_TYPE == 'FrankensteinEdgeLoss'
 
+
+    ''' transforms to apply to images'''
     trfm = []
     trfm.append(BGR2RGB())
     if cfg.DATASETS.USE_CLAHE_VARI: trfm.append(VARI())
@@ -99,9 +102,12 @@ def train_net(net,
     elif cfg.AUGMENTATION.CROP_TYPE == 'importance':
         trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
     if cfg.AUGMENTATION.RANDOM_FLIP_ROTATE: trfm.append(RandomFlipRotate())
+    if cfg.MODEL.OUT_CHANNELS == 4:
+        trfm.append(AddLabelChannels(kernel_size=cfg.AUGMENTATION.KERNEL_SIZE))
 
     trfm.append(Npy2Torch())
     trfm = transforms.Compose(trfm)
+    ''''''
 
     # reset the generators
     dataset = Xview2Detectron2Dataset(cfg.DATASETS.TRAIN[0],
@@ -116,7 +122,7 @@ def train_net(net,
     dataloader_kwargs = {
         'batch_size': cfg.TRAINER.BATCH_SIZE,
         'num_workers': cfg.DATALOADER.NUM_WORKER,
-        'shuffle':cfg.DATALOADER.SHUFFLE,
+        'shuffle': cfg.DATALOADER.SHUFFLE,
         'drop_last': True,
         'pin_memory': True,
     }
@@ -130,7 +136,6 @@ def train_net(net,
 
     dataloader = torch_data.DataLoader(dataset, **dataloader_kwargs)
 
-
     for epoch in range(epochs):
         start = timeit.default_timer()
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
@@ -138,9 +143,9 @@ def train_net(net,
 
         net.train()
         # mean AP, mean AUC, max F1
-        mAP_set_train, mAUC_set_train, maxF1_train = [],[],[]
+        mAP_set_train, mAUC_set_train, maxF1_train = [], [], []
         loss_set, f1_set = [], []
-        positive_pixels_set = [] # Used to evaluated image over sampling techniques
+        positive_pixels_set = []  # Used to evaluated image over sampling techniques
         for i, batch in enumerate(dataloader):
             optimizer.zero_grad()
 
@@ -148,26 +153,19 @@ def train_net(net,
             y_gts = batch['y'].to(device)
             image_weight = batch['image_weight']
 
-
             y_pred = net(x)
 
             if cfg.MODEL.LOSS_TYPE == 'CrossEntropyLoss':
                 # y_pred = y_pred # Cross entropy loss doesn't like single channel dimension
-                y_gts = y_gts.long()# Cross entropy loss requires a long as target
+                y_gts = y_gts.long()  # Cross entropy loss requires a long as target
 
             if use_edge_loss:
-                edge_mask = y_gts[:,[0]]
-                y_gts = y_gts[:, 1:]
-                loss, ce_loss, jaccard_loss, edge_loss = criterion(y_pred, y_gts, edge_mask, cfg.TRAINER.EDGE_LOSS_SCALE)
-                wandb.log({
-                    'ce_loss': ce_loss,
-                    'jaccard_loss': jaccard_loss,
-                    'edge_loss': edge_loss,
-                    'step':global_step,
-                })
+                # TODO
+                edge_mask = y_gts[:, [-1]]
+                y_gts = y_gts[:, [0]]
+                loss = criterion(y_pred, y_gts, edge_mask, cfg.TRAINER.EDGE_LOSS_SCALE)
             else:
                 loss = criterion(y_pred, y_gts)
-
 
             epoch_loss += loss.item()
 
@@ -180,7 +178,7 @@ def train_net(net,
             if global_step % 100 == 0 or global_step == 0:
                 # time per 100 steps
                 stop = timeit.default_timer()
-                time_per_n_batches= stop - start
+                time_per_n_batches = stop - start
 
                 if global_step % 10000 == 0 and global_step > 0:
                     check_point_name = f'cp_{global_step}.pkl'
@@ -216,6 +214,19 @@ def train_net(net,
             model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
             model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
 
+
+def collapse_label(label, device):
+
+    # label: [B, C, H, W]
+
+    mesh = torch.ones(label.shape).to(device)
+    mesh[:, 0, :, :] -= 1
+    mesh[:, 2, :, :] += 1
+    mesh[:, 3, :, :] += 2
+
+    return (label * mesh).sum(1).long()
+
+
 def image_sampling_weight(dataset_metadata):
     print('performing oversampling...', end='', flush=True)
     EMPTY_IMAGE_BASELINE = 1000
@@ -226,22 +237,29 @@ def image_sampling_weight(dataset_metadata):
     return image_p
 
 
+class LULC(enum.Enum):
+    BACKGROUND = (0, 'Background', 'black')
+    NO_DATA = (1, 'No Data', 'white')
+    NO_DAMAGE = (2, 'No damage', 'xkcd:lime')
+    MINOR_DAMAGE = (3, 'Minor Damage', 'yellow')
+    MAJOR_DAMAGE = (4, 'Major Damage', 'orange')
+    DESTROYED = (5, 'Destroyed', 'red')
+
+    def __init__(self, val1, val2, val3):
+        self.id = val1
+        self.class_name = val2
+        self.color = val3
+
+
+lulc_cmap = ListedColormap([entry.color for entry in LULC])
+lulc_norm = BoundaryNorm(np.arange(-0.5, 6, 1), lulc_cmap.N)
+
+
 def gpu_stats():
-    max_memory_allocated = torch.cuda.max_memory_allocated() / 1e6 # bytes to MB
-    max_memory_cached = torch.cuda.max_memory_cached() /1e6
+    max_memory_allocated = torch.cuda.max_memory_allocated() / 1e6  # bytes to MB
+    max_memory_cached = torch.cuda.max_memory_cached() / 1e6
     return int(max_memory_allocated), int(max_memory_cached)
 
-def frankenstein_edge_loss(y_pred, y_gts, edge_mask, scale):
-    ce = F.binary_cross_entropy_with_logits(y_pred, y_gts)
-    jaccard = jaccard_like_balanced_loss(y_pred, y_gts)
-    y_pred_sigmoid = torch.sigmoid(y_pred)
-    edge_ce = -(y_gts * y_pred_sigmoid.log() + (1 - y_gts) * (1-y_pred_sigmoid).log())#  * edge_mask.float() * scale
-    edge_ce = edge_ce.mean()
-
-
-    loss = ce + jaccard + edge_ce
-
-    return loss, ce, jaccard, edge_ce
 
 def setup(args):
     cfg = new_config()
@@ -249,7 +267,7 @@ def setup(args):
     cfg.merge_from_list(args.opts)
     cfg.NAME = args.config_file
 
-    if args.log_dir: # Override Output dir
+    if args.log_dir:  # Override Output dir
         cfg.OUTPUT_DIR = path.join(args.log_dir, args.config_file)
     else:
         cfg.OUTPUT_DIR = path.join(cfg.OUTPUT_BASE_DIR, args.config_file)
@@ -259,7 +277,9 @@ def setup(args):
         cfg.DATASETS.TRAIN = (args.data_dir,)
     return cfg
 
+
 if __name__ == '__main__':
+
     args = default_argument_parser().parse_known_args()[0]
     cfg = setup(args)
 
@@ -267,8 +287,8 @@ if __name__ == '__main__':
     if cfg.MODEL.BACKBONE.ENABLED:
         net = smp.Unet(cfg.MODEL.BACKBONE.TYPE,
                        encoder_weights=None,
-                       decoder_channels = [512,256,128,64,32],
-        )
+                       decoder_channels=[512, 256, 128, 64, 32],
+                       )
     else:
         net = UNet(cfg)
 
@@ -300,5 +320,3 @@ if __name__ == '__main__':
             sys.exit(0)
         except SystemExit:
             os._exit(0)
-
-
