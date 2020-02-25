@@ -195,6 +195,7 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
         super().__init__()
 
         # setting up directories
+        root_dir = Path(root_dir)
         self.root_dir = root_dir
         self.s1_dir = root_dir / 'sentinel1'
         self.s2_dir = root_dir / 'sentinel2'
