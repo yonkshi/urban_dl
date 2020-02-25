@@ -208,7 +208,7 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
         self.metadata = metadata
         self.year = metadata['year']
 
-        self.length = len(self.samples)
+        self.length = len(self.metadata['samples'])
         print('dataset length', self.length)
 
         self.include_index = include_index
