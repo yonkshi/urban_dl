@@ -5,6 +5,8 @@
 import os
 import torch
 import json
+from pathlib import Path
+from imageio import imread
 from unet.utils import *
 
 
@@ -180,3 +182,90 @@ class Xview2Detectron2DamageLevelDataset(Xview2Detectron2Dataset):
 
         return masks
 
+
+
+class UrbanExtractionDataset(torch.utils.data.Dataset):
+    '''
+    Dataset for Urban Extraction style labelled Dataset
+    '''
+    def __init__(self, cfg, # used for feature names
+                 root_dir: Path,  # path to folder with sub folder images and labels and a metadata file
+                 include_index: bool = False,  # index of sample
+                 transform: list = None  # list of transformations
+                 ):
+        super().__init__()
+
+        # setting up directories
+        self.root_dir = root_dir
+        self.s1_dir = root_dir / 'sentinel1'
+        self.s2_dir = root_dir / 'sentinel2'
+        self.label_dir = root_dir / cfg.LABEL
+
+        # loading metadata of dataset
+        with open(str(root_dir / 'metadata.json')) as f:
+            metadata = json.load(f)
+        self.metadata = metadata
+        self.year = metadata['year']
+
+        self.length = len(self.samples)
+        print('dataset length', self.length)
+
+        self.include_index = include_index
+        self.transform = transform
+
+        # creating boolean feature vector to subset sentinel 1 and sentinel 2 bands
+        self.s1_feature_selection = self._get_feature_selection(metadata['sentinel1'],
+                                                                cfg.DATALOADER.S1_FEATURES)
+        self.s2_feature_selection = self._get_feature_selection(metadata['sentinel2'],
+                                                                cfg.DATALOADER.S2_FEATURES)
+
+    def __getitem__(self, index):
+
+        # loading metadata of sample
+        sample_metadata = self.metadata['samples'][index]
+
+        city = sample_metadata['city']
+        patch_id = sample_metadata['patch_id']
+
+        s1_file = self.s1_dir / f'S1_{city}_{self.year}_{patch_id}.tif'
+        s2_file = self.s2_dir / f'S2_{city}_{self.year}_{patch_id}.tif'
+        label_file = self.label_dir / f'{str(cfg.LABEL).upper()}_{city}_{patch_id}.tif'
+
+        # loading images and corresponding label
+        if not any(self.s1_feature_selection):  # only sentinel 2 features
+            img = cv2.imread(s2_file, -1)
+            img = img[:, :, self.s2_feature_selection]
+        elif not any(self.s2_feature_selection):  # only sentinel 1 features
+            img = cv2.imread(s1_file, -1)
+            img = img[:, :, self.s1_feature_selection]
+        else:  # sentinel 1 and sentinel 2 features
+            s1_img = cv2.imread(s1_file, -1)
+            s1_img = s1_img[:, :, self.s1_feature_selection]
+            s2_img = cv2.imread(s2_file, -1)
+            s2_img = s2_img[:, :, self.s2_feature_selection]
+            img = np.stack([s1_img, s2_img], axis=-1)
+
+        label = cv2.imread(label_file, 0)
+
+        if self.transform:
+            img,label,sample_id, = self.transform((img, label, patch_id,))
+
+        sample = {
+            'x': img.float(), # numpy.array (m, n, N_CHANNELS)
+            'y': label.float(), # numpy.array (m, n, 1)
+            'img_name': sample_id, # identifier of sample
+            'image_weight': np.float(sample_metadata['img_weight'])
+        }
+
+        if self.include_index:
+            sample['index'] = index
+
+        return sample
+
+
+    def _get_feature_selection(self, features, selection):
+        feature_selection = [False for _ in range(len(features))]
+        for feature in selection:
+            i = feature_selection.index(feature)
+            feature_selection[i] = True
+        return feature_selection
