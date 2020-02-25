@@ -107,10 +107,12 @@ def train_net(net,
     trfm = transforms.Compose(trfm)
 
     # reset the generators
-    dataset = UrbanExtractionDataset(root_dir = cfg.DATASETS.TRAIN[0],
-                                     product_name = 'S2FC', # move to config file
-                                     include_index = True,
-                                     transform = trfm)
+    dataset = UrbanExtractionDataset(
+        cfg=cfg,
+        root_dir=cfg.DATASETS.TRAIN[0],
+        include_index=True,
+        transform=trfm
+    )
 
     dataloader_kwargs = {
         'batch_size': cfg.TRAINER.BATCH_SIZE,
@@ -122,7 +124,7 @@ def train_net(net,
 
     # sampler
     if cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE == 'simple':
-        image_p = image_sampling_weight(dataset.dataset_metadata)
+        image_p = image_sampling_weight(dataset.metadata['samples'])
         sampler = torch_data.WeightedRandomSampler(weights=image_p, num_samples=len(image_p))
         dataloader_kwargs['sampler'] = sampler
         dataloader_kwargs['shuffle'] = False
@@ -211,16 +213,14 @@ def train_net(net,
             model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
             model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
 
-def image_sampling_weight(dataset_metadata):
+def image_sampling_weight(samples_metadata):
     # TODO: No idea how to change this
     print('performing oversampling...', end='', flush=True)
-    # all
-    SCALE_FACTOR = 9000
     EMPTY_IMAGE_BASELINE = 1000
-    urban_percentages = np.array([float(sample_metadata['img_weight']) for sample_metadata in dataset_metadata]) + EMPTY_IMAGE_BASELINE
+    sampling_weights = np.array([float(sample['img_weight']) for sample in samples_metadata]) + EMPTY_IMAGE_BASELINE
     # image_p = np.array([int(p * SCALE_FACTOR) for p in urban_percentages]) + EMPTY_IMAGE_BASELINE
     print('done', flush=True)
-    return urban_percentages
+    return sampling_weights
 
 def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, epoch=0):
     '''
@@ -248,17 +248,20 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, ep
     trfm = transforms.Compose(trfm)
 
     if run_type == 'TRAIN':
-        dataset = UrbanExtractionDataset(root_dir=cfg.DATASETS.TRAIN[0],
-                                         product_name='S2FC',  # move to config file
-                                         include_index=True,
-                                         transform=trfm)
-
+        dataset = UrbanExtractionDataset(
+            cfg=cfg,
+            root_dir=cfg.DATASETS.TRAIN[0],
+            include_index=True,
+            transform=trfm
+        )
         inference_loop(net, cfg, device, evaluate, run_type= 'TRAIN', max_samples = max_samples, dataset=dataset)
     elif run_type == 'TEST':
-        dataset = UrbanExtractionDataset(root_dir=cfg.DATASETS.TEST[0],
-                                         product_name='S2FC',  # move to config file
-                                         include_index=True,
-                                         transform=trfm)
+        dataset = UrbanExtractionDataset(
+            cfg=cfg,
+            root_dir=cfg.DATASETS.TEST[0],
+            include_index=True,
+            transform=trfm
+        )
         inference_loop(net, cfg, device, evaluate, max_samples = max_samples, dataset=dataset)
 
     # Summary gathering ===
@@ -325,6 +328,7 @@ def setup(args):
     if args.data_dir:
         cfg.DATASETS.TRAIN = (args.data_dir,)
     return cfg
+
 
 if __name__ == '__main__':
     args = default_argument_parser().parse_known_args()[0]
