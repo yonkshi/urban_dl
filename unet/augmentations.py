@@ -176,22 +176,20 @@ def bgr2rgb(img):
 
 class AddLabelChannels():
 
-    def __init__(self, kernel_size=5, method='erotion'):
+    def __init__(self, kernel_size=5):
         self.kernel = np.ones((kernel_size, kernel_size), np.uint8)
-        self.method = method
 
     def __call__(self, args):
         input, label, image_path = args
 
-        if self.method == 'erosion':
+        dilation = cv2.dilate(label[:, :, 0], self.kernel, iterations=1)
+        erosion = cv2.erode(label[:, :, 0], self.kernel, iterations=1)
 
-            new_label = label[:,:,0]
-            label_edge = np.abs(label[:, :, 0] - cv2.erode(label[:, :, 0], self.kernel, iterations=1))
-            new_label += label_edge
+        label_0 = 1 - dilation
+        label_1 = np.abs(label[:, :, 0] - dilation)
+        label_2 = np.abs(label[:, :, 0] - erosion)
+        label_3 = erosion
 
-        elif self.method == 'dilation':
-
-            label_edge = np.abs(label[:, :, 0] - cv2.dilate(label[:, :, 0], self.kernel, iterations=1))
-            new_label = 2*label_edge + label[:,:,0]
+        new_label = np.stack((label_0, label_1, label_2, label_3), -1)
 
         return input, new_label, image_path

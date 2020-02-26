@@ -308,6 +308,11 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, ep
 
     measurer = MultiThresholdMetric(F1_THRESH)
     def evaluate(y_true, y_pred, img_filename):
+
+        if cfg.MODEL.OUT_CHANNELS == 4:
+            y_true = y_true[:,2:,:,:].sum(1)
+            y_pred = y_pred[:,2:,:,:].sum(1)
+
         y_true = y_true.detach()
         y_pred = y_pred.detach()
         y_true_set.append(y_true.cpu())
