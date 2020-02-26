@@ -1,4 +1,5 @@
 _BASE_: "base.yaml"
+SEED: 42
 MODEL:
   LOSS_TYPE: 'FrankensteinLoss'
   OUT_CHANNELS: 1
