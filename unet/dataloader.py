@@ -5,6 +5,7 @@
 import os
 import torch
 import json
+import tifffile
 from pathlib import Path
 from unet.utils import *
 
@@ -195,15 +196,14 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
         super().__init__()
 
         # setting up directories
-        root_dir = Path(root_dir)
-        self.root_dir = root_dir
-        self.s1_dir = root_dir / 'sentinel1'
-        self.s2_dir = root_dir / 'sentinel2'
-        self.label_dir = root_dir / cfg.DATALOADER.LABEL
+        self.root_dir = Path(root_dir)
+        self.s1_dir = self.root_dir / 'sentinel1'
+        self.s2_dir = self.root_dir / 'sentinel2'
+        self.label_dir = self.root_dir / cfg.DATALOADER.LABEL
         self.cfg = cfg
 
         # loading metadata of dataset
-        with open(str(root_dir / 'metadata.json')) as f:
+        with open(str(self.root_dir / 'metadata.json')) as f:
             metadata = json.load(f)
         self.metadata = metadata
         self.year = metadata['year']
@@ -234,19 +234,25 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
 
         # loading images and corresponding label
         if not any(self.s1_feature_selection):  # only sentinel 2 features
-            img = cv2.imread(s2_file, -1)
+            # img = cv2.imread(str(s1_file), -1)
+            img = tifffile.imread(str(s2_file))
             img = img[:, :, self.s2_feature_selection]
         elif not any(self.s2_feature_selection):  # only sentinel 1 features
-            img = cv2.imread(s1_file, -1)
+            # img = cv2.imread(str(s1_file), -1)
+            img = tifffile.imread(str(s1_file))
             img = img[:, :, self.s1_feature_selection]
         else:  # sentinel 1 and sentinel 2 features
-            s1_img = cv2.imread(s1_file, -1)
+            # s1_img = cv2.imread(str(s1_file), -1)
+            s1_img = tifffile.imread(str(s1_file))
             s1_img = s1_img[:, :, self.s1_feature_selection]
-            s2_img = cv2.imread(s2_file, -1)
+            # s2_img = cv2.imread(str(s2_file), -1)
+            s2_img = tifffile.imread(str(s2_file))
             s2_img = s2_img[:, :, self.s2_feature_selection]
             img = np.stack([s1_img, s2_img], axis=-1)
 
-        label = cv2.imread(label_file, 0)
+        label = tifffile.imread(str(label_file))
+        label = label[:, :, None]
+        # label_old = cv2.imread(str(label_file), 0)
 
         if self.transform:
             img,label,sample_id, = self.transform((img, label, patch_id,))
@@ -267,6 +273,9 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
     def _get_feature_selection(self, features, selection):
         feature_selection = [False for _ in range(len(features))]
         for feature in selection:
-            i = feature_selection.index(feature)
+            i = features.index(feature)
             feature_selection[i] = True
         return feature_selection
+
+    def __len__(self):
+        return self.length

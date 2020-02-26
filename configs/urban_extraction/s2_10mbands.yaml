@@ -1,8 +1,8 @@
-_BASE_: "base.yaml"
+_BASE_: "base2.yaml"
 MODEL:
   LOSS_TYPE: 'FrankensteinLoss'
   OUT_CHANNELS: 1
-  IN_CHANNELS: 3
+  IN_CHANNELS: 4
   BACKBONE:
     ENABLED: True
 OUTPUT_BASE_DIR: ('logs/')

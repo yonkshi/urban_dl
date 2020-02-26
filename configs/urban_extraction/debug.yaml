@@ -1,4 +1,4 @@
-_BASE_: "base.yaml"
+_BASE_: "base2.yaml"
 MODEL:
   LOSS_TYPE: 'FrankensteinLoss'
   OUT_CHANNELS: 1
@@ -7,8 +7,8 @@ MODEL:
     ENABLED: True
 OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
-  TRAIN: ("/storage/shafner/urban_extraction/train/",)
-  TEST: ("/storage/shafner/urban_extraction/test/",)
+  TRAIN: ("/storage/yonk/urban_extraction/train/",)
+  TEST: ("/storage/yonk/urban_extraction/test/",)
   INFERENCE: ("/storage/yonk/debug_new/test/",)
   USE_CLAHE_VARI: False
 TRAINER:
