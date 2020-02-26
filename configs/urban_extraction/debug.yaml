@@ -1,4 +1,4 @@
-_BASE_: "base2.yaml"
+_BASE_: "base.yaml"
 MODEL:
   LOSS_TYPE: 'FrankensteinLoss'
   OUT_CHANNELS: 1
