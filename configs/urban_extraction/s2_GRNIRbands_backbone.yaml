@@ -10,8 +10,6 @@ DATASETS:
   TEST: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/two_cities/test/",)
   INFERENCE: ("/storage/yonk/debug_new/test/",)
   USE_CLAHE_VARI: False
-TRAINER:
-  BATCH_SIZE: 8
 DATALOADER:
   S1_FEATURES: []
   S2_FEATURES: ['Green_median', 'Red_median', 'NIR_median']

@@ -6,8 +6,6 @@ MODEL:
 DATASETS:
   TRAIN: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/two_cities/train/",)
   TEST: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/two_cities/test/",)
-TRAINER:
-  BATCH_SIZE: 8
 DATALOADER:
   S1_FEATURES: []
   S2_FEATURES: ['Green_median', 'Red_median', 'NIR_median']

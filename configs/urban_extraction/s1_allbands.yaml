@@ -7,9 +7,6 @@ MODEL:
 DATASETS:
   TRAIN: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/two_cities/train/",)
   TEST: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/two_cities/test/",)
-TRAINER:
-  BATCH_SIZE: 8
-  EDGE_LOSS_SCALE: 20
 DATALOADER:
   S1_FEATURES: ['VV_asc_mean', 'VH_asc_mean', 'VV_desc_mean', 'VH_desc_mean']
   S2_FEATURES: []
