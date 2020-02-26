@@ -317,18 +317,6 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, ep
 
         y_pred_thresh = (y_pred > 0.52).type(torch.int8)  # 0.52 == best threshold
 
-        # ==== Measuring connected components
-        y_true_thresh_numpy = y_pred_thresh.cpu().squeeze().numpy()
-        true_cc = cv2.connectedComponentsWithStats(y_true_thresh_numpy.astype(np.int8), connectivity=8)[0]
-
-        y_pred_numpy = y_pred.cpu().squeeze().numpy()
-        y_pred_denoised = cv2.morphologyEx(y_pred_numpy, cv2.MORPH_OPEN, kernel)
-        pred_cc = cv2.connectedComponentsWithStats(y_pred_denoised.astype(np.int8), connectivity=8)[0]
-
-        cc_ratio = np.abs(true_cc - pred_cc) / true_cc
-        cc_difference_ratio_abs.append(cc_ratio)
-
-
     if run_type == 'TRAIN':
         inference_loop(net, cfg, device, evaluate, run_type= 'TRAIN', max_samples = max_samples)
     elif run_type == 'TEST':
@@ -351,15 +339,12 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, ep
     best_fnr = fnr[argmaxF1]
     print(maxF1.item(), flush=True)
 
-    avg_cc_difference = np.mean(cc_difference_ratio_abs)
-    print(avg_cc_difference)
     set_name = 'test_set' if run_type == 'TEST' else 'training_set'
     wandb.log({f'{set_name} max F1': maxF1,
                f'{set_name} argmax F1': argmaxF1,
                # f'{set_name} Average Precision': ap,
                f'{set_name} false positive rate': best_fpr,
                f'{set_name} false negative rate': best_fnr,
-               f'avg abs connected components ratio': avg_cc_difference,
                'step': step,
                'epoch': epoch,
                })
