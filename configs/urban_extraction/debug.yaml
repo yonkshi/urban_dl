@@ -2,9 +2,7 @@ _BASE_: "base.yaml"
 MODEL:
   LOSS_TYPE: 'FrankensteinLoss'
   OUT_CHANNELS: 1
-  IN_CHANNELS: 3
-  BACKBONE:
-    ENABLED: True
+  IN_CHANNELS: 4
 OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
   TRAIN: ("/storage/yonk/urban_extraction/train/",)
@@ -17,6 +15,7 @@ TRAINER:
   EDGE_LOSS_SCALE: 20
 DATALOADER:
   NUM_WORKER: 0
+  S2_FEATURES: ['Blue_median','Green_median', 'Red_median', 'NIR_median']
 AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'importance'
