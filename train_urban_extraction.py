@@ -356,7 +356,7 @@ if __name__ == '__main__':
     wandb.init(
         name=cfg.NAME,
         project='urban_extraction',
-        tags=['run', 'localization'],
+        tags=['run', 'localization', ],
     )
     torch.manual_seed(cfg.SEED)
     np.random.seed(cfg.SEED)
