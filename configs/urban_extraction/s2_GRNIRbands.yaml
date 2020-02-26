@@ -5,17 +5,19 @@ MODEL:
   IN_CHANNELS: 3
 OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
-  TRAIN: ("/storage/yonk/urban_extraction/train/",)
-  TEST: ("/storage/yonk/urban_extraction/test/",)
+  TRAIN: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/two_cities/train/",)
+  TEST: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/two_cities/test/",)
   INFERENCE: ("/storage/yonk/debug_new/test/",)
   USE_CLAHE_VARI: False
 TRAINER:
   LR: 0.001
-  BATCH_SIZE: 1
+  BATCH_SIZE: 8
   EDGE_LOSS_SCALE: 20
 DATALOADER:
   NUM_WORKER: 0
-  S2_FEATURES: ['Green_median', 'Red_median', 'NIR_median',]
+  S1_FEATURES: []
+  S2_FEATURES: ['Green_median', 'Red_median', 'NIR_median']
+  LABEL: 'guf'
 AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'importance'

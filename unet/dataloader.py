@@ -254,6 +254,13 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
         label = label[:, :, None]
         # label_old = cv2.imread(str(label_file), 0)
 
+        # TODO REMOVE ME
+        plt.imshow(img)
+        plt.savefig('extraction_test.png')
+        plt.imshow(label.squeeze())
+        plt.savefig('extraction_test_label.png')
+        # TODO END REMOVE ME
+
         if self.transform:
             img,label,sample_id, = self.transform((img, label, patch_id,))
 
@@ -266,6 +273,8 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
 
         if self.include_index:
             sample['index'] = index
+
+
 
         return sample
 
