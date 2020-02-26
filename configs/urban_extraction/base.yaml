@@ -19,7 +19,7 @@ MODEL:
     ENABLED: False
     TYPE: 'resnet34'
 
-THRESH: 0.01 # Best threshold (only to be filled after running final model evaluation)
+THRESH: 0.0001 # Best threshold (only to be filled after running final model evaluation)
 DATASETS:
   TRAIN: ("/local_storage/datasets/xview2/full_new/train/",)
   TEST: ("/local_storage/datasets/xview2/full_new/test/",)
@@ -33,7 +33,7 @@ TRAINER:
   EPOCHS: 1000
   EDGE_LOSS_SCALE: 1
 DATALOADER:
-  NUM_WORKER: 1
+  NUM_WORKER: 16
   SHUFFLE: True
   LEGACY_MASK_RASTERIZATION: False
   S1_FEATURES: []

@@ -5,18 +5,14 @@ MODEL:
   IN_CHANNELS: 3
   BACKBONE:
     ENABLED: True
-OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
   TRAIN: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/two_cities/train/",)
   TEST: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/two_cities/test/",)
   INFERENCE: ("/storage/yonk/debug_new/test/",)
   USE_CLAHE_VARI: False
 TRAINER:
-  LR: 0.001
   BATCH_SIZE: 8
-  EDGE_LOSS_SCALE: 20
 DATALOADER:
-  NUM_WORKER: 0
   S1_FEATURES: []
   S2_FEATURES: ['Green_median', 'Red_median', 'NIR_median']
   LABEL: 'guf'
@@ -25,4 +21,3 @@ AUGMENTATION:
   CROP_TYPE: 'importance'
   CROP_SIZE: 256
   IMAGE_OVERSAMPLING_TYPE: 'simple'
-  RANDOM_FLIP_ROTATE: True
