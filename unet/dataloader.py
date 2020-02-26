@@ -19,6 +19,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
                  include_image_weight = False,
                  transform = None,
                  include_edge_mask= False,
+                 edge_mask_type = '',
                  use_clahe = False
 
                  ):
@@ -38,6 +39,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         self.transform = transform
         self.pre_or_post = pre_or_post
         self.include_edge_mask = include_edge_mask
+        self.edge_mask_type = edge_mask_type
         self.use_clahe = use_clahe
 
 
@@ -72,9 +74,6 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
                 ret['image_weight'] = data_sample['image_weight']
             else:
                 ret['image_weight'] = label.sum()
-
-
-
 
         return ret
 
@@ -116,7 +115,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         loading edge mask for edge loss computation
         :return:
         '''
-        edge_mask_path = os.path.join(self.dataset_path, 'edge_loss_weight_mask', sample_name + '.npz')
+        edge_mask_path = os.path.join(self.dataset_path, self.edge_mask_type, sample_name + '.npz')
         if not os.path.exists(edge_mask_path):
             # empty files have no edges
             edge_mask = np.ones((1024, 1024, 1)) / 20

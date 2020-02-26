@@ -109,8 +109,8 @@ def train_net(net,
                                       include_image_weight=True,
                                       transform=trfm,
                                       include_edge_mask=use_edge_loss,
+                                      edge_mask_type=cfg.MODEL.EDGE_WEIGHTED_LOSS.TYPE,
                                       use_clahe=cfg.DATASETS.USE_CLAHE_VARI,
-
                                       )
 
     dataloader_kwargs = {
@@ -158,7 +158,7 @@ def train_net(net,
             if use_edge_loss:
                 edge_mask = y_gts[:,[0]]
                 y_gts = y_gts[:, 1:]
-                loss, ce_loss, jaccard_loss, edge_loss = criterion(y_pred, y_gts, edge_mask, cfg.TRAINER.EDGE_LOSS_SCALE)
+                loss, ce_loss, jaccard_loss, edge_loss = criterion(y_pred, y_gts, edge_mask, cfg.MODEL.EDGE_WEIGHTED_LOSS.SCALE)
                 wandb.log({
                     'ce_loss': ce_loss,
                     'jaccard_loss': jaccard_loss,
@@ -236,11 +236,7 @@ def frankenstein_edge_loss(y_pred, y_gts, edge_mask, scale):
     jaccard = jaccard_like_balanced_loss(y_pred, y_gts)
     a = (-y_pred).clamp(0)
     edge_ce = (1 - y_gts)*y_pred + a + torch.log(a.exp() + torch.exp(-y_pred-a)) * edge_mask.float() * scale
-    # y_pred_sigmoid = torch.sigmoid(y_pred)
-    # edge_ce = -(y_gts * y_pred_sigmoid.log() + (1 - y_gts) * (1-y_pred_sigmoid).log())#  * edge_mask.float() * scale
     edge_ce = edge_ce.mean()
-
-
     loss = ce + jaccard + edge_ce
 
     return loss, ce, jaccard, edge_ce
