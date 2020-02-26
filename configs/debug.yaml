@@ -1,10 +1,11 @@
 _BASE_: "base.yaml"
 MODEL:
-  LOSS_TYPE: 'FrankensteinEdgeLoss'
-  OUT_CHANNELS: 1
+  LOSS_TYPE: 'Frankenstein4Classes'
+  OUT_CHANNELS: 4
   IN_CHANNELS: 3
-  BACKBONE:
-    ENABLED: True
+  POSITIVE_WEIGHT: 1
+  NEGATIVE_WEIGHT: 1
+  EDGE_WEIGHT: 20 # CHANGE ME
 OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
   TRAIN: ("/storage/yonk/debug_new/train/",)
@@ -23,3 +24,4 @@ AUGMENTATION:
   CROP_SIZE: 256
   IMAGE_OVERSAMPLING_TYPE: 'simple'
   RANDOM_FLIP_ROTATE: True
+  KERNEL_SIZE: 5
