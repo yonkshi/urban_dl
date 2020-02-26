@@ -18,7 +18,7 @@ TRAINER:
 DATALOADER:
   NUM_WORKER: 0
   S1_FEATURES: []
-  S2_FEATURES: ['Blue_median', 'Green_median', 'Red_median', 'NIR_median']
+  S2_FEATURES: ['Green_median', 'Red_median', 'NIR_median']
   LABEL: 'guf'
 AUGMENTATION:
   # Random cropping of the images
