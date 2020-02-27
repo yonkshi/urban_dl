@@ -146,10 +146,10 @@ def train_net(net,
             optimizer.zero_grad()
 
             x = batch['x'].to(device)
+
             y_gts = batch['y'].to(device)
             # TODO: this is probably wrong
             image_weight = batch['image_weight']
-
 
             y_pred = net(x)
 
@@ -174,7 +174,7 @@ def train_net(net,
             loss_set.append(loss.item())
             positive_pixels_set.extend(image_weight.cpu().numpy())
 
-            if global_step % 100 == 0 and global_step != 0:
+            if global_step % 1 == 0: #  and global_step == 0:
                 # time per 100 steps
                 stop = timeit.default_timer()
                 time_per_n_batches= stop - start
