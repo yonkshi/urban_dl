@@ -1,0 +1,11 @@
+_BASE_: "base.yaml"
+SEED: 42
+MODEL:
+  LOSS_TYPE: 'FrankensteinLoss'
+  OUT_CHANNELS: 1
+  IN_CHANNELS: 4
+DATALOADER:
+  S1_FEATURES: ['VV_asc_mean', 'VH_asc_mean', 'VV_desc_mean', 'VH_desc_mean']
+  S2_FEATURES: ['Blue_median', 'Green_median', 'Red_median', 'RedEdge1_median','RedEdge2_median','RedEdge3_median', 'NIR_median','RedEdge4_median', 'SWIR1_median', 'SWIR2_median']
+AUGMENTATION:
+  IMAGE_OVERSAMPLING_TYPE: 'simple'
