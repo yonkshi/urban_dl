@@ -8,7 +8,4 @@ DATALOADER:
   S2_FEATURES: ['Blue_median', 'Green_median', 'Red_median', 'RedEdge1_median','RedEdge2_median','RedEdge3_median', 'NIR_median','RedEdge4_median', 'SWIR1_median', 'SWIR2_median']
   LABEL: 'guf'
 AUGMENTATION:
-  # Random cropping of the images
-  CROP_TYPE: 'importance'
-  CROP_SIZE: 256
   IMAGE_OVERSAMPLING_TYPE: 'simple'
