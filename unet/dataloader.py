@@ -254,7 +254,7 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
         label = label[:, :, None]
         # label_old = cv2.imread(str(label_file), 0)
         if self.transform:
-            img,label,sample_id, = self.transform((img, label, patch_id,))
+            img, label, sample_id, = self.transform((img, label, patch_id,))
 
         sample = {
             'x': img.float(), # numpy.array (m, n, N_CHANNELS)
@@ -280,3 +280,4 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return self.length
+

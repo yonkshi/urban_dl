@@ -11,11 +11,12 @@ DATASETS:
   USE_CLAHE_VARI: False
 TRAINER:
   LR: 0.0001
-  BATCH_SIZE: 1
+  BATCH_SIZE: 6
   EDGE_LOSS_SCALE: 20
 DATALOADER:
   NUM_WORKER: 0
-  S1_FEATURES: ['VV_asc_mean', 'VH_asc_mean', 'VV_desc_mean', 'VH_desc_mean']
+  S2_FEATURES: ['Green_median', 'Red_median', 'NIR_median']
+  S1_FEATURES: []
 AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'importance'

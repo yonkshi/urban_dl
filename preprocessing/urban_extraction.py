@@ -27,7 +27,7 @@ def get_image_weight(file: Path):
     return int(n_urban)
 
 
-def is_edge_tile(file: Path, tile_size=1024):
+def is_edge_tile(file: Path, tile_size=256):
     arr = cv2.imread(str(file), 0)
     arr = np.array(arr)
     if arr.shape == (tile_size, tile_size):
@@ -103,14 +103,20 @@ def preprocess_dataset(root_dir: Path, save_dir: Path, experiment_name: str, yea
         json.dump(dataset_metadata, f, ensure_ascii=False, indent=4)
 
 
+def preprocess_dataset_png(root_dir: Path, save_dir: Path, experiment_name: str, year: int, cities: list,
+                       s1_features: list, s2_features: list, split: float):
+    # TODO: preprocessing that saves files as png instead of geotiffs
+    pass
+
+
 if __name__ == '__main__':
 
-    root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/urban_extraction_gee_subset')
+    root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/')
     save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/')
 
-    experiment_name = 'debug_dataset'
+    experiment = 'urban_extraction_debug'
     year = 2017
-    cities = ['Stockholm', 'Beijing']
+    cities = ['Beijing']
 
     split = 0.2
 
@@ -135,9 +141,9 @@ if __name__ == '__main__':
                                                  metrics=s2params['metrics'])
 
     preprocess_dataset(
-        root_dir=root_dir,
+        root_dir=root_dir / experiment,
         save_dir=save_dir,
-        experiment_name=experiment_name,
+        experiment_name=experiment,
         year=year,
         cities=cities,
         s1_features=sentinel1_features,
