@@ -3,9 +3,6 @@ MODEL:
   LOSS_TYPE: 'FrankensteinLoss'
   OUT_CHANNELS: 1
   IN_CHANNELS: 3
-DATASETS:
-  TRAIN: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/two_cities/train/",)
-  TEST: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/two_cities/test/",)
 DATALOADER:
   S1_FEATURES: []
   S2_FEATURES: ['Green_median', 'Red_median', 'NIR_median']

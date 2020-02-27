@@ -4,9 +4,6 @@ MODEL:
   LOSS_TYPE: 'FrankensteinLoss'
   OUT_CHANNELS: 1
   IN_CHANNELS: 4
-DATASETS:
-  TRAIN: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/two_cities/train/",)
-  TEST: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/two_cities/test/",)
 DATALOADER:
   S1_FEATURES: ['VV_asc_mean', 'VH_asc_mean', 'VV_desc_mean', 'VH_desc_mean']
   S2_FEATURES: []
