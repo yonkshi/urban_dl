@@ -248,7 +248,7 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
             # s2_img = cv2.imread(str(s2_file), -1)
             s2_img = tifffile.imread(str(s2_file))
             s2_img = s2_img[:, :, self.s2_feature_selection]
-            img = np.stack([s1_img, s2_img], axis=-1)
+            img = np.concatenate([s1_img, s2_img], axis=-1)
 
         label = tifffile.imread(str(label_file))
         label = label[:, :, None].astype(np.float32)
