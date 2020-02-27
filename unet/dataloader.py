@@ -251,14 +251,14 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
             img = np.stack([s1_img, s2_img], axis=-1)
 
         label = tifffile.imread(str(label_file))
-        label = label[:, :, None]
+        label = label[:, :, None].astype(np.float32)
         # label_old = cv2.imread(str(label_file), 0)
         if self.transform:
             img,label,sample_id, = self.transform((img, label, patch_id,))
 
         sample = {
             'x': img.float(), # numpy.array (m, n, N_CHANNELS)
-            'y': label.float(), # numpy.array (m, n, 1)
+            'y': label, # numpy.array (m, n, 1)
             'img_name': sample_id, # identifier of sample
             'image_weight': np.float(sample_metadata['img_weight'])
         }
