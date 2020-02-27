@@ -104,9 +104,10 @@ def preprocess_dataset(root_dir: Path, save_dir: Path, experiment_name: str, yea
 
 if __name__ == '__main__':
 
-    root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/')
-    save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/')
-
+    # root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/')
+    # save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/')
+    root_dir = Path('/Midgard/Data/pshi/datasets/sentinel/raw/')
+    save_dir = Path('/Midgard/Data/pshi/datasets/sentinel/preprocssed/')
     experiment = 'urban_extraction_debug'
     year = 2017
     cities = ['Beijing']
