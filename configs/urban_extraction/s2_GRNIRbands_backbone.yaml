@@ -5,17 +5,9 @@ MODEL:
   IN_CHANNELS: 3
   BACKBONE:
     ENABLED: True
-DATASETS:
-  TRAIN: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/two_cities/train/",)
-  TEST: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/two_cities/test/",)
-  INFERENCE: ("/storage/yonk/debug_new/test/",)
-  USE_CLAHE_VARI: False
 DATALOADER:
   S1_FEATURES: []
   S2_FEATURES: ['Green_median', 'Red_median', 'NIR_median']
   LABEL: 'guf'
 AUGMENTATION:
-  # Random cropping of the images
-  CROP_TYPE: 'importance'
-  CROP_SIZE: 256
   IMAGE_OVERSAMPLING_TYPE: 'simple'

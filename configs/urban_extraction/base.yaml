@@ -21,19 +21,19 @@ MODEL:
 
 THRESH: 0.0001 # Best threshold (only to be filled after running final model evaluation)
 DATASETS:
-  TRAIN: ("/local_storage/datasets/xview2/full_new/train/",)
-  TEST: ("/local_storage/datasets/xview2/full_new/test/",)
+  TRAIN: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/urban_extraction_debug/train/",)
+  TEST: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/urban_extraction_debug/test/",)
   INFERENCE: ("/local_storage/datasets/xview2/full_new/real_test_set/",)
   PRE_OR_POST: 'pre' # 'pre' vs 'post' disaster images to use
   USE_CLAHE_VARI: False
 OUTPUT_BASE_DIR: ('/Midgard/home/pshi/run_logs/unet/')
 TRAINER:
   LR: 0.0001
-  BATCH_SIZE: 8
+  BATCH_SIZE: 16
   EPOCHS: 1000
   EDGE_LOSS_SCALE: 1
 DATALOADER:
-  NUM_WORKER: 4
+  NUM_WORKER: 8
   SHUFFLE: True
   LEGACY_MASK_RASTERIZATION: False
   S1_FEATURES: []
