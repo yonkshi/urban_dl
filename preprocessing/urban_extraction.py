@@ -108,7 +108,7 @@ if __name__ == '__main__':
     # save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/')
     root_dir = Path('/Midgard/Data/pshi/datasets/sentinel/raw/')
     save_dir = Path('/Midgard/Data/pshi/datasets/sentinel/preprocessed/')
-    experiment = 'urban_extraction_debug'
+    experiment = 'urban_extraction_twocities'
     year = 2017
     cities = ['Beijing']
 
