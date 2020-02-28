@@ -103,11 +103,11 @@ class inconv(nn.Module):
 
 
 class down(nn.Module):
-    def __init__(self, in_ch, out_ch, conv_block):
+    def __init__(self, in_ch, out_ch, conv_block, pooling_layer):
         super(down, self).__init__()
 
         self.mpconv = nn.Sequential(
-            nn.MaxPool2d(2),
+            pooling_layer,
             conv_block(in_ch, out_ch)
         )
 

@@ -9,6 +9,7 @@ MODEL:
   LEGACY: False # If True, use the fixed UNet for backwards compatibility
   TOPOLOGY: [64, 128, 256, 512,]
   BLOCK_TYPE: 'Double' # Double = Double conv, Triple = Triple conv, for greater receptive field
+  POOLING_TYPE: 'MaxPooling' # 'MaxPooling', 'AvgPooling', '2Stride'
   SIMPLE_INTERPOLATION: False # True: Bilinear interpo, False: Deconv interpo
   USE_ATTENTION: False
   MULTISCALE_CONTEXT: # For U-Net bottleneck context module
@@ -21,6 +22,7 @@ MODEL:
   EDGE_WEIGHTED_LOSS:
     TYPE: 'edge_loss_weight_mask' # Which preprocessed edge weight to use: e.g. edge_loss_weight_mask_32
     SCALE: 1
+
 
 THRESH: 0.01 # Best threshold (only to be filled after running final model evaluation)
 DATASETS:
