@@ -126,7 +126,7 @@ def compute_sample(x, Y_true, Y_pred, img_filenames, indices):
                                                  mode='bilinear')
     # expand batch
     Y_pred = Y_pred.squeeze(1) >= THRESHOLD  # remove empty channel and activate Y_pred
-    Y_true = Y_true.type(torch.bool)
+    Y_true = Y_true.squeeze(1).type(torch.bool)
 
     hw_dims = (-1, -2)
     # Compute all TP, TN, FP, FP, FN at once
