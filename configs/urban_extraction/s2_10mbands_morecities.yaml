@@ -1,0 +1,4 @@
+_BASE_: "s2_10mbands.yaml"
+DATASETS:
+  TRAIN: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/urban_extraction_morecities/train/",)
+  TEST: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/urban_extraction_morecities/test/",)
