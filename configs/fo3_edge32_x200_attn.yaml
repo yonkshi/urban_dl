@@ -6,8 +6,10 @@ MODEL:
   BLOCK_TYPE: 'Triple'
   EDGE_WEIGHTED_LOSS:
     TYPE: 'edge_loss_weight_mask_32' # Which preprocessed edge weight to use: e.g. edge_loss_weight_mask_32
-    SCALE: 20
+    SCALE: 200
   USE_ATTENTION: True
+TRAINER:
+  BATCH_SIZE: 14
 AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'importance'
