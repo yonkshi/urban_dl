@@ -1,5 +1,5 @@
 _BASE_: "frankenstein_oversample_3conv.yaml"
-THRESH: 0.52
+THRESH: 0.88
 MODEL:
   LOSS_TYPE: 'FrankensteinEdgeLoss'
   OUT_CHANNELS: 1
