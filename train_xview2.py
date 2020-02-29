@@ -249,7 +249,7 @@ def edge_loss_warmup_schedule(cfg, global_step):
         warmup_end = cfg.MODEL.EDGE_WEIGHTED_LOSS.WARMUP_END
         if global_step < warmup_begin:
             edge_loss_scale = 0
-        if global_step > warmup_end:
+        elif global_step > warmup_end:
             edge_loss_scale = cfg.MODEL.EDGE_WEIGHTED_LOSS.SCALE
         else:
             edge_loss_scale = (global_step - warmup_begin) / (
