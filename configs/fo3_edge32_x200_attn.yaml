@@ -1,18 +1,11 @@
-_BASE_: "unet_dice.yaml"
+_BASE_: "frankenstein_oversample_3conv.yaml"
 THRESH: 0.52
 MODEL:
-  LOSS_TYPE: 'FrankensteinEdgeLoss'
-  OUT_CHANNELS: 1
-  BLOCK_TYPE: 'Triple'
   EDGE_WEIGHTED_LOSS:
     TYPE: 'edge_loss_weight_mask_32' # Which preprocessed edge weight to use: e.g. edge_loss_weight_mask_32
     SCALE: 200
   USE_ATTENTION: True
 TRAINER:
   BATCH_SIZE: 14
-AUGMENTATION:
-  # Random cropping of the images
-  CROP_TYPE: 'importance'
-  CROP_SIZE: 256
-  IMAGE_OVERSAMPLING_TYPE: 'simple'
+
 

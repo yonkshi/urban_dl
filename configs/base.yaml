@@ -9,6 +9,7 @@ MODEL:
   LEGACY: False # If True, use the fixed UNet for backwards compatibility
   TOPOLOGY: [64, 128, 256, 512,]
   BLOCK_TYPE: 'Double' # Double = Double conv, Triple = Triple conv, for greater receptive field
+  BLOCK_ACTIVATION: 'ReLU' # 'ReLU' or 'PReLU', PReLU is known to perform well with pooling type 2Stride
   POOLING_TYPE: 'MaxPooling' # 'MaxPooling', 'AvgPooling', '2Stride'
   SIMPLE_INTERPOLATION: False # True: Bilinear interpo, False: Deconv interpo
   USE_ATTENTION: False

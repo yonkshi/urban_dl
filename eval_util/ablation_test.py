@@ -42,7 +42,7 @@ else:
     cfg.merge_from_file(f'/Midgard/home/pshi/urban_dl/configs/{MODEL_NAME}.yaml')
 cfg.OUTPUT_DIR = path.join(cfg.OUTPUT_BASE_DIR, MODEL_NAME)
 net = UNet(cfg)
-print('==========  THRESHOLD', cfg.THRESH)
+print('==========  THRESHOLD', THRESHOLD)
 
 # load state dict
 full_model_path = os.path.join(cfg.OUTPUT_DIR, CHECKPOINT_NAME)
