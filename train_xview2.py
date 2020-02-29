@@ -158,12 +158,14 @@ def train_net(net,
             if use_edge_loss:
                 edge_mask = y_gts[:,[0]]
                 y_gts = y_gts[:, 1:]
-                loss, ce_loss, jaccard_loss, edge_loss = criterion(y_pred, y_gts, edge_mask, cfg.MODEL.EDGE_WEIGHTED_LOSS.SCALE)
+                edge_loss_scale = edge_loss_warmup_schedule(cfg, global_step)
+                loss, ce_loss, jaccard_loss, edge_loss = criterion(y_pred, y_gts, edge_mask, edge_loss_scale, global_step)
                 wandb.log({
                     'ce_loss': ce_loss,
                     'jaccard_loss': jaccard_loss,
                     'edge_loss': edge_loss,
                     'step':global_step,
+                    'edge_loss_scale': edge_loss_scale,
                 })
             else:
                 loss = criterion(y_pred, y_gts)
@@ -240,7 +242,21 @@ def frankenstein_edge_loss(y_pred, y_gts, edge_mask, scale):
     loss = ce + jaccard + edge_ce
 
     return loss, ce, jaccard, edge_ce
-
+def edge_loss_warmup_schedule(cfg, global_step):
+    # Scheduler for edge loss
+    if cfg.MODEL.EDGE_WEIGHTED_LOSS.WARMUP_ENABLED:
+        warmup_begin = cfg.MODEL.EDGE_WEIGHTED_LOSS.WARMUP_START
+        warmup_end = cfg.MODEL.EDGE_WEIGHTED_LOSS.WARMUP_END
+        if global_step < warmup_begin:
+            edge_loss_scale = 0
+        if global_step > warmup_end:
+            edge_loss_scale = cfg.MODEL.EDGE_WEIGHTED_LOSS.SCALE
+        else:
+            edge_loss_scale = (global_step - warmup_begin) / (
+                        warmup_end - warmup_begin) * cfg.MODEL.EDGE_WEIGHTED_LOSS.SCALE
+    else:
+        edge_loss_scale = cfg.MODEL.EDGE_WEIGHTED_LOSS.SCALE
+    return edge_loss_scale
 def setup(args):
     cfg = new_config()
     cfg.merge_from_file(f'configs/{args.config_file}.yaml')
