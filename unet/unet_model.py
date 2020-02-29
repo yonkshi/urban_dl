@@ -67,7 +67,7 @@ class UNet(nn.Module):
             in_dim = up_topo[x1_idx] * 2
             out_dim = up_topo[x2_idx]
 
-            layer = up_block(in_dim, out_dim, conv_block, bilinear=cfg.MODEL.SIMPLE_INTERPOLATION)
+            layer = up_block(in_dim, out_dim, conv_block, activation, bilinear=cfg.MODEL.SIMPLE_INTERPOLATION)
 
             print(f'up{idx+1}: in {in_dim}, out {out_dim}')
             up_dict[f'up{idx+1}'] = layer
