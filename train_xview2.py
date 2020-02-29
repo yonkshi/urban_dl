@@ -159,7 +159,7 @@ def train_net(net,
                 edge_mask = y_gts[:,[0]]
                 y_gts = y_gts[:, 1:]
                 edge_loss_scale = edge_loss_warmup_schedule(cfg, global_step)
-                loss, ce_loss, jaccard_loss, edge_loss = criterion(y_pred, y_gts, edge_mask, edge_loss_scale, global_step)
+                loss, ce_loss, jaccard_loss, edge_loss = criterion(y_pred, y_gts, edge_mask, edge_loss_scale)
                 wandb.log({
                     'ce_loss': ce_loss,
                     'jaccard_loss': jaccard_loss,
