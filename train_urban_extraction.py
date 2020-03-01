@@ -39,7 +39,7 @@ def train_net(net,
               cfg):
 
     log_path = cfg.OUTPUT_DIR
-    writer = SummaryWriter(log_path)
+    # writer = SummaryWriter(log_path)
 
     run_config = {}
     run_config['CONFIG_NAME'] = cfg.NAME
