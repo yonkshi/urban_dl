@@ -174,15 +174,14 @@ def train_net(net,
             loss_set.append(loss.item())
             positive_pixels_set.extend(image_weight.cpu().numpy())
 
+
+
             if global_step % 100 == 0 and global_step == 0:
                 # time per 100 steps
                 stop = timeit.default_timer()
                 time_per_n_batches= stop - start
 
-                if global_step % 10000 == 0 and global_step > 0:
-                    check_point_name = f'cp_{global_step}.pkl'
-                    save_path = os.path.join(log_path, check_point_name)
-                    torch.save(net.state_dict(), save_path)
+
 
                 # Averaged loss and f1 writer
 
@@ -207,7 +206,10 @@ def train_net(net,
 
             # torch.cuda.empty_cache()
             global_step += 1
-
+        # Save every epoch
+        check_point_name = f'cp_{global_step}.pkl'
+        save_path = os.path.join(log_path, check_point_name)
+        torch.save(net.state_dict(), save_path)
         if epoch % 2 == 0:
             # Evaluation after every other epoch
             model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
