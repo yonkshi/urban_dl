@@ -1,4 +1,6 @@
 _BASE_: "s1_allbands.yaml"
+MODEL:
+  IN_CHANNELS: 2
 DATALOADER:
   S1_FEATURES: ['VV_desc_mean', 'VH_desc_mean']
 DATASETS:
