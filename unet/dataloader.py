@@ -256,7 +256,8 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
         if self.transform:
             img, label, sample_id, = self.transform((img, label, patch_id,))
 
-        img = np.nan_to_num(img).astype(np.float32)
+        # TODO: converts tensor back to numpy array?
+        # img = np.nan_to_num(img).astype(np.float32)
 
         sample = {
             'x': img, # numpy.array (m, n, N_CHANNELS)

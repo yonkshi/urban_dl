@@ -104,13 +104,20 @@ def preprocess_dataset(root_dir: Path, save_dir: Path, experiment_name: str, yea
 
 if __name__ == '__main__':
 
+    root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/urban_extraction_gee_download')
+    save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/')
+    # root_dir = Path('/Midgard/Data/pshi/datasets/sentinel/raw/')
+    # save_dir = Path('/Midgard/Data/pshi/datasets/sentinel/preprocessed/')
+    experiment = 'urban_extraction_morecities'
+
     # root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/')
     # save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/')
     root_dir = Path('/Midgard/Data/pshi/datasets/sentinel/raw/')
     save_dir = Path('/Midgard/Data/pshi/datasets/sentinel/preprocessed/')
     experiment = 'urban_extraction_twocities'
+
     year = 2017
-    cities = ['Beijing']
+    cities = ['Stockholm', 'Beijing', 'Jakarta', 'NewYork', 'RioDeJaneiro', 'Shanghai', 'Sydney']
 
     split = 0.2
 
@@ -135,7 +142,7 @@ if __name__ == '__main__':
                                                  metrics=s2params['metrics'])
 
     preprocess_dataset(
-        root_dir=root_dir / experiment,
+        root_dir=root_dir,
         save_dir=save_dir,
         experiment_name=experiment,
         year=year,
