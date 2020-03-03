@@ -11,6 +11,7 @@ from unet import dataloader
 from experiment_manager.config import new_config
 from preprocessing import urban_extraction as ue
 from torch.utils import data as torch_data
+import torchvision.transforms.functional as TF
 from unet.augmentations import *
 from torchvision import transforms
 
@@ -112,9 +113,11 @@ def load_dataset(cfg, data_dir: Path):
 
 
 
-def classify_tiles(configs_dir: Path, models_dir: Path, root_dir: Path, save_dir: Path, experiment: str):
+def classify_tiles(city: str, configs_dir: Path, models_dir: Path, root_dir: Path, save_dir: Path, experiment: str):
 
     classification_batch_size = 10
+    mode = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = torch.device(mode)
 
     cfg = load_cfg(configs_dir, experiment)
 
@@ -130,29 +133,68 @@ def classify_tiles(configs_dir: Path, models_dir: Path, root_dir: Path, save_dir
 
         for i in range(len(dataset)):
             item = dataset.__getitem__(i)
-            img = item['x']
+            img = item['x'].to(device)
 
             metadata = dataset.metadata['samples'][i]
-            city = metadata['city']
+            patch_city = metadata['city']
             patch_id = metadata['patch_id']
             row_id, col_id = patch_id.split('-')
             row_id, col_id = int(row_id), int(col_id)
-            tif_file = root_dir / train_test / 'guf' / f'GUF_{metadata["city"]}_{metadata["patch_id"]}.tif'
+            tif_file = root_dir / train_test / 'guf' / f'GUF_{patch_city}_{patch_id}.tif'
             print(city, patch_id)
-            if city == 'Stockholm':
-                # if 5376 <= row_id <= 6400 and 9728 <= col_id <= 13056:
-
+            if patch_city == city:
                 _, geotransform, epsg = read_tif(tif_file)
                 y_pred = net(img.unsqueeze(0))
                 y_pred = torch.sigmoid(y_pred)
 
-                y_pred = y_pred.detach().numpy()
-                y_pred = y_pred[0, 0,] > 0.5
+                y_pred = y_pred.cpu().detach().numpy()
+                y_pred = y_pred[0, 0,] > cfg.THRESH
                 y_pred = y_pred.astype('uint8')
-
 
                 fname = f'pred_{metadata["city"]}_{year}_{metadata["patch_id"]}'
                 write_tif(y_pred, geotransform, epsg, save_dir / experiment, fname, dtype=gdal.GDT_Byte)
+
+
+def classify_tiles_noprep(city: str, year: int, configs_dir: Path, models_dir: Path, root_dir: Path, save_dir: Path, experiment: str):
+
+    mode = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = torch.device(mode)
+
+    cfg = load_cfg(configs_dir, experiment)
+
+    # cfg.MODEL.IN_CHANNELS = 3
+    # cfg.DATALOADER.S2_FEATURES = ['Green_median', 'Red_median', 'NIR_median']
+    print(cfg)
+    net = load_net(cfg, models_dir, experiment)
+
+    # classification loop
+    trfm = transforms.Compose([Npy2Torch()])
+    dataset = dataloader.UrbanExtractionDatasetNoPrep(cfg, root_dir, transform=None)
+
+
+    for i in range(len(dataset)):
+        item = dataset.__getitem__(i)
+        img = item['x']
+        img = TF.to_tensor(img)
+        img = img.to(device)
+
+        metadata = dataset.metadata['samples'][i]
+        patch_city = metadata['city']
+        patch_id = metadata['patch_id']
+
+        tif_file = root_dir / 'sentinel1' / f'S1_{patch_city}_{year}_{patch_id}.tif'
+        print(patch_city, patch_id)
+        if patch_city == city:
+            _, geotransform, epsg = read_tif(tif_file)
+            y_pred = net(img.unsqueeze(0))
+            y_pred = torch.sigmoid(y_pred)
+
+            y_pred = y_pred.cpu().detach().numpy()
+            y_pred = y_pred[0, 0, ] > cfg.THRESH
+            y_pred = y_pred.astype('uint8')
+
+            fname = f'pred_{patch_city}_{year}_{patch_id}'
+            write_tif(y_pred, geotransform, epsg, save_dir / f'{year}' / experiment, fname, dtype=gdal.GDT_Byte)
 
 
 
@@ -228,22 +270,34 @@ def merge_tiles(data_dir: Path, save_dir: Path, experiment: str, city: str, year
 if __name__ == '__main__':
 
     configs_dir = Path('configs/urban_extraction')
+
     models_dir = Path('C:/Users/shafner/models')
-    root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/urban_extraction_twocities')
+    # models_dir = Path('/home/yonk/saved_models')
+
+    root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/urban_extraction_2019')
+    # root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/urban_extraction_twocities')
+    # root_dir = Path('/storage/yonk/urban_extraction_twocities/')
+
     save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/classifications')
+    # save_dir = Path('/storage/yonk/urban_extraction_twocities/predicted/')
 
-    experiment = 's2_allbands_twocities'
+    experiment = 's1s2_allbands_twocities'
 
-    classify_tiles(
-        configs_dir=configs_dir,
-        models_dir=models_dir,
-        root_dir=root_dir,
-        save_dir=save_dir,
-        experiment=experiment,
-    )
+
+    for city in ['Stockholm', 'Milano', 'Beijing']:
+
+        classify_tiles_noprep(
+            city=city,
+            year=2019,
+            configs_dir=configs_dir,
+            models_dir=models_dir,
+            root_dir=root_dir,
+            save_dir=save_dir,
+            experiment=experiment
+        )
+
+        merge_tiles(save_dir / f'{2019}' / experiment, save_dir, experiment, city, 2019)
 
     # combine_tiles(save_dir / experiment, 'Stockholm', 2017, top_left=(5376, 9728))
-    merge_tiles(save_dir / experiment, save_dir, experiment, 'Stockholm', 2017)
-    merge_tiles(save_dir / experiment, save_dir, experiment, 'Beijing', 2017)
-
-
+    # merge_tiles(save_dir / experiment, save_dir, experiment, 'Stockholm', 2017)
+    # merge_tiles(save_dir / experiment, save_dir, experiment, 'Beijing', 2019)
