@@ -182,7 +182,6 @@ class Xview2Detectron2DamageLevelDataset(Xview2Detectron2Dataset):
         return masks
 
 
-
 class UrbanExtractionDataset(torch.utils.data.Dataset):
     '''
     Dataset for Urban Extraction style labelled Dataset
@@ -255,7 +254,6 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
         if self.transform:
             img, label, sample_id, = self.transform((img, label, patch_id,))
 
-        # TODO: converts tensor back to numpy array?
         # img = np.nan_to_num(img).astype(np.float32)
 
         sample = {
@@ -267,8 +265,6 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
 
         if self.include_index:
             sample['index'] = index
-
-
 
         return sample
 
@@ -285,7 +281,7 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
 
 
 
-class UrbanExtractionDatasetNoPrep(torch.utils.data.Dataset):
+class UrbanExtractionDatasetInference(torch.utils.data.Dataset):
     '''
     Dataset for Urban Extraction style labelled Dataset
     '''

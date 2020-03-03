@@ -142,6 +142,7 @@ def classify_tiles(city: str, configs_dir: Path, models_dir: Path, root_dir: Pat
             row_id, col_id = int(row_id), int(col_id)
             tif_file = root_dir / train_test / 'guf' / f'GUF_{patch_city}_{patch_id}.tif'
             print(city, patch_id)
+
             if patch_city == city:
                 _, geotransform, epsg = read_tif(tif_file)
                 y_pred = net(img.unsqueeze(0))
@@ -153,6 +154,22 @@ def classify_tiles(city: str, configs_dir: Path, models_dir: Path, root_dir: Pat
 
                 fname = f'pred_{metadata["city"]}_{year}_{metadata["patch_id"]}'
                 write_tif(y_pred, geotransform, epsg, save_dir / experiment, fname, dtype=gdal.GDT_Byte)
+
+            # if city == 'Stockholm':
+                # if 5376 <= row_id <= 6400 and 9728 <= col_id <= 13056:
+
+            _, geotransform, epsg = read_tif(tif_file)
+            y_pred = net(img.unsqueeze(0))
+            y_pred = torch.sigmoid(y_pred)
+
+            y_pred = y_pred.cpu().detach().numpy()
+            y_pred = y_pred[0, 0,] > cfg.THRESH
+            y_pred = y_pred.astype('uint8')
+
+
+            fname = f'pred_{metadata["city"]}_{year}_{metadata["patch_id"]}'
+            write_tif(y_pred, geotransform, epsg, save_dir / experiment, fname, dtype=gdal.GDT_Byte)
+
 
 
 def classify_tiles_noprep(city: str, year: int, configs_dir: Path, models_dir: Path, root_dir: Path, save_dir: Path, experiment: str):
@@ -270,6 +287,7 @@ def merge_tiles(data_dir: Path, save_dir: Path, experiment: str, city: str, year
 if __name__ == '__main__':
 
     configs_dir = Path('configs/urban_extraction')
+<<<<<<< HEAD
 
     models_dir = Path('C:/Users/shafner/models')
     # models_dir = Path('/home/yonk/saved_models')
@@ -282,6 +300,24 @@ if __name__ == '__main__':
     # save_dir = Path('/storage/yonk/urban_extraction_twocities/predicted/')
 
     experiment = 's1s2_allbands_twocities'
+
+    models_dir = Path('/home/yonk/saved_models')
+
+    # root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/urban_extraction_twocities')
+    root_dir = Path('/storage/yonk/urban_extraction_twocities/')
+
+    # save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/classifications')
+    save_dir = Path('/storage/yonk/urban_extraction_twocities/predicted/')
+
+    experiment = 's1_allbands_twocities'
+
+    # classify_tiles(
+    #     configs_dir=configs_dir,
+    #     models_dir=models_dir,
+    #     root_dir=root_dir,
+    #     save_dir=save_dir,
+    #     experiment=experiment,
+    # )
 
 
     for city in ['Stockholm', 'Milano', 'Beijing']:
