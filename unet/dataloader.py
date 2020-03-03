@@ -21,6 +21,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
                  include_image_weight = False,
                  transform = None,
                  include_edge_mask= False,
+                 edge_mask_type = '',
                  use_clahe = False
 
                  ):
@@ -40,6 +41,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         self.transform = transform
         self.pre_or_post = pre_or_post
         self.include_edge_mask = include_edge_mask
+        self.edge_mask_type = edge_mask_type
         self.use_clahe = use_clahe
 
 
@@ -74,9 +76,6 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
                 ret['image_weight'] = data_sample['image_weight']
             else:
                 ret['image_weight'] = label.sum()
-
-
-
 
         return ret
 
@@ -118,7 +117,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         loading edge mask for edge loss computation
         :return:
         '''
-        edge_mask_path = os.path.join(self.dataset_path, 'edge_loss_weight_mask', sample_name + '.npz')
+        edge_mask_path = os.path.join(self.dataset_path, self.edge_mask_type, sample_name + '.npz')
         if not os.path.exists(edge_mask_path):
             # empty files have no edges
             edge_mask = np.ones((1024, 1024, 1)) / 20
@@ -286,8 +285,7 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
 
 
 
-
-class UrbanExtractionDataset_png(torch.utils.data.Dataset):
+class UrbanExtractionDatasetNoPrep(torch.utils.data.Dataset):
     '''
     Dataset for Urban Extraction style labelled Dataset
     '''
@@ -302,7 +300,6 @@ class UrbanExtractionDataset_png(torch.utils.data.Dataset):
         self.root_dir = Path(root_dir)
         self.s1_dir = self.root_dir / 'sentinel1'
         self.s2_dir = self.root_dir / 'sentinel2'
-        self.label_dir = self.root_dir / cfg.DATALOADER.LABEL
         self.cfg = cfg
 
         # loading metadata of dataset
@@ -317,6 +314,12 @@ class UrbanExtractionDataset_png(torch.utils.data.Dataset):
         self.include_index = include_index
         self.transform = transform
 
+        # creating boolean feature vector to subset sentinel 1 and sentinel 2 bands
+        self.s1_feature_selection = self._get_feature_selection(metadata['sentinel1'],
+                                                                cfg.DATALOADER.S1_FEATURES)
+        self.s2_feature_selection = self._get_feature_selection(metadata['sentinel2'],
+                                                                cfg.DATALOADER.S2_FEATURES)
+
     def __getitem__(self, index):
 
         # loading metadata of sample
@@ -327,20 +330,34 @@ class UrbanExtractionDataset_png(torch.utils.data.Dataset):
 
         s1_file = self.s1_dir / f'S1_{city}_{self.year}_{patch_id}.tif'
         s2_file = self.s2_dir / f'S2_{city}_{self.year}_{patch_id}.tif'
-        label_file = self.label_dir / f'{str(self.cfg.DATALOADER.LABEL).upper()}_{city}_{patch_id}.tif'
 
-        img = cv2.imread(s2_file, 1)
-        label = cv2.imread(label_file, 0)
+        # loading images and corresponding label
+        if not any(self.s1_feature_selection):  # only sentinel 2 features
+            # img = cv2.imread(str(s1_file), -1)
+            img = tifffile.imread(str(s2_file))
+            img = img[:, :, self.s2_feature_selection]
+        elif not any(self.s2_feature_selection):  # only sentinel 1 features
+            # img = cv2.imread(str(s1_file), -1)
+            img = tifffile.imread(str(s1_file))
+            img = img[:, :, self.s1_feature_selection]
+        else:  # sentinel 1 and sentinel 2 features
+            # s1_img = cv2.imread(str(s1_file), -1)
+            s1_img = tifffile.imread(str(s1_file))
+            s1_img = s1_img[:, :, self.s1_feature_selection]
+            # s2_img = cv2.imread(str(s2_file), -1)
+            s2_img = tifffile.imread(str(s2_file))
+            s2_img = s2_img[:, :, self.s2_feature_selection]
+            img = np.concatenate([s1_img, s2_img], axis=-1)
 
         # label_old = cv2.imread(str(label_file), 0)
         if self.transform:
             img, label, sample_id, = self.transform((img, label, patch_id,))
 
+        # TODO: converts tensor back to numpy array?
+        # img = np.nan_to_num(img).astype(np.float32)
+
         sample = {
-            'x': img.float(), # numpy.array (m, n, N_CHANNELS)
-            'y': label.float(), # numpy.array (m, n, 1)
-            'img_name': sample_id, # identifier of sample
-            'image_weight': np.float(sample_metadata['img_weight'])
+            'x': img, # numpy.array (m, n, N_CHANNELS)
         }
 
         if self.include_index:
@@ -348,5 +365,15 @@ class UrbanExtractionDataset_png(torch.utils.data.Dataset):
 
         return sample
 
+
+    def _get_feature_selection(self, features, selection):
+        feature_selection = [False for _ in range(len(features))]
+        for feature in selection:
+            i = features.index(feature)
+            feature_selection[i] = True
+        return feature_selection
+
     def __len__(self):
         return self.length
+
+

@@ -1,6 +1,7 @@
 import shutil, json, cv2
 from pathlib import Path
 import numpy as np
+import tifffile
 
 # getting list of feature names based on input parameters
 def sentinel1_feature_names(polarizations: list, metrics: list):
@@ -27,9 +28,9 @@ def get_image_weight(file: Path):
 
 
 def is_edge_tile(file: Path, tile_size=256):
-    arr = cv2.imread(str(file), 0)
+    arr = tifffile.imread(str(file))
     arr = np.array(arr)
-    if arr.shape == (tile_size, tile_size):
+    if arr.shape[0] == tile_size and arr.shape[1] == tile_size:
         return False
     return True
 
@@ -102,22 +103,62 @@ def preprocess_dataset(root_dir: Path, save_dir: Path, experiment_name: str, yea
         json.dump(dataset_metadata, f, ensure_ascii=False, indent=4)
 
 
+
+
+def write_metadata_file(root_dir: Path, save_dir: Path, year: int, cities: list, s1_features: list, s2_features: list):
+
+    # setting up raw data directories
+    s1_dir = root_dir / 'sentinel1'
+
+    # container to store all the metadata
+    dataset_metadata = {
+        'cities': cities,
+        'year': year,
+        'sentinel1': s1_features,
+        'sentinel2': s2_features,
+    }
+
+    # getting all sentinel1 files
+    s1_files = [file for file in s1_dir.glob('**/*')]
+
+    # main loop splitting into train test, removing edge tiles, and collecting metadata
+    samples = []
+    for i, s1_file in enumerate(s1_files):
+        if not is_edge_tile(s1_file):
+
+            sample_metadata = {}
+
+            _, city, _, patch_id = s1_file.stem.split('_')
+
+            sample_metadata['city'] = city
+            sample_metadata['patch_id'] = patch_id
+
+            samples.append(sample_metadata)
+
+    # writing metadata to .json file for train and test set
+    dataset_metadata['samples'] = samples
+    with open(str(save_dir / 'metadata.json'), 'w', encoding='utf-8') as f:
+        json.dump(dataset_metadata, f, ensure_ascii=False, indent=4)
+
 if __name__ == '__main__':
 
-    root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/urban_extraction_gee_download')
+    # root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/urban_extraction_gee_download')
+    # save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/')
+    # root_dir = Path('/Midgard/Data/pshi/datasets/sentinel/raw/')
+    # save_dir = Path('/Midgard/Data/pshi/datasets/sentinel/preprocessed/')
+    # experiment = 'urban_extraction_morecities'
+
+    root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/')
     save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/')
     # root_dir = Path('/Midgard/Data/pshi/datasets/sentinel/raw/')
     # save_dir = Path('/Midgard/Data/pshi/datasets/sentinel/preprocessed/')
-    experiment = 'urban_extraction_morecities'
+    # experiment = 'urban_extraction_twocities'
 
-    # root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/')
-    # save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/')
-    root_dir = Path('/Midgard/Data/pshi/datasets/sentinel/raw/')
-    save_dir = Path('/Midgard/Data/pshi/datasets/sentinel/preprocessed/')
-    experiment = 'urban_extraction_twocities'
+    metadata_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/urban_extraction_2019')
 
-    year = 2017
-    cities = ['Stockholm', 'Beijing', 'Jakarta', 'NewYork', 'RioDeJaneiro', 'Shanghai', 'Sydney']
+
+    year = 2019
+    cities = ['Stockholm', 'Beijing', 'Milan']
 
     split = 0.2
 
@@ -141,13 +182,23 @@ if __name__ == '__main__':
                                                  indices=s2params['indices'],
                                                  metrics=s2params['metrics'])
 
-    preprocess_dataset(
-        root_dir=root_dir,
-        save_dir=save_dir,
-        experiment_name=experiment,
+    write_metadata_file(
+        root_dir=metadata_dir,
+        save_dir=metadata_dir,
         year=year,
         cities=cities,
         s1_features=sentinel1_features,
-        s2_features=sentinel2_features,
-        split=split
+        s2_features=sentinel2_features
     )
+
+
+    # preprocess_dataset(
+    #     root_dir=root_dir,
+    #     save_dir=save_dir,
+    #     experiment_name=experiment,
+    #     year=year,
+    #     cities=cities,
+    #     s1_features=sentinel1_features,
+    #     s2_features=sentinel2_features,
+    #     split=split
+    # )

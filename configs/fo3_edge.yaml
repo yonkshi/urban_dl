@@ -1,4 +1,4 @@
-_BASE_: "unet_dice.yaml"
+_BASE_: "frankenstein_oversample_3conv.yaml"
 THRESH: 0.52
 MODEL:
   LOSS_TYPE: 'FrankensteinEdgeLoss'
