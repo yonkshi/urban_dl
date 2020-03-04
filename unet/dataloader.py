@@ -311,12 +311,10 @@ class UrbanExtractionDatasetAugmentedLabels(UrbanExtractionDataset):
         s1_file = self.s1_dir / f'S1_{city}_{self.year}_{patch_id}.tif'
         s2_file = self.s2_dir / f'S2_{city}_{self.year}_{patch_id}.tif'
 
-        label_name = self.cfg.DATALOADER.LABEL if self.cfg.DATALOADER.LABEL != 'guf' else 'GUF'
-        label_file = self.label_dir / f'{label_name}_{city}_{patch_id}.tif'
-
         # loading images and corresponding label
         # s2 data is always required due to label augmentation
         s2_img = tifffile.imread(str(s2_file))
+        s2_file_exists = s2_file.exists()
         red, nir = s2_img[:, :, self.red_selection], s2_img[:, :, self.nir_selection]
         s2_img = s2_img[:, :, self.s2_feature_selection]
 
@@ -326,6 +324,12 @@ class UrbanExtractionDatasetAugmentedLabels(UrbanExtractionDataset):
             img = np.concatenate([s1_img, s2_img], axis=-1)
         else:
             img = s2_img
+
+        # TODO: handle better for wsf
+        product = 'pred' if self.cfg.DATALOADER.LABEL != 'guf' else 'GUF'
+        label_file = self.label_dir / f'{product}_{city}_{self.year}_{patch_id}.tif'
+        debug = label_file.exists()
+        debug1 = label_file.parent.exists()
 
         label = tifffile.imread(str(label_file))
 
