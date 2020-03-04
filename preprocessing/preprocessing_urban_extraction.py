@@ -140,6 +140,10 @@ def write_metadata_file(root_dir: Path, save_dir: Path, year: int, cities: list,
     with open(str(save_dir / 'metadata.json'), 'w', encoding='utf-8') as f:
         json.dump(dataset_metadata, f, ensure_ascii=False, indent=4)
 
+
+
+
+
 if __name__ == '__main__':
 
     # root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/urban_extraction_gee_download')
