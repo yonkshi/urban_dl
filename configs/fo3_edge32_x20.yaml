@@ -1,0 +1,7 @@
+_BASE_: "frankenstein_oversample_3conv.yaml"
+THRESH: 0.50
+MODEL:
+  EDGE_WEIGHTED_LOSS:
+    TYPE: 'edge_loss_weight_mask_32' # Which preprocessed edge weight to use: e.g. edge_loss_weight_mask_32
+    SCALE: 20
+

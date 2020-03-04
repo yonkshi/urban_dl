@@ -7,6 +7,7 @@ import torch.nn.functional as F
 
 class double_conv(nn.Module):
     '''(conv => BN => ReLU) * 2'''
+
     def __init__(self, in_ch, out_ch):
         super(double_conv, self).__init__()
         self.conv = nn.Sequential(
@@ -22,8 +23,10 @@ class double_conv(nn.Module):
         x = self.conv(x)
         return x
 
+
 class triple_conv(nn.Module):
     '''(conv => BN => ReLU) * 2'''
+
     def __init__(self, in_ch, out_ch):
         super(triple_conv, self).__init__()
         self.conv = nn.Sequential(
@@ -42,6 +45,7 @@ class triple_conv(nn.Module):
         x = self.conv(x)
         return x
 
+
 class attention_block(nn.Module):
 
     def __init__(self, in_ch, out_ch):
@@ -55,14 +59,13 @@ class attention_block(nn.Module):
 
         self.W1 = nn.Conv2d(in_ch // 2, out_ch, kernel_size=1, stride=1, padding=0, bias=True)
 
-        self.psi =  nn.Sequential(
+        self.psi = nn.Sequential(
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=out_ch, out_channels=1, kernel_size=1, stride=1, padding=0, bias=True),
             nn.Sigmoid(),
         )
 
-    def forward(self, x1, x2,): # X1 is upstream, X2 is skip
-
+    def forward(self, x1, x2, ):  # X1 is upstream, X2 is skip
 
         xl_size_orig = x2.size()
         xl_ = self.W2(x2)
@@ -79,7 +82,7 @@ class attention_block(nn.Module):
 
 
 class ContextLayer(nn.Module):
-    def __init__(self, channels, dilation, include_activation = True):
+    def __init__(self, channels, dilation, include_activation=True):
         super().__init__()
         self.conv = nn.Sequential(
             nn.Conv2d(channels, channels, 3, padding=dilation, dilation=dilation),
@@ -91,6 +94,7 @@ class ContextLayer(nn.Module):
     def forward(self, x):
         x = self.conv(x)
         return x
+
 
 class inconv(nn.Module):
     def __init__(self, in_ch, out_ch, conv_block):
@@ -111,7 +115,6 @@ class down(nn.Module):
             conv_block(in_ch, out_ch)
         )
 
-
     def forward(self, x):
         x = self.mpconv(x)
         return x
@@ -126,27 +129,28 @@ class up(nn.Module):
         if bilinear:
             self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         else:
-            self.up = nn.ConvTranspose2d(in_ch//2, in_ch//2, 2, stride=2)
+            self.up = nn.ConvTranspose2d(in_ch // 2, in_ch // 2, 2, stride=2)
 
         self.conv = conv_block(in_ch, out_ch)
 
     def forward(self, x1, x2):
         x1 = self.up(x1)
-        
+
         # input is CHW
         diffY = x2.detach().size()[2] - x1.detach().size()[2]
         diffX = x2.detach().size()[3] - x1.detach().size()[3]
 
-        x1 = F.pad(x1, (diffX // 2, diffX - diffX//2,
-                        diffY // 2, diffY - diffY//2))
-        
-        # for padding issues, see 
+        x1 = F.pad(x1, (diffX // 2, diffX - diffX // 2,
+                        diffY // 2, diffY - diffY // 2))
+
+        # for padding issues, see
         # https://github.com/HaiyongJiang/U-Net-Pytorch-Unstructured-Buggy/commit/0e854509c2cea854e247a9c615f175f76fbb2e3a
         # https://github.com/xiaopeng-liao/Pytorch-UNet/commit/8ebac70e633bac59fc22bb5195e513d5832fb3bd
 
         x = torch.cat([x2, x1], dim=1)
         x = self.conv(x)
         return x
+
 
 class attention_up(nn.Module):
     def __init__(self, in_ch, out_ch, conv_block, bilinear=True, ):
@@ -168,7 +172,6 @@ class attention_up(nn.Module):
         x = torch.cat([x2, x1], dim=1)
         x = self.conv(x)
         return x
-
 
 
 class outconv(nn.Module):
