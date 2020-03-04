@@ -9,6 +9,8 @@ MODEL:
   LEGACY: False # If True, use the fixed UNet for backwards compatibility
   TOPOLOGY: [64, 128, 256, 512,]
   BLOCK_TYPE: 'Double' # Double = Double conv, Triple = Triple conv, for greater receptive field
+  BLOCK_ACTIVATION: 'ReLU' # 'ReLU' or 'PReLU', PReLU is known to perform well with pooling type 2Stride
+  POOLING_TYPE: 'MaxPooling' # 'MaxPooling', 'AvgPooling', '2Stride'
   SIMPLE_INTERPOLATION: False # True: Bilinear interpo, False: Deconv interpo
   USE_ATTENTION: False
   MULTISCALE_CONTEXT: # For U-Net bottleneck context module
@@ -18,6 +20,16 @@ MODEL:
   BACKBONE:
     ENABLED: False
     TYPE: 'resnet34'
+<<<<<<< HEAD
+=======
+  EDGE_WEIGHTED_LOSS:
+    TYPE: 'edge_loss_weight_mask' # Which preprocessed edge weight to use: e.g. edge_loss_weight_mask_32
+    SCALE: 1
+    WARMUP_ENABLED: False
+    WARMUP_START: 0
+    WARMUP_END: 1
+
+>>>>>>> f54e6f3279c0dfbff7a0374205e2f71b61e9ad99
 
 THRESH: 0.01 # Best threshold (only to be filled after running final model evaluation)
 DATASETS:
@@ -31,7 +43,6 @@ TRAINER:
   LR: 0.0001
   BATCH_SIZE: 1
   EPOCHS: 1000
-  EDGE_LOSS_SCALE: 1
 DATALOADER:
   NUM_WORKER: 1
   SHUFFLE: True
