@@ -17,7 +17,7 @@ DATALOADER:
   NUM_WORKER: 0
   S1_FEATURES: ['VV_asc_mean', 'VH_asc_mean', 'VV_desc_mean', 'VH_desc_mean']
   S2_FEATURES: ['Blue_median', 'Green_median', 'Red_median', 'RedEdge1_median','RedEdge2_median','RedEdge3_median', 'NIR_median','RedEdge4_median', 'SWIR1_median', 'SWIR2_median']
-  LABEL: 's1s2_allbands_twocities'
+  LABEL: 'pred_s1s2_allbands_twocities'
 AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'none'
