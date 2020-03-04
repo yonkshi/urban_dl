@@ -127,6 +127,7 @@ def classify_tiles(configs_dir: Path, models_dir: Path, root_dir: Path, save_dir
 
     # classification loop
     for train_test in ['train', 'test']:
+    #for train_test in ['train', 'test']:
         dataset = load_dataset(cfg, root_dir / train_test)
         year = dataset.metadata['year']
 
@@ -157,6 +158,49 @@ def classify_tiles(configs_dir: Path, models_dir: Path, root_dir: Path, save_dir
             write_tif(y_pred, geotransform, epsg, save_dir / experiment, fname, dtype=gdal.GDT_Byte)
 
 
+
+def classify_tiles(configs_dir: Path, models_dir: Path, root_dir: Path, save_dir: Path, experiment: str):
+
+    classification_batch_size = 10
+    mode = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = torch.device(mode)
+
+    cfg = load_cfg(configs_dir, experiment)
+
+    # cfg.MODEL.IN_CHANNELS = 3
+    # cfg.DATALOADER.S2_FEATURES = ['Green_median', 'Red_median', 'NIR_median']
+    print(cfg)
+    net = load_net(cfg, models_dir, experiment)
+
+    # classification loop
+    dataset = load_dataset(cfg, root_dir)
+    year = dataset.metadata['year']
+
+    for i in range(len(dataset)):
+        item = dataset.__getitem__(i)
+        img = item['x'].to(device)
+
+        metadata = dataset.metadata['samples'][i]
+        city = metadata['city']
+        patch_id = metadata['patch_id']
+        row_id, col_id = patch_id.split('-')
+        row_id, col_id = int(row_id), int(col_id)
+        tif_file = root_dir / 'sentinel1' / f'S1_{metadata["city"]}_{year}_{metadata["patch_id"]}.tif'
+        print(city, patch_id)
+        # if city == 'Stockholm':
+            # if 5376 <= row_id <= 6400 and 9728 <= col_id <= 13056:
+
+        _, geotransform, epsg = read_tif(tif_file)
+        y_pred = net(img.unsqueeze(0))
+        y_pred = torch.sigmoid(y_pred)
+
+        y_pred = y_pred.cpu().detach().numpy()
+        y_pred = y_pred[0, 0,] > cfg.THRESH
+        y_pred = y_pred.astype('uint8')
+
+
+        fname = f'pred_{metadata["city"]}_{year}_{metadata["patch_id"]}'
+        write_tif(y_pred, geotransform, epsg, save_dir / experiment, fname, dtype=gdal.GDT_Byte)
 
 def combine_tiles(data_dir: Path, city: str, year: int, tile_size=256, top_left=(0, 0)):
 
@@ -238,15 +282,15 @@ if __name__ == '__main__':
     # save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/classifications')
     save_dir = Path('/storage/yonk/urban_extraction_twocities/predicted/')
 
-    experiment = 's1_allbands_twocities'
+    experiment = 's2_allbands_twocities'
 
-    # classify_tiles(
-    #     configs_dir=configs_dir,
-    #     models_dir=models_dir,
-    #     root_dir=root_dir,
-    #     save_dir=save_dir,
-    #     experiment=experiment,
-    # )
+    classify_tiles(
+        configs_dir=configs_dir,
+        models_dir=models_dir,
+        root_dir=root_dir,
+        save_dir=save_dir,
+        experiment=experiment,
+    )
 
     # combine_tiles(save_dir / experiment, 'Stockholm', 2017, top_left=(5376, 9728))
     merge_tiles(save_dir / experiment, save_dir, experiment, 'Stockholm', 2017)
