@@ -8,6 +8,9 @@ import json
 import tifffile
 from pathlib import Path
 from unet.utils import *
+from torchvision import transforms
+from unet.augmentations import *
+from preprocessing.utils import *
 
 
 
@@ -186,11 +189,8 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
     '''
     Dataset for Urban Extraction style labelled Dataset
     '''
-    def __init__(self, cfg, # used for feature names
-                 root_dir: Path,  # path to folder with sub folder images and labels and a metadata file
-                 include_index: bool = False,  # index of sample
-                 transform: list = None  # list of transformations
-                 ):
+    def __init__(self, cfg, root_dir: Path, transform: list = None,
+                 include_index: bool = False, include_projection: bool = False):
         super().__init__()
 
         # setting up directories
@@ -209,8 +209,10 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
         self.length = len(self.metadata['samples'])
         print('dataset length', self.length)
 
-        self.include_index = include_index
         self.transform = transform
+        self.include_index = include_index
+        self.include_projection = include_projection
+
 
         # creating boolean feature vector to subset sentinel 1 and sentinel 2 bands
         self.s1_feature_selection = self._get_feature_selection(metadata['sentinel1'],
@@ -257,17 +259,21 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
         # img = np.nan_to_num(img).astype(np.float32)
 
         sample = {
-            'x': img, # numpy.array (m, n, N_CHANNELS)
-            'y': label, # numpy.array (m, n, 1)
-            'img_name': sample_id, # identifier of sample
+            'x': img,
+            'y': label,
+            'img_name': sample_id,
             'image_weight': np.float(sample_metadata['img_weight'])
         }
 
         if self.include_index:
             sample['index'] = index
 
-        return sample
+        if self.include_projection:
+            _, geotransform, epsg = read_tif(s1_file)
+            sample['geotransform'] = geotransform
+            sample['epsg'] = epsg
 
+        return sample
 
     def _get_feature_selection(self, features, selection):
         feature_selection = [False for _ in range(len(features))]
@@ -279,6 +285,79 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
     def __len__(self):
         return self.length
 
+
+
+class UrbanExtractionDatasetAugmentedLabels(UrbanExtractionDataset):
+    '''
+    Dataset for Urban Extraction style labelled Dataset
+    '''
+    def __init__(self, cfg, root_dir: Path, transform: list = None,
+                 include_index: bool = False, include_projection: bool = False,
+                 ndvi_threshold: float = 0.5):
+        UrbanExtractionDataset.__init__(self, cfg, root_dir, transform, include_index, include_projection)
+
+        self.red_selection = self._get_feature_selection(self.metadata['sentinel2'], ['Red_median'])
+        self.nir_selection = self._get_feature_selection(self.metadata['sentinel2'], ['NIR_median'])
+        self.ndvi_treshold = ndvi_threshold
+
+    def __getitem__(self, index):
+
+        # loading metadata of sample
+        sample_metadata = self.metadata['samples'][index]
+
+        city = sample_metadata['city']
+        patch_id = sample_metadata['patch_id']
+
+        s1_file = self.s1_dir / f'S1_{city}_{self.year}_{patch_id}.tif'
+        s2_file = self.s2_dir / f'S2_{city}_{self.year}_{patch_id}.tif'
+
+        label_name = self.cfg.DATALOADER.LABEL if self.cfg.DATALOADER.LABEL != 'guf' else 'GUF'
+        label_file = self.label_dir / f'{label_name}_{city}_{patch_id}.tif'
+
+        # loading images and corresponding label
+        # s2 data is always required due to label augmentation
+        s2_img = tifffile.imread(str(s2_file))
+        red, nir = s2_img[:, :, self.red_selection], s2_img[:, :, self.nir_selection]
+        s2_img = s2_img[:, :, self.s2_feature_selection]
+
+        if any(self.s1_feature_selection):
+            s1_img = tifffile.imread(str(s1_file))
+            s1_img = s1_img[:, :, self.s1_feature_selection]
+            img = np.concatenate([s1_img, s2_img], axis=-1)
+        else:
+            img = s2_img
+
+        label = tifffile.imread(str(label_file))
+
+        # removing vegetation from urban labels
+        ndvi = (nir - red) / (nir + red)
+        vegetation = ndvi > self.ndvi_treshold
+        augmented_label = np.logical_and(label, np.logical_not(vegetation))
+
+        augmented_label = augmented_label[:, :, None].astype(np.float32)
+
+        if self.transform:
+            img, augmented_label, sample_id, = self.transform((img, augmented_label, patch_id,))
+
+        # img = np.nan_to_num(img).astype(np.float32)
+
+        # TODO: maybe adjust img_weight for new label
+        sample = {
+            'x': img,
+            'y': augmented_label,
+            'img_name': sample_id,
+            'image_weight': np.float(sample_metadata['img_weight'])
+        }
+
+        if self.include_index:
+            sample['index'] = index
+
+        if self.include_projection:
+            _, geotransform, epsg = read_tif(s1_file)
+            sample['geotransform'] = geotransform
+            sample['epsg'] = epsg
+
+        return sample
 
 
 class UrbanExtractionDatasetInference(torch.utils.data.Dataset):
@@ -329,35 +408,21 @@ class UrbanExtractionDatasetInference(torch.utils.data.Dataset):
 
         # loading images and corresponding label
         if not any(self.s1_feature_selection):  # only sentinel 2 features
-            # img = cv2.imread(str(s1_file), -1)
             img = tifffile.imread(str(s2_file))
             img = img[:, :, self.s2_feature_selection]
         elif not any(self.s2_feature_selection):  # only sentinel 1 features
-            # img = cv2.imread(str(s1_file), -1)
             img = tifffile.imread(str(s1_file))
             img = img[:, :, self.s1_feature_selection]
         else:  # sentinel 1 and sentinel 2 features
-            # s1_img = cv2.imread(str(s1_file), -1)
             s1_img = tifffile.imread(str(s1_file))
             s1_img = s1_img[:, :, self.s1_feature_selection]
-            # s2_img = cv2.imread(str(s2_file), -1)
             s2_img = tifffile.imread(str(s2_file))
             s2_img = s2_img[:, :, self.s2_feature_selection]
             img = np.concatenate([s1_img, s2_img], axis=-1)
 
-        # label_old = cv2.imread(str(label_file), 0)
-        if self.transform:
-            img, label, sample_id, = self.transform((img, label, patch_id,))
-
-        # TODO: converts tensor back to numpy array?
-        # img = np.nan_to_num(img).astype(np.float32)
-
-        sample = {
-            'x': img, # numpy.array (m, n, N_CHANNELS)
-        }
-
-        if self.include_index:
-            sample['index'] = index
+        transform = transforms.Compose([Npy2Torch()])
+        img, _, _ = transform(img)
+        sample = {'x': img}
 
         return sample
 
@@ -371,5 +436,3 @@ class UrbanExtractionDatasetInference(torch.utils.data.Dataset):
 
     def __len__(self):
         return self.length
-
-
