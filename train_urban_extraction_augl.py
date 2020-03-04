@@ -24,7 +24,7 @@ from tabulate import tabulate
 import wandb
 
 from unet import UNet
-from unet.dataloader import UrbanExtractionDataset_png
+from unet.dataloader import UrbanExtractionDatasetAugmentedLabels
 from unet.augmentations import *
 
 from experiment_manager.metrics import f1_score
@@ -39,7 +39,7 @@ def train_net(net,
               cfg):
 
     log_path = cfg.OUTPUT_DIR
-    writer = SummaryWriter(log_path)
+    # writer = SummaryWriter(log_path)
 
     run_config = {}
     run_config['CONFIG_NAME'] = cfg.NAME
@@ -107,11 +107,12 @@ def train_net(net,
     trfm = transforms.Compose(trfm)
 
     # reset the generators
-    dataset = UrbanExtractionDataset_png(
+    dataset = UrbanExtractionDatasetAugmentedLabels(
         cfg=cfg,
         root_dir=cfg.DATASETS.TRAIN[0],
         include_index=True,
-        transform=trfm
+        transform=trfm,
+        ndvi_threshold=0.5
     )
 
     dataloader_kwargs = {
@@ -146,10 +147,10 @@ def train_net(net,
             optimizer.zero_grad()
 
             x = batch['x'].to(device)
+
             y_gts = batch['y'].to(device)
             # TODO: this is probably wrong
             image_weight = batch['image_weight']
-
 
             y_pred = net(x)
 
@@ -174,15 +175,14 @@ def train_net(net,
             loss_set.append(loss.item())
             positive_pixels_set.extend(image_weight.cpu().numpy())
 
-            if global_step % 10 == 0 or global_step != 0:
+
+
+            if global_step % 100 == 0 and global_step == 0:
                 # time per 100 steps
                 stop = timeit.default_timer()
                 time_per_n_batches= stop - start
 
-                if global_step % 10000 == 0 and global_step > 0:
-                    check_point_name = f'cp_{global_step}.pkl'
-                    save_path = os.path.join(log_path, check_point_name)
-                    torch.save(net.state_dict(), save_path)
+
 
                 # Averaged loss and f1 writer
 
@@ -207,7 +207,10 @@ def train_net(net,
 
             # torch.cuda.empty_cache()
             global_step += 1
-
+        # Save every epoch
+        check_point_name = f'cp_{global_step}.pkl'
+        save_path = os.path.join(log_path, check_point_name)
+        torch.save(net.state_dict(), save_path)
         if epoch % 2 == 0:
             # Evaluation after every other epoch
             model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
@@ -248,7 +251,7 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, ep
     trfm = transforms.Compose(trfm)
 
     if run_type == 'TRAIN':
-        dataset = UrbanExtractionDataset_png(
+        dataset = UrbanExtractionDatasetAugmentedLabels(
             cfg=cfg,
             root_dir=cfg.DATASETS.TRAIN[0],
             include_index=True,
@@ -256,7 +259,7 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, ep
         )
         inference_loop(net, cfg, device, evaluate, run_type= 'TRAIN', max_samples = max_samples, dataset=dataset)
     elif run_type == 'TEST':
-        dataset = UrbanExtractionDataset_png(
+        dataset = UrbanExtractionDatasetAugmentedLabels(
             cfg=cfg,
             root_dir=cfg.DATASETS.TEST[0],
             include_index=True,
