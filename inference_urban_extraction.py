@@ -9,88 +9,21 @@ from rasterio.merge import merge
 from unet import UNet
 from unet import dataloader
 from experiment_manager.config import new_config
-from preprocessing import urban_extraction as ue
-from torch.utils import data as torch_data
-import torchvision.transforms.functional as TF
+from preprocessing.utils import *
 from unet.augmentations import *
 from torchvision import transforms
 
 import matplotlib as mpl
 
-# plotting
-import matplotlib.pyplot as plt
 
-
-# reading in geotiff file as numpy array
-def read_tif(file: Path):
-
-    if not file.exists():
-        raise FileNotFoundError(f'File {file} not found')
-
-    ds = gdal.Open(str(file))
-
-    geotransform = ds.GetGeoTransform()
-
-    proj = osr.SpatialReference(wkt=ds.GetProjection())
-    epsg = int(proj.GetAttrValue('AUTHORITY' ,1))
-
-    xy_shape = np.array(ds.GetRasterBand(1).ReadAsArray()).shape
-
-    # get number of bands in raster file
-    n_bands = ds.RasterCount
-
-    # initialize a data cube
-    xyz_shape = xy_shape + (n_bands,)
-    data_cube = np.ndarray(xyz_shape)
-
-    # fill it with bands
-    for i in range(1, n_bands+1):
-        data_cube[: ,: , i -1] = np.array(ds.GetRasterBand(i).ReadAsArray())
-
-    ds = None
-    return data_cube, geotransform, epsg
-    # end of read in datacube function
-
-
-# writing an array to a geo tiff file
-def write_tif(arr, geotransform, epsg, save_dir: Path, fname: str, dtype=gdal.GDT_Float32):
-
-    if not save_dir.exists():
-        save_dir.mkdir()
-    file = save_dir / f'{fname}.tif'
-
-    n_rows, n_cols = arr.shape[:2]
-    n_bands = arr.shape[2] if len(arr.shape) > 2 else 1
-
-    driver = gdal.GetDriverByName("GTiff")
-    ds = driver.Create(str(file), n_rows, n_cols, n_bands, dtype)
-
-    # setting coordinate reference system
-    ds.SetGeoTransform(geotransform)
-    srs = osr.SpatialReference()
-    srs.ImportFromEPSG(epsg)
-    ds.SetProjection(srs.ExportToWkt())
-
-    # write data to file
-    if n_bands == 1:
-        arr = arr if len(arr.shape) == 2 else arr[:, :, 0]
-        ds.GetRasterBand(1).WriteArray(arr)
-    else:
-        for i in range(n_bands):
-            ds.GetRasterBand(i + 1).WriteArray(arr[:, :, i])
-
-    ds.FlushCache()  # saves to disk
-    del driver
-    del ds
-
-
-
+# loading cfg for inference
 def load_cfg(configs_dir: Path, experiment: str):
     cfg = new_config()
     cfg.merge_from_file(str(configs_dir / f'{experiment}.yaml'))
     return cfg
 
 
+# loading network for inference
 def load_net(cfg, models_dir: Path, experiment: str):
     net = UNet(cfg)
     state_dict = torch.load(models_dir / f'{experiment}.pkl', map_location=lambda storage, loc: storage)
@@ -104,105 +37,52 @@ def load_net(cfg, models_dir: Path, experiment: str):
 
     return net
 
+
+# loading dataset for inference
 def load_dataset(cfg, data_dir: Path):
     trfm = transforms.Compose([Npy2Torch()])
-    dataset = dataloader.UrbanExtractionDataset(cfg, data_dir, transform=trfm)
+    dataset = dataloader.UrbanExtractionDataset(cfg, data_dir, transform=trfm, include_projection=True)
     return dataset
 
 
-
-
-
-def classify_tiles(city: str, configs_dir: Path, models_dir: Path, root_dir: Path, save_dir: Path, experiment: str):
-
-    classification_batch_size = 10
-    mode = 'cuda' if torch.cuda.is_available() else 'cpu'
-    device = torch.device(mode)
-
-    cfg = load_cfg(configs_dir, experiment)
-
-    # cfg.MODEL.IN_CHANNELS = 3
-    # cfg.DATALOADER.S2_FEATURES = ['Green_median', 'Red_median', 'NIR_median']
-    print(cfg)
-    net = load_net(cfg, models_dir, experiment)
-
-    # classification loop
-    for train_test in ['train', 'test']:
-        dataset = load_dataset(cfg, root_dir / train_test)
-        year = dataset.metadata['year']
-
-        for i in range(len(dataset)):
-            item = dataset.__getitem__(i)
-            img = item['x'].to(device)
-
-            metadata = dataset.metadata['samples'][i]
-            patch_city = metadata['city']
-            patch_id = metadata['patch_id']
-            row_id, col_id = patch_id.split('-')
-            row_id, col_id = int(row_id), int(col_id)
-            tif_file = root_dir / train_test / 'guf' / f'GUF_{patch_city}_{patch_id}.tif'
-            print(city, patch_id)
-
-            if patch_city == city:
-                _, geotransform, epsg = read_tif(tif_file)
-                y_pred = net(img.unsqueeze(0))
-                y_pred = torch.sigmoid(y_pred)
-
-                y_pred = y_pred.cpu().detach().numpy()
-                y_pred = y_pred[0, 0,] > cfg.THRESH
-                y_pred = y_pred.astype('uint8')
-
-                fname = f'pred_{metadata["city"]}_{year}_{metadata["patch_id"]}'
-                write_tif(y_pred, geotransform, epsg, save_dir / experiment, fname, dtype=gdal.GDT_Byte)
-
-            # if city == 'Stockholm':
-                # if 5376 <= row_id <= 6400 and 9728 <= col_id <= 13056:
-
-            _, geotransform, epsg = read_tif(tif_file)
-            y_pred = net(img.unsqueeze(0))
-            y_pred = torch.sigmoid(y_pred)
-
-            y_pred = y_pred.cpu().detach().numpy()
-            y_pred = y_pred[0, 0,] > cfg.THRESH
-            y_pred = y_pred.astype('uint8')
-
-
-            fname = f'pred_{metadata["city"]}_{year}_{metadata["patch_id"]}'
-            write_tif(y_pred, geotransform, epsg, save_dir / experiment, fname, dtype=gdal.GDT_Byte)
-
-
-
-def classify_tiles_noprep(city: str, year: int, configs_dir: Path, models_dir: Path, root_dir: Path, save_dir: Path, experiment: str):
+# uses trained model to make a prediction for each tiles
+def inference_tiles(data_dir: Path, experiment: str, city: str, configs_dir: Path, models_dir: Path,
+                    metadata_exists: bool = True):
 
     mode = 'cuda' if torch.cuda.is_available() else 'cpu'
     device = torch.device(mode)
 
+    # loading cfg and network
     cfg = load_cfg(configs_dir, experiment)
-
-    # cfg.MODEL.IN_CHANNELS = 3
-    # cfg.DATALOADER.S2_FEATURES = ['Green_median', 'Red_median', 'NIR_median']
-    print(cfg)
     net = load_net(cfg, models_dir, experiment)
 
-    # classification loop
-    trfm = transforms.Compose([Npy2Torch()])
-    dataset = dataloader.UrbanExtractionDatasetNoPrep(cfg, root_dir, transform=None)
+    # setting up save directory
+    save_dir = data_dir / f'pred_{experiment}'
+    if not save_dir.exists():
+        save_dir.mkdir()
 
+    # loading dataset from config (requires metadata)
+    if not metadata_exists:
+        # TODO: generate metadata file
+        pass
+    # TODO: create dataloader for no labels
+    dataset = load_dataset(cfg, data_dir)
+    year = dataset.metadata['year']
 
+    # classifying all tiles in dataset
     for i in range(len(dataset)):
         item = dataset.__getitem__(i)
-        img = item['x']
-        img = TF.to_tensor(img)
-        img = img.to(device)
+        img = item['x'].to(device)
 
         metadata = dataset.metadata['samples'][i]
         patch_city = metadata['city']
         patch_id = metadata['patch_id']
 
-        tif_file = root_dir / 'sentinel1' / f'S1_{patch_city}_{year}_{patch_id}.tif'
-        print(patch_city, patch_id)
         if patch_city == city:
-            _, geotransform, epsg = read_tif(tif_file)
+            print(patch_city, patch_id)
+            geotransform = item['geotransform']
+            epsg = item['epsg']
+
             y_pred = net(img.unsqueeze(0))
             y_pred = torch.sigmoid(y_pred)
 
@@ -211,7 +91,8 @@ def classify_tiles_noprep(city: str, year: int, configs_dir: Path, models_dir: P
             y_pred = y_pred.astype('uint8')
 
             fname = f'pred_{patch_city}_{year}_{patch_id}'
-            write_tif(y_pred, geotransform, epsg, save_dir / f'{year}' / experiment, fname, dtype=gdal.GDT_Byte)
+            write_tif(y_pred, geotransform, epsg, save_dir, fname, dtype=gdal.GDT_Byte)
+
 
 
 
@@ -255,16 +136,20 @@ def combine_tiles(data_dir: Path, city: str, year: int, tile_size=256, top_left=
     mpl.image.imsave(classified_map, arr, vmin=-20, vmax=0, cmap='viridis')
 
 
-def merge_tiles(data_dir: Path, save_dir: Path, experiment: str, city: str, year: int):
+def merge_tiles(root_dir: Path, product: str, save_dir: Path = None):
 
-    # getting all files in directory
-    files_in_dir = [file for file in data_dir.glob('**/*')]
+    # getting all files of product in train and test directory
+    train_files_dir = root_dir / 'train' / product
+    test_files_dir = root_dir / 'test' / product
+    files_in_train = [file for file in train_files_dir.glob('**/*')]
+    files_in_test = [file for file in test_files_dir.glob('**/*')]
+    files = files_in_train + files_in_test
 
-    # sub setting files
+    # sub setting files to city
     files_to_mosaic = []
-    for file in files_in_dir:
-        _, city_file, year_file, _ = file.stem.split('_')
-        if city_file == city and year_file == str(year):
+    for file in files:
+        city_file = file.stem.split('_')[1]
+        if city_file == city:
             src = rasterio.open(str(file))
             files_to_mosaic.append(src)
 
@@ -278,7 +163,16 @@ def merge_tiles(data_dir: Path, save_dir: Path, experiment: str, city: str, year
                      "width": mosaic.shape[2],
                      "transform": out_trans})
 
-    out_file = save_dir / f'pred_{city}_{year}_{experiment}.tif'
+    # dropping patch id from file name
+    fname_parts = file.stem.split('_')[:-1]
+    prefix = '_'.join(fname_parts)
+
+    if save_dir is None:
+        save_dir = root_dir / 'maps'
+    if not save_dir.exists():
+        save_dir.mkdir()
+
+    out_file = save_dir / f'{prefix}_{experiment}.tif'
     with rasterio.open(out_file, "w", **out_meta) as dest:
         dest.write(mosaic)
 
@@ -286,54 +180,33 @@ def merge_tiles(data_dir: Path, save_dir: Path, experiment: str, city: str, year
 
 if __name__ == '__main__':
 
-    configs_dir = Path('configs/urban_extraction')
-<<<<<<< HEAD
+    CONFIGS_DIR = Path('configs/urban_extraction')
 
     models_dir = Path('C:/Users/shafner/models')
     # models_dir = Path('/home/yonk/saved_models')
 
-    root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/urban_extraction_2019')
-    # root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/urban_extraction_twocities')
+    preprocessed_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed')
     # root_dir = Path('/storage/yonk/urban_extraction_twocities/')
 
     save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/classifications')
     # save_dir = Path('/storage/yonk/urban_extraction_twocities/predicted/')
 
-    experiment = 's1s2_allbands_twocities'
+    # set dataset and experiment
+    dataset = 'twocities'
+    experiment = 's1s2_allbands'
 
-    models_dir = Path('/home/yonk/saved_models')
-
-    # root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/urban_extraction_twocities')
-    root_dir = Path('/storage/yonk/urban_extraction_twocities/')
-
-    # save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/classifications')
-    save_dir = Path('/storage/yonk/urban_extraction_twocities/predicted/')
-
-    experiment = 's1_allbands_twocities'
-
-    # classify_tiles(
-    #     configs_dir=configs_dir,
-    #     models_dir=models_dir,
-    #     root_dir=root_dir,
-    #     save_dir=save_dir,
-    #     experiment=experiment,
-    # )
-
-
-    for city in ['Stockholm', 'Milano', 'Beijing']:
-
-        classify_tiles_noprep(
+    for train_test in ['test']:
+        city = 'Beijing'
+        data_dir = preprocessed_dir / f'urban_extraction_{dataset}' / train_test
+        inference_tiles(
+            data_dir=data_dir,
+            experiment=f'{experiment}_{dataset}',
             city=city,
-            year=2019,
-            configs_dir=configs_dir,
+            configs_dir=CONFIGS_DIR,
             models_dir=models_dir,
-            root_dir=root_dir,
-            save_dir=save_dir,
-            experiment=experiment
+            metadata_exists=True
         )
 
-        merge_tiles(save_dir / f'{2019}' / experiment, save_dir, experiment, city, 2019)
-
-    # combine_tiles(save_dir / experiment, 'Stockholm', 2017, top_left=(5376, 9728))
-    # merge_tiles(save_dir / experiment, save_dir, experiment, 'Stockholm', 2017)
-    # merge_tiles(save_dir / experiment, save_dir, experiment, 'Beijing', 2019)
+    product = 'pred_s1s2_allbands_twocities'
+    root_dir = preprocessed_dir / f'urban_extraction_{dataset}'
+    # merge_tiles(root_dir, product)
