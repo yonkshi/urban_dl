@@ -182,30 +182,27 @@ if __name__ == '__main__':
 
     CONFIGS_DIR = Path('configs/urban_extraction')
 
-    models_dir = Path('C:/Users/shafner/models')
-    # models_dir = Path('/home/yonk/saved_models')
+    # models_dir = Path('C:/Users/shafner/models')
+    models_dir = Path('/home/yonk/saved_models')
 
-    preprocessed_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed')
-    # root_dir = Path('/storage/yonk/urban_extraction_twocities/')
-
-    save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/classifications')
-    # save_dir = Path('/storage/yonk/urban_extraction_twocities/predicted/')
+    # preprocessed_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed')
+    preprocessed_dir = Path('/storage/yonk/')
 
     # set dataset and experiment
     dataset = 'twocities'
     experiment = 's1s2_allbands'
 
-    for train_test in ['test']:
-        city = 'Beijing'
-        data_dir = preprocessed_dir / f'urban_extraction_{dataset}' / train_test
-        inference_tiles(
-            data_dir=data_dir,
-            experiment=f'{experiment}_{dataset}',
-            city=city,
-            configs_dir=CONFIGS_DIR,
-            models_dir=models_dir,
-            metadata_exists=True
-        )
+    for train_test in ['train', 'test']:
+        for city in ['Beijing', 'Stockholm']:
+            data_dir = preprocessed_dir / f'urban_extraction_{dataset}' / train_test
+            inference_tiles(
+                data_dir=data_dir,
+                experiment=f'{experiment}_{dataset}',
+                city=city,
+                configs_dir=CONFIGS_DIR,
+                models_dir=models_dir,
+                metadata_exists=True
+            )
 
     product = 'pred_s1s2_allbands_twocities'
     root_dir = preprocessed_dir / f'urban_extraction_{dataset}'
