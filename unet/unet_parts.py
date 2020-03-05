@@ -105,16 +105,20 @@ class inconv(nn.Module):
 class down(nn.Module):
     def __init__(self, in_ch, out_ch, conv_block, activation, pooling_layer):
         super(down, self).__init__()
+        if pooling_layer == 'MaxPooling':
+            self.pooling_layer = nn.MaxPool2d(2)
+        elif pooling_layer == 'AvgPooling':
+            self.pooling_layer = nn.AvgPool2d(2)
+        elif pooling_layer == '2Stride':
+            self.pooling_layer = nn.Conv2d(in_ch, in_ch, 2, 2)
 
-        self.mpconv = nn.Sequential(
-            pooling_layer,
-            conv_block(in_ch, out_ch, activation)
-        )
+        self.mpconv = conv_block(in_ch, out_ch, activation)
 
 
     def forward(self, x):
-        x = self.mpconv(x)
-        return x
+        x1 = self.pooling_layer(x)
+        out = self.mpconv(x1)
+        return out
 
 
 class up(nn.Module):

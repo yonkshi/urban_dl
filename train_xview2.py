@@ -88,6 +88,10 @@ def train_net(net,
     global_step = 0
     epochs = cfg.TRAINER.EPOCHS
 
+    # TODO DELETE ME
+    for name, m in net.named_parameters():
+        print(name)
+
     use_edge_loss = cfg.MODEL.LOSS_TYPE == 'FrankensteinEdgeLoss'
 
     trfm = []

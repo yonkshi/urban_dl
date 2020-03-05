@@ -7,14 +7,15 @@ from .unet_parts import *
 
 class UNet(nn.Module):
     def __init__(self, cfg):
+        super(UNet, self).__init__()
 
         n_channels = cfg.MODEL.IN_CHANNELS
         n_classes = cfg.MODEL.OUT_CHANNELS
 
         if cfg.MODEL.BLOCK_ACTIVATION == 'PReLU':
-            activation = nn.PReLU()
+            self.activation  = nn.PReLU()
         else:
-            activation = nn.ReLU(inplace=True)
+            self.activation = nn.ReLU(inplace=True)
 
 
         if cfg.MODEL.BLOCK_TYPE == 'Double':
@@ -24,10 +25,10 @@ class UNet(nn.Module):
 
         self._cfg = cfg
 
-        super(UNet, self).__init__()
+
 
         first_chan = cfg.MODEL.TOPOLOGY[0]
-        self.inc = inconv(n_channels, first_chan, conv_block, activation)
+        self.inc = inconv(n_channels, first_chan, conv_block, self.activation)
         self.outc = outconv(first_chan, n_classes)
         self.multiscale_context_enabled = cfg.MODEL.MULTISCALE_CONTEXT.ENABLED
         self.multiscale_context_type = cfg.MODEL.MULTISCALE_CONTEXT.TYPE
@@ -46,8 +47,7 @@ class UNet(nn.Module):
             is_not_last_layer = idx != n_layers-1
             in_dim = down_topo[idx]
             out_dim = down_topo[idx+1] if is_not_last_layer else down_topo[idx] # last layer
-            pooling_layer = self._build_pooling_layer(in_dim)
-            layer = down(in_dim, out_dim, conv_block, activation, pooling_layer)
+            layer = down(in_dim, out_dim, conv_block, self.activation, self._cfg.MODEL.POOLING_TYPE)
 
             print(f'down{idx+1}: in {in_dim}, out {out_dim}')
             down_dict[f'down{idx+1}'] = layer
@@ -67,7 +67,7 @@ class UNet(nn.Module):
             in_dim = up_topo[x1_idx] * 2
             out_dim = up_topo[x2_idx]
 
-            layer = up_block(in_dim, out_dim, conv_block, activation, bilinear=cfg.MODEL.SIMPLE_INTERPOLATION)
+            layer = up_block(in_dim, out_dim, conv_block, self.activation, bilinear=cfg.MODEL.SIMPLE_INTERPOLATION)
 
             print(f'up{idx+1}: in {in_dim}, out {out_dim}')
             up_dict[f'up{idx+1}'] = layer
@@ -99,15 +99,6 @@ class UNet(nn.Module):
         out = self.outc(x1)
 
         return out
-    def _build_pooling_layer(self, in_channel):
-
-        if self._cfg.MODEL.POOLING_TYPE == 'MaxPooling':
-            pooling_layer = nn.MaxPool2d(2)
-        elif self._cfg.MODEL.POOLING_TYPE == 'AvgPooling':
-            pooling_layer = nn.AvgPool2d(2)
-        elif self._cfg.MODEL.POOLING_TYPE == '2Stride':
-            pooling_layer = nn.Conv2d(in_channel, in_channel, 2, 2)
-        return pooling_layer
 
 class MultiScaleContextForUNet(nn.Module):
     def __init__(self, cfg, bottlneck_dim):
