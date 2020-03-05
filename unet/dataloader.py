@@ -336,7 +336,8 @@ class UrbanExtractionDatasetAugmentedLabels(UrbanExtractionDataset):
         # removing vegetation from urban labels
         ndvi = (nir - red) / (nir + red)
         vegetation = ndvi > self.ndvi_treshold
-        augmented_label = np.logical_and(label, np.logical_not(vegetation))
+        not_vegetation = np.logical_not(vegetation)
+        augmented_label = np.logical_and(label, not_vegetation)
 
         augmented_label = augmented_label[:, :, None].astype(np.float32)
 
