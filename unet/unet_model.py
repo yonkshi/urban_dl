@@ -68,6 +68,9 @@ class UNet(nn.Module):
             out_dim = up_topo[x2_idx]
 
             layer = up_block(in_dim, out_dim, conv_block, self.activation, bilinear=cfg.MODEL.SIMPLE_INTERPOLATION)
+            if idx == 0 and cfg.MODEL.LAST_LAYER_RESIDUAL:
+                in_dim = up_topo[x1_idx]
+                layer = residual_up(in_dim, out_dim, conv_block, self.activation, bilinear=cfg.MODEL.SIMPLE_INTERPOLATION)
 
             print(f'up{idx+1}: in {in_dim}, out {out_dim}')
             up_dict[f'up{idx+1}'] = layer
@@ -75,9 +78,9 @@ class UNet(nn.Module):
         self.up_seq = nn.ModuleDict(up_dict)
 
     def forward(self, x):
-        x1 = self.inc(x)
+        inc_out = self.inc(x)
 
-        inputs = [x1]
+        inputs = [inc_out]
         # Downward U:
         for layer in self.down_seq.values():
             out = layer(inputs[-1])
@@ -94,7 +97,8 @@ class UNet(nn.Module):
         x1 = inputs.pop(0)
         for idx, layer in enumerate(self.up_seq.values()):
             x2 = inputs[idx]
-            x1 = layer(x1, x2)  # x1 for next up layer
+            x_out = layer(x1, x2)  # x1 for next up layer
+            x1 = x_out
 
         out = self.outc(x1)
 

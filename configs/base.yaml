@@ -13,6 +13,7 @@ MODEL:
   POOLING_TYPE: 'MaxPooling' # 'MaxPooling', 'AvgPooling', '2Stride'
   SIMPLE_INTERPOLATION: False # True: Bilinear interpo, False: Deconv interpo
   USE_ATTENTION: False
+  LAST_LAYER_RESIDUAL: False # Switches last layer to a Residual connection to preserve feature information
   MULTISCALE_CONTEXT: # For U-Net bottleneck context module
     ENABLED: False
     TYPE: 'Simple' # [Simple, PyramidSum, ParallelSum]
