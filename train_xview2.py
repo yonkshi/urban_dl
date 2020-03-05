@@ -32,6 +32,7 @@ from experiment_manager.config import new_config
 from experiment_manager.loss import soft_dice_loss, soft_dice_loss_balanced, jaccard_like_loss, jaccard_like_balanced_loss, jaccard_like_loss_multi_class
 from eval_unet_xview2 import model_eval
 
+from PIL import Image
 
 # import hp
 
@@ -136,6 +137,8 @@ def train_net(net, cfg):
 
     dataloader = torch_data.DataLoader(dataset, **dataloader_kwargs)
 
+    idx = 0
+
     for epoch in range(epochs):
         start = timeit.default_timer()
         print('Starting epoch {}/{}.'.format(epoch + 1, epochs))
@@ -175,6 +178,10 @@ def train_net(net, cfg):
             loss_set.append(loss.item())
             positive_pixels_set.extend(image_weight.cpu().numpy())
 
+            if global_step % 1000 == 999:
+                plot_images(x[0].cpu().numpy(), y_gts[0].cpu().numpy(), (F.softmax(y_pred, dim=1))[0].detach().cpu().numpy(), idx)
+
+
             if global_step % 100 == 0 or global_step == 0:
                 # time per 100 steps
                 stop = timeit.default_timer()
@@ -213,6 +220,45 @@ def train_net(net, cfg):
             # Evaluation after every other epoch
             model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
             model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
+
+
+def plot_images(x_n, y_gts_n, y_pred_n, idx):
+
+    y_pred_class_n = np.argmax(y_pred_n, 0)  # [256, 256]
+
+    y_gts_n_compact = y_gts_n.copy()
+    y_gts_n_compact[0] *= 0
+    y_gts_n_compact[2] *= 2
+    y_gts_n_compact[3] *= 3
+    y_gts_n_compact = np.sum(y_gts_n_compact, 0)  # [256, 256]
+
+    choosed_class = np.zeros((256, 256, 3))
+    choosed_class[:, :, 2] = np.minimum((y_pred_class_n == 3) * 1. + (y_pred_class_n == 2) * 1., 1)
+    choosed_class[:, :, 1] = np.minimum((y_pred_class_n == 1) * 1. + (y_pred_class_n == 2) * 1., 1)
+
+    img = Image.fromarray((choosed_class * 255).astype(np.uint8))
+    img.save("imgs/choosed_class" + str(idx) + ".png")
+
+    choosed_building = (y_pred_class_n > 1) * 1.
+
+    img = Image.fromarray((choosed_building * 255).astype(np.uint8))
+    img.save("imgs/choosed_building" + str(idx) + ".png")
+
+    ground_truth = (y_gts_n_compact > 1) * 1.
+
+    img = Image.fromarray((ground_truth * 255).astype(np.uint8))
+    img.save("imgs/ground_truth" + str(idx) + ".png")
+
+    error = (y_gts_n_compact != y_pred_class_n) * 1.
+    colored_error = np.zeros((256, 256, 3))
+    colored_error[:, :, 0] = error
+    colored_error[:, :, 2] = (y_gts_n_compact / 3.)
+
+    img = Image.fromarray((colored_error * 255).astype(np.uint8))
+    img.save("imgs/error" + str(idx) + ".png")
+
+    img = Image.fromarray(np.moveaxis((x_n * 255).astype(np.uint8), 0, -1))
+    img.save("imgs/x" + str(idx) + ".png")
 
 
 def collapse_label(label, device):
