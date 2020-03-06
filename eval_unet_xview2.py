@@ -308,6 +308,11 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, ep
 
     measurer = MultiThresholdMetric(F1_THRESH)
     def evaluate(y_true, y_pred, img_filename):
+
+        if cfg.MODEL.OUT_CHANNELS == 4:
+            y_true = y_true[:,2:,:,:].sum(1)
+            y_pred = y_pred[:,2:,:,:].sum(1)
+
         y_true = y_true.detach()
         y_pred = y_pred.detach()
         y_true_set.append(y_true.cpu())
@@ -396,6 +401,8 @@ def inference_loop(net, cfg, device,
         if cfg.AUGMENTATION.RESIZE: trfm.append( Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
         trfm.append(BGR2RGB())
         if cfg.DATASETS.USE_CLAHE_VARI: trfm.append(VARI())
+        if cfg.MODEL.IN_CHANNELS == 4:
+            trfm.append(AddCanny())
         trfm.append(Npy2Torch())
         trfm = transforms.Compose(trfm)
 

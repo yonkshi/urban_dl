@@ -1,0 +1,21 @@
+_BASE_: "unet_dice.yaml"
+THRESH: 0.52
+MODEL:
+  LOSS_TYPE: 'Frankenstein4Classes'
+  OUT_CHANNELS: 4
+  BLOCK_TYPE: 'Triple'
+  POSITIVE_WEIGHT: 1
+  NEGATIVE_WEIGHT: 1
+  EDGE_WEIGHT: 20 # CHANGE ME
+OUTPUT_BASE_DIR: ('/Midgard/home/pshi/run_logs/unet/')
+AUGMENTATION:
+  # Random cropping of the images
+  CROP_TYPE: 'importance'
+  CROP_SIZE: 256
+  IMAGE_OVERSAMPLING_TYPE: 'simple'
+  KERNEL_SIZE: 5
+
+
+
+
+

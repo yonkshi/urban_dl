@@ -172,3 +172,45 @@ class RandomFlipRotate():
         return input, label, image_path
 def bgr2rgb(img):
     return img[..., [2,1,0]]
+
+
+class AddLabelChannels():
+
+    def __init__(self, kernel_size=5):
+        self.kernel = np.ones((kernel_size, kernel_size), np.uint8)
+
+    def __call__(self, args):
+        input, label, image_path = args
+
+        dilation = cv2.dilate(label[:, :, 0], self.kernel, iterations=1)
+        erosion = cv2.erode(label[:, :, 0], self.kernel, iterations=1)
+
+        label_0 = 1 - dilation
+        label_1 = np.abs(label[:, :, 0] - dilation)
+        label_2 = np.abs(label[:, :, 0] - erosion)
+        label_3 = erosion
+
+        new_label = np.stack((label_0, label_1, label_2, label_3), -1)
+
+        return input, new_label, image_path
+
+
+class AddCanny():
+
+    def __call__(self, args):
+
+        input, label, image_path = args
+
+        edges1 = np.expand_dims(cv2.Canny(input, 10, 240), -1) * 0.2
+        edges2 = np.expand_dims(cv2.Canny(input, 20, 240), -1) * 0.2
+        edges3 = np.expand_dims(cv2.Canny(input, 50, 240), -1) * 0.2
+        edges4 = np.expand_dims(cv2.Canny(input, 80, 240), -1) * 0.2
+        edges5 = np.expand_dims(cv2.Canny(input, 100, 240), -1) * 0.2
+
+        edges = np.clip(edges1 + edges2 + edges3 + edges4 + edges5, 0., 255.)
+
+        edges = edges.astype(np.uint8)
+
+        new_input = np.concatenate((input, edges), -1)
+
+        return new_input, label, image_path
