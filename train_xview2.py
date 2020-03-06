@@ -236,6 +236,10 @@ def plot_images(x_n, y_gts_n, y_pred_n, idx):
                              (y_pred_n * y_gts_n),                      # G: true positives
                              (np.maximum(y_gts_n - y_pred_n, 0.))), 0)  # B: false positives
 
+    isdir = os.path.isdir("./imgs")
+    if not isdir:
+        os.mkdir("./imgs")
+
     img = Image.fromarray(np.moveaxis((canvas * 255).astype(np.uint8), 0, -1))
     img.save("imgs/error" + str(idx) + ".png")
 
