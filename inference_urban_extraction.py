@@ -1,8 +1,4 @@
 from pathlib import Path
-
-import gdal
-import osr
-import tifffile
 import rasterio
 from rasterio.merge import merge
 
@@ -17,16 +13,18 @@ import matplotlib as mpl
 
 
 # loading cfg for inference
-def load_cfg(configs_dir: Path, experiment: str):
+def load_cfg(configs_dir: Path, cfg_name: str):
+    configs_file = configs_dir / f'{cfg_name}.yaml'
     cfg = new_config()
-    cfg.merge_from_file(str(configs_dir / f'{experiment}.yaml'))
+    cfg.merge_from_file(str(configs_file))
     return cfg
 
 
 # loading network for inference
-def load_net(cfg, models_dir: Path, experiment: str):
+def load_net(cfg, net_dir: Path, net_name: str):
     net = UNet(cfg)
-    state_dict = torch.load(models_dir / f'{experiment}.pkl', map_location=lambda storage, loc: storage)
+    net_file = net_dir / f'{net_name}.pkl'
+    state_dict = torch.load(str(net_file), map_location=lambda storage, loc: storage)
     net.load_state_dict(state_dict)
 
     mode = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -46,23 +44,24 @@ def load_dataset(cfg, data_dir: Path):
 
 
 # uses trained model to make a prediction for each tiles
-def inference_tiles(data_dir: Path, experiment: str, city: str, configs_dir: Path, models_dir: Path,
-                    metadata_exists: bool = True):
+def inference_tiles(data_dir: Path, experiment: str, dataset: str, city: str, configs_dir: Path, models_dir: Path,
+                    model_cp: int, metadata_exists: bool = True):
 
     mode = 'cuda' if torch.cuda.is_available() else 'cpu'
     device = torch.device(mode)
 
     # loading cfg and network
-    cfg = load_cfg(configs_dir, experiment)
-    net = load_net(cfg, models_dir, experiment)
+    cfg = load_cfg(configs_dir, f'{experiment}_{dataset}')
+    net = load_net(cfg, models_dir / f'{experiment}_{dataset}', f'cp_{model_cp}')
 
     # setting up save directory
-    save_dir = data_dir / f'pred_{experiment}'
+    save_dir = data_dir / f'pred_{experiment}_{dataset}'
     if not save_dir.exists():
         save_dir.mkdir()
 
     # loading dataset from config (requires metadata)
-    if not metadata_exists:
+    metadata_file = data_dir / 'metadata.json'
+    if not metadata_file.exists():
         # TODO: generate metadata file
         pass
     # TODO: create dataloader for no labels
@@ -87,7 +86,8 @@ def inference_tiles(data_dir: Path, experiment: str, city: str, configs_dir: Pat
             y_pred = torch.sigmoid(y_pred)
 
             y_pred = y_pred.cpu().detach().numpy()
-            y_pred = y_pred[0, 0, ] > cfg.THRESH
+            threshold = cfg.THRESH
+            y_pred = y_pred[0, 0, ] > threshold
             y_pred = y_pred.astype('uint8')
 
             fname = f'pred_{patch_city}_{year}_{patch_id}'
@@ -180,33 +180,36 @@ def merge_tiles(root_dir: Path, product: str, save_dir: Path = None):
 
 if __name__ == '__main__':
 
-    CONFIGS_DIR = Path('configs/urban_extraction')
+    CONFIGS_DIR = Path.cwd() / Path('configs/urban_extraction')
 
-    models_dir = Path('C:/Users/shafner/models')
+    models_dir = Path('/storage/shafner/run_logs/unet/')
+    # models_dir = Path('C:/Users/shafner/models')
     # models_dir = Path('/home/yonk/saved_models')
 
-    preprocessed_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed')
-    # root_dir = Path('/storage/yonk/urban_extraction_twocities/')
+    # preprocessed_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed')
+    storage_dir = Path('/storage/shafner/urban_extraction')
 
-    save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/classifications')
-    # save_dir = Path('/storage/yonk/urban_extraction_twocities/predicted/')
+    # save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/classifications')
+    # save_dir = Path('/storage/shafner/urban_extraction_twocities/predicted/')
 
-    # set dataset and experiment
+    # set experiment and dataset
+    experiment = 's1s2_allbands_augl'
     dataset = 'twocities'
-    experiment = 's1s2_allbands'
 
-    for train_test in ['test']:
+    for train_test in ['train', 'test']:
         city = 'Beijing'
-        data_dir = preprocessed_dir / f'urban_extraction_{dataset}' / train_test
+        data_dir = storage_dir / f'urban_extraction_{dataset}' / train_test
         inference_tiles(
             data_dir=data_dir,
-            experiment=f'{experiment}_{dataset}',
+            experiment=experiment,
+            dataset=dataset,
             city=city,
             configs_dir=CONFIGS_DIR,
             models_dir=models_dir,
+            model_cp=5550,
             metadata_exists=True
         )
 
-    product = 'pred_s1s2_allbands_twocities'
-    root_dir = preprocessed_dir / f'urban_extraction_{dataset}'
+    # product = 'pred_s1s2_allbands_twocities'
+    # root_dir = preprocessed_dir / f'urban_extraction_{dataset}'
     # merge_tiles(root_dir, product)
