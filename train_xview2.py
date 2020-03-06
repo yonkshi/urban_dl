@@ -188,7 +188,7 @@ def train_net(net,
             positive_pixels_set.extend(image_weight.cpu().numpy())
 
             if global_step % 1000 == 999:
-                plot_images(x[0].cpu().numpy(), y_gts[0].cpu().numpy(), ((y_pred[0] > cfg.THRESH)*1.).detach().cpu().numpy(), int(global_step / 100))
+                plot_images(x[0].cpu().numpy(), y_gts[0].cpu().numpy(), ((y_pred[0] > cfg.THRESH)*1.).detach().cpu().numpy(), int(global_step / 1000))
 
             if global_step % 100 == 0 or global_step == 0:
                 # time per 100 steps
@@ -279,11 +279,8 @@ def frankenstein_edge_loss(y_pred, y_gts, edge_mask, scale):
     loss = ce + jaccard + edge_ce
 
     return loss, ce, jaccard, edge_ce
-<<<<<<< HEAD
 
 
-=======
->>>>>>> 5ea9166cb33bd398febb4ef8236d8c7a49190886
 def edge_loss_warmup_schedule(cfg, global_step):
     # Scheduler for edge loss
     if cfg.MODEL.EDGE_WEIGHTED_LOSS.WARMUP_ENABLED:
@@ -299,11 +296,8 @@ def edge_loss_warmup_schedule(cfg, global_step):
     else:
         edge_loss_scale = cfg.MODEL.EDGE_WEIGHTED_LOSS.SCALE
     return edge_loss_scale
-<<<<<<< HEAD
 
 
-=======
->>>>>>> 5ea9166cb33bd398febb4ef8236d8c7a49190886
 def setup(args):
     cfg = new_config()
     cfg.merge_from_file(f'configs/{args.config_file}.yaml')
