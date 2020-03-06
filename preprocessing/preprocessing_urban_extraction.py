@@ -35,17 +35,17 @@ def is_edge_tile(file: Path, tile_size=256):
     return True
 
 
-def preprocess_dataset(root_dir: Path, save_dir: Path, experiment_name: str, year: int, cities: list,
-                       s1_features: list, s2_features: list, split: float):
+def preprocess_dataset(data_dir: Path, save_dir: Path, cities: list, year: int, label: str,
+                       s1_features: list, s2_features: list, split: float, seed: int = 42):
 
     # setting up raw data directories
-    s1_dir = root_dir / 'sentinel1'
-    s2_dir = root_dir / 'sentinel2'
-    guf_dir = root_dir / 'guf'
+    s1_dir = data_dir / 'sentinel1'
+    s2_dir = data_dir / 'sentinel2'
+    label_dir = data_dir / label
 
-    # setting up directories for preprocessed data
-    train_dir = save_dir / experiment_name / 'train'
-    test_dir = save_dir / experiment_name / 'test'
+    # setting up save dir
+    if not save_dir.exists():
+        save_dir.mkdir()
 
     # container to store all the metadata
     dataset_metadata = {
@@ -56,52 +56,52 @@ def preprocess_dataset(root_dir: Path, save_dir: Path, experiment_name: str, yea
     }
 
     # getting all guf files
-    guf_files = [file for file in guf_dir.glob('**/*')]
+    label_files = [file for file in label_dir.glob('**/*')]
 
     # generating random numbers for split
-    random_numbers = list(np.random.uniform(size=len(guf_files)))
+    np.random.seed(seed)
+    random_numbers = list(np.random.uniform(size=len(label_files)))
 
     # main loop splitting into train test, removing edge tiles, and collecting metadata
-    train_samples, test_samples = [], []
-    for i, (guf_file, random_num) in enumerate(zip(guf_files, random_numbers)):
-        if not is_edge_tile(guf_file):
+    samples = {'train': [], 'test': []}
+    for i, (label_file, random_num) in enumerate(zip(label_files, random_numbers)):
+        if not is_edge_tile(label_file):
 
             sample_metadata = {}
 
-            _, city, patch_id = guf_file.stem.split('_')
+            _, city, patch_id = label_file.stem.split('_')
 
             sample_metadata['city'] = city
             sample_metadata['patch_id'] = patch_id
-            sample_metadata['img_weight'] = get_image_weight(guf_file)
+            sample_metadata['img_weight'] = get_image_weight(label_file)
 
             s1_file = s1_dir / f'S1_{city}_{year}_{patch_id}.tif'
             s2_file = s2_dir / f'S2_{city}_{year}_{patch_id}.tif'
 
             if random_num > split:
-                train_test_dir = train_dir
-                train_samples.append(sample_metadata)
+                train_test_dir = save_dir / 'train'
+                samples['train'].append(sample_metadata)
             else:
-                train_test_dir = test_dir
-                test_samples.append(sample_metadata)
+                train_test_dir = save_dir / 'test'
+                samples['test'].append(sample_metadata)
+
+            if not train_test_dir.exists():
+                train_test_dir.mkdir()
 
             # copying all files into new directory
-            for file, product in zip([guf_file, s1_file, s2_file], ['guf', 'sentinel1', 'sentinel2']):
+            for file, product in zip([label_file, s1_file, s2_file], [label, 'sentinel1', 'sentinel2']):
                 new_file = train_test_dir / product / file.name
                 if not new_file.parent.exists():
-                    new_file.parent.mkdir(parents=True)
+                    new_file.parent.mkdir()
                 shutil.copy(str(file), str(train_test_dir / product / file.name))
 
     # writing metadata to .json file for train and test set
-    dataset_metadata['dataset'] = 'train'
-    dataset_metadata['samples'] = train_samples
-    with open(str(train_dir / 'metadata.json'), 'w', encoding='utf-8') as f:
-        json.dump(dataset_metadata, f, ensure_ascii=False, indent=4)
-
-    dataset_metadata['dataset'] = 'test'
-    dataset_metadata['samples'] = test_samples
-    with open(str(test_dir / 'metadata.json'), 'w', encoding='utf-8') as f:
-        json.dump(dataset_metadata, f, ensure_ascii=False, indent=4)
-
+    for train_test in ['train', 'test']:
+        dataset_metadata['dataset'] = train_test
+        dataset_metadata['samples'] = samples[train_test]
+        metadata_file = save_dir / train_test / 'metadata.json'
+        with open(str(metadata_file), 'w', encoding='utf-8') as f:
+            json.dump(dataset_metadata, f, ensure_ascii=False, indent=4)
 
 
 
@@ -146,23 +146,16 @@ def write_metadata_file(root_dir: Path, save_dir: Path, year: int, cities: list,
 
 if __name__ == '__main__':
 
-    # root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/urban_extraction_gee_download')
-    # save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/')
-    # root_dir = Path('/Midgard/Data/pshi/datasets/sentinel/raw/')
-    # save_dir = Path('/Midgard/Data/pshi/datasets/sentinel/preprocessed/')
-    # experiment = 'urban_extraction_morecities'
-
-    root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/')
+    gee_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/')
     save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/')
-    # root_dir = Path('/Midgard/Data/pshi/datasets/sentinel/raw/')
-    # save_dir = Path('/Midgard/Data/pshi/datasets/sentinel/preprocessed/')
-    # experiment = 'urban_extraction_twocities'
 
-    metadata_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/urban_extraction_2019')
+    cities = ['StockholmCadastre']
+    year = 2017
+    label = 'cadastre'
+    bucket = 'urban_extraction_gee_stockholm_buildings'
+    data_dir = gee_dir / bucket
+    save_dir = save_dir / bucket
 
-
-    year = 2019
-    cities = ['Stockholm', 'Beijing', 'Milan']
 
     split = 0.2
 
@@ -186,23 +179,16 @@ if __name__ == '__main__':
                                                  indices=s2params['indices'],
                                                  metrics=s2params['metrics'])
 
-    write_metadata_file(
-        root_dir=metadata_dir,
-        save_dir=metadata_dir,
-        year=year,
-        cities=cities,
-        s1_features=sentinel1_features,
-        s2_features=sentinel2_features
-    )
+    preprocess_dataset(data_dir, save_dir, cities, year, label, sentinel1_features, sentinel2_features, split)
 
-
-    # preprocess_dataset(
-    #     root_dir=root_dir,
-    #     save_dir=save_dir,
-    #     experiment_name=experiment,
+    # write_metadata_file(
+    #     root_dir=metadata_dir,
+    #     save_dir=metadata_dir,
     #     year=year,
     #     cities=cities,
     #     s1_features=sentinel1_features,
-    #     s2_features=sentinel2_features,
-    #     split=split
+    #     s2_features=sentinel2_features
     # )
+
+
+

@@ -5,7 +5,6 @@
 import os
 import torch
 import json
-import tifffile
 from pathlib import Path
 from unet.utils import *
 from torchvision import transforms
@@ -228,35 +227,15 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
         city = sample_metadata['city']
         patch_id = sample_metadata['patch_id']
 
-        s1_file = self.s1_dir / f'S1_{city}_{self.year}_{patch_id}.tif'
-        s2_file = self.s2_dir / f'S2_{city}_{self.year}_{patch_id}.tif'
-        label_file = self.label_dir / f'{str(self.cfg.DATALOADER.LABEL).upper()}_{city}_{patch_id}.tif'
+        img, transform, crs = self._get_sentinel_data(city, self.year, patch_id)
+        label, transform, crs = self._get_label_data(city, self.year, patch_id)
 
-        # loading images and corresponding label
-        if not any(self.s1_feature_selection):  # only sentinel 2 features
-            # img = cv2.imread(str(s1_file), -1)
-            img = tifffile.imread(str(s2_file))
-            img = img[:, :, self.s2_feature_selection]
-        elif not any(self.s2_feature_selection):  # only sentinel 1 features
-            # img = cv2.imread(str(s1_file), -1)
-            img = tifffile.imread(str(s1_file))
-            img = img[:, :, self.s1_feature_selection]
-        else:  # sentinel 1 and sentinel 2 features
-            # s1_img = cv2.imread(str(s1_file), -1)
-            s1_img = tifffile.imread(str(s1_file))
-            s1_img = s1_img[:, :, self.s1_feature_selection]
-            # s2_img = cv2.imread(str(s2_file), -1)
-            s2_img = tifffile.imread(str(s2_file))
-            s2_img = s2_img[:, :, self.s2_feature_selection]
-            img = np.concatenate([s1_img, s2_img], axis=-1)
-
-        label = tifffile.imread(str(label_file))
-        label = label[:, :, None].astype(np.float32)
-        # label_old = cv2.imread(str(label_file), 0)
         if self.transform:
             img, label, sample_id, = self.transform((img, label, patch_id,))
+        else:
 
-        # img = np.nan_to_num(img).astype(np.float32)
+            # TODO: convert to pytorch tensor
+            pass
 
         sample = {
             'x': img,
@@ -269,11 +248,47 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
             sample['index'] = index
 
         if self.include_projection:
-            _, geotransform, epsg = read_tif(s1_file)
-            sample['geotransform'] = geotransform
-            sample['epsg'] = epsg
+            sample['transform'] = transform
+            sample['crs'] = crs
 
         return sample
+
+    def _get_sentinel_data(self, city, year, patch_id):
+
+        s1_file = self.s1_dir / f'S1_{city}_{year}_{patch_id}.tif'
+        s2_file = self.s2_dir / f'S2_{city}_{year}_{patch_id}.tif'
+
+        # loading images and corresponding label
+        if not any(self.s1_feature_selection):  # only sentinel 2 features
+            img, transform, crs = read_tif(s2_file)
+            img = img[self.s2_feature_selection, ]
+        elif not any(self.s2_feature_selection):  # only sentinel 1 features
+            img, transform, crs = read_tif(s1_file)
+            img = img[self.s1_feature_selection, ]
+        else:  # sentinel 1 and sentinel 2 features
+            s1_img, transform, crs = read_tif(s1_file)
+            s1_img = s1_img[self.s1_feature_selection, ]
+            s2_img, transform, crs = read_tif(s2_file)
+            s2_img = s2_img[self.s2_feature_selection, ]
+            img = np.concatenate([s1_img, s2_img], axis=0)
+
+        return np.nan_to_num(img).astype(np.float32), transform, crs
+
+    def _get_label_data(self, city, year, patch_id):
+
+        label = self.cfg.DATALOADER.LABEL
+
+        if label.split('_')[0] == 'pred':
+            fname = f'pred_{city}_{self.year}_{patch_id}'
+        elif label == 'guf':
+            fname = f'GUF_{city}_{patch_id}'
+        elif label == 'cadastre':
+            fname = f'cadastre_{city}_{patch_id}'
+
+        label_file = self.label_dir / f'{fname}.tif'
+        img, transform, crs = read_tif(label_file)
+
+        return np.nan_to_num(img).astype(np.float32), transform, crs
 
     def _get_feature_selection(self, features, selection):
         feature_selection = [False for _ in range(len(features))]
@@ -337,6 +352,7 @@ class UrbanExtractionDatasetAugmentedLabels(UrbanExtractionDataset):
         ndvi = (nir - red) / (nir + red)
         vegetation = ndvi > self.ndvi_treshold
         not_vegetation = np.logical_not(vegetation)
+        not_vegetation = not_vegetation[:, :, 0]
         augmented_label = np.logical_and(label, not_vegetation)
 
         augmented_label = augmented_label[:, :, None].astype(np.float32)
@@ -364,80 +380,3 @@ class UrbanExtractionDatasetAugmentedLabels(UrbanExtractionDataset):
 
         return sample
 
-
-class UrbanExtractionDatasetInference(torch.utils.data.Dataset):
-    '''
-    Dataset for Urban Extraction style labelled Dataset
-    '''
-    def __init__(self, cfg, # used for feature names
-                 root_dir: Path,  # path to folder with sub folder images and labels and a metadata file
-                 include_index: bool = False,  # index of sample
-                 transform: list = None  # list of transformations
-                 ):
-        super().__init__()
-
-        # setting up directories
-        self.root_dir = Path(root_dir)
-        self.s1_dir = self.root_dir / 'sentinel1'
-        self.s2_dir = self.root_dir / 'sentinel2'
-        self.cfg = cfg
-
-        # loading metadata of dataset
-        with open(str(self.root_dir / 'metadata.json')) as f:
-            metadata = json.load(f)
-        self.metadata = metadata
-        self.year = metadata['year']
-
-        self.length = len(self.metadata['samples'])
-        print('dataset length', self.length)
-
-        self.include_index = include_index
-        self.transform = transform
-
-        # creating boolean feature vector to subset sentinel 1 and sentinel 2 bands
-        self.s1_feature_selection = self._get_feature_selection(metadata['sentinel1'],
-                                                                cfg.DATALOADER.S1_FEATURES)
-        self.s2_feature_selection = self._get_feature_selection(metadata['sentinel2'],
-                                                                cfg.DATALOADER.S2_FEATURES)
-
-    def __getitem__(self, index):
-
-        # loading metadata of sample
-        sample_metadata = self.metadata['samples'][index]
-
-        city = sample_metadata['city']
-        patch_id = sample_metadata['patch_id']
-
-        s1_file = self.s1_dir / f'S1_{city}_{self.year}_{patch_id}.tif'
-        s2_file = self.s2_dir / f'S2_{city}_{self.year}_{patch_id}.tif'
-
-        # loading images and corresponding label
-        if not any(self.s1_feature_selection):  # only sentinel 2 features
-            img = tifffile.imread(str(s2_file))
-            img = img[:, :, self.s2_feature_selection]
-        elif not any(self.s2_feature_selection):  # only sentinel 1 features
-            img = tifffile.imread(str(s1_file))
-            img = img[:, :, self.s1_feature_selection]
-        else:  # sentinel 1 and sentinel 2 features
-            s1_img = tifffile.imread(str(s1_file))
-            s1_img = s1_img[:, :, self.s1_feature_selection]
-            s2_img = tifffile.imread(str(s2_file))
-            s2_img = s2_img[:, :, self.s2_feature_selection]
-            img = np.concatenate([s1_img, s2_img], axis=-1)
-
-        transform = transforms.Compose([Npy2Torch()])
-        img, _, _ = transform(img)
-        sample = {'x': img}
-
-        return sample
-
-
-    def _get_feature_selection(self, features, selection):
-        feature_selection = [False for _ in range(len(features))]
-        for feature in selection:
-            i = features.index(feature)
-            feature_selection[i] = True
-        return feature_selection
-
-    def __len__(self):
-        return self.length
