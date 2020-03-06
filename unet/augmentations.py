@@ -193,3 +193,24 @@ class AddLabelChannels():
         new_label = np.stack((label_0, label_1, label_2, label_3), -1)
 
         return input, new_label, image_path
+
+
+class AddCanny():
+
+    def __call__(self, args):
+
+        input, label, image_path = args
+
+        edges1 = np.expand_dims(cv2.Canny(input, 10, 240), -1) * 0.2
+        edges2 = np.expand_dims(cv2.Canny(input, 20, 240), -1) * 0.2
+        edges3 = np.expand_dims(cv2.Canny(input, 50, 240), -1) * 0.2
+        edges4 = np.expand_dims(cv2.Canny(input, 80, 240), -1) * 0.2
+        edges5 = np.expand_dims(cv2.Canny(input, 100, 240), -1) * 0.2
+
+        edges = np.clip(edges1 + edges2 + edges3 + edges4 + edges5, 0., 255.)
+
+        edges = edges.astype(np.uint8)
+
+        new_input = np.concatenate((input, edges), -1)
+
+        return new_input, label, image_path
