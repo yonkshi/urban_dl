@@ -1,3 +1,0 @@
-_BASE_: "s1s2_allbands_twocities.yaml"
-DATALOADER:
-  LABEL: 'pred_s1s2_allbands_twocities'

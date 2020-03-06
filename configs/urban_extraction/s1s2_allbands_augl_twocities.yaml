@@ -1,0 +1,10 @@
+_BASE_: "s1s2_allbands_twocities.yaml"
+THRESH: 0.54
+DATALOADER:
+  LABEL: 'pred_s1s2_allbands_twocities'
+DATASETS:
+  TRAIN: ("/storage/yonk/urban_extraction_twocities/train/",)
+  TEST: ("/storage/yonk/urban_extraction_twocities/test/",)
+  INFERENCE: ("/storage/yonk/debug_new/test/",)
+  USE_CLAHE_VARI: False
+OUTPUT_BASE_DIR: ('/storage/shafner/run_logs/unet/')
