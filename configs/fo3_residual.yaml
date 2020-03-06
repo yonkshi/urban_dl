@@ -1,11 +1,13 @@
 _BASE_: "frankenstein_oversample_3conv.yaml"
 THRESH: 0.52
 MODEL:
-  LOSS_TYPE: 'FrankensteinEdgeLoss'
+  LOSS_TYPE: 'FrankensteinLoss'
   OUT_CHANNELS: 1
   BLOCK_TYPE: 'Triple'
+  LAST_LAYER_RESIDUAL: True
+  TOPOLOGY: [128, 128, 256, 512,]
 TRAINER:
-  EDGE_LOSS_SCALE: 1
+  BATCH_SIZE: 12
 AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'importance'

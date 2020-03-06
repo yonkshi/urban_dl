@@ -1,0 +1,4 @@
+_BASE_: "frankenstein_oversample_3conv.yaml"
+MODEL:
+  BLOCK_ACTIVATION: 'PReLU'
+  POOLING_TYPE: '2Stride'

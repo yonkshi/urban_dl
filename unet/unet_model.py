@@ -7,9 +7,17 @@ from .unet_parts import *
 
 class UNet(nn.Module):
     def __init__(self, cfg):
+        super(UNet, self).__init__()
 
         n_channels = cfg.MODEL.IN_CHANNELS
         n_classes = cfg.MODEL.OUT_CHANNELS
+
+        if cfg.MODEL.BLOCK_ACTIVATION == 'PReLU':
+            self.activation  = nn.PReLU()
+        else:
+            self.activation = nn.ReLU(inplace=True)
+
+
         if cfg.MODEL.BLOCK_TYPE == 'Double':
             conv_block = double_conv
         elif cfg.MODEL.BLOCK_TYPE == 'Triple':
@@ -17,10 +25,10 @@ class UNet(nn.Module):
 
         self._cfg = cfg
 
-        super(UNet, self).__init__()
+
 
         first_chan = cfg.MODEL.TOPOLOGY[0]
-        self.inc = inconv(n_channels, first_chan, conv_block)
+        self.inc = inconv(n_channels, first_chan, conv_block, self.activation)
         self.outc = outconv(first_chan, n_classes)
         self.multiscale_context_enabled = cfg.MODEL.MULTISCALE_CONTEXT.ENABLED
         self.multiscale_context_type = cfg.MODEL.MULTISCALE_CONTEXT.TYPE
@@ -39,8 +47,7 @@ class UNet(nn.Module):
             is_not_last_layer = idx != n_layers-1
             in_dim = down_topo[idx]
             out_dim = down_topo[idx+1] if is_not_last_layer else down_topo[idx] # last layer
-
-            layer = down(in_dim, out_dim, conv_block)
+            layer = down(in_dim, out_dim, conv_block, self.activation, self._cfg.MODEL.POOLING_TYPE)
 
             print(f'down{idx+1}: in {in_dim}, out {out_dim}')
             down_dict[f'down{idx+1}'] = layer
@@ -60,7 +67,10 @@ class UNet(nn.Module):
             in_dim = up_topo[x1_idx] * 2
             out_dim = up_topo[x2_idx]
 
-            layer = up_block(in_dim, out_dim, conv_block, bilinear=cfg.MODEL.SIMPLE_INTERPOLATION)
+            layer = up_block(in_dim, out_dim, conv_block, self.activation, bilinear=cfg.MODEL.SIMPLE_INTERPOLATION)
+            if idx == 0 and cfg.MODEL.LAST_LAYER_RESIDUAL:
+                in_dim = up_topo[x1_idx]
+                layer = residual_up(in_dim, out_dim, conv_block, self.activation, bilinear=cfg.MODEL.SIMPLE_INTERPOLATION)
 
             print(f'up{idx+1}: in {in_dim}, out {out_dim}')
             up_dict[f'up{idx+1}'] = layer
@@ -68,9 +78,9 @@ class UNet(nn.Module):
         self.up_seq = nn.ModuleDict(up_dict)
 
     def forward(self, x):
-        x1 = self.inc(x)
+        inc_out = self.inc(x)
 
-        inputs = [x1]
+        inputs = [inc_out]
         # Downward U:
         for layer in self.down_seq.values():
             out = layer(inputs[-1])
@@ -87,7 +97,8 @@ class UNet(nn.Module):
         x1 = inputs.pop(0)
         for idx, layer in enumerate(self.up_seq.values()):
             x2 = inputs[idx]
-            x1 = layer(x1, x2)  # x1 for next up layer
+            x_out = layer(x1, x2)  # x1 for next up layer
+            x1 = x_out
 
         out = self.outc(x1)
 

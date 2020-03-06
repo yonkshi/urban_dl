@@ -188,7 +188,7 @@ def train_net(net,
             positive_pixels_set.extend(image_weight.cpu().numpy())
 
             if global_step % 1000 == 999:
-                plot_images(x[0].cpu().numpy(), y_gts[0].cpu().numpy(), ((y_pred[0] > cfg.THRESH)*1.).detach().cpu().numpy(), int(global_step / 100))
+                plot_images(x[0].cpu().numpy(), y_gts[0].cpu().numpy(), ((y_pred[0] > cfg.THRESH)*1.).detach().cpu().numpy(), int(global_step / 1000))
 
             if global_step % 100 == 0 or global_step == 0:
                 # time per 100 steps
@@ -235,6 +235,10 @@ def plot_images(x_n, y_gts_n, y_pred_n, idx):
     canvas = np.concatenate(((np.maximum(y_pred_n - y_gts_n, 0.)),      # R: false negatives
                              (y_pred_n * y_gts_n),                      # G: true positives
                              (np.maximum(y_gts_n - y_pred_n, 0.))), 0)  # B: false positives
+
+    isdir = os.path.isdir("./imgs")
+    if not isdir:
+        os.mkdir("./imgs")
 
     img = Image.fromarray(np.moveaxis((canvas * 255).astype(np.uint8), 0, -1))
     img.save("imgs/error" + str(idx) + ".png")

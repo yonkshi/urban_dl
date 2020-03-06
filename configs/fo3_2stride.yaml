@@ -1,11 +1,10 @@
 _BASE_: "unet_dice.yaml"
 THRESH: 0.52
 MODEL:
-  LOSS_TYPE: 'FrankensteinEdgeLoss'
+  LOSS_TYPE: 'FrankensteinLoss'
   OUT_CHANNELS: 1
   BLOCK_TYPE: 'Triple'
-TRAINER:
-  EDGE_LOSS_SCALE: 0.02
+  POOLING_TYPE: '2Stride'
 AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'importance'
