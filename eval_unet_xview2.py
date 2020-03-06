@@ -401,6 +401,8 @@ def inference_loop(net, cfg, device,
         if cfg.AUGMENTATION.RESIZE: trfm.append( Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
         trfm.append(BGR2RGB())
         if cfg.DATASETS.USE_CLAHE_VARI: trfm.append(VARI())
+        if cfg.MODEL.IN_CHANNELS == 4:
+            trfm.append(AddCanny())
         trfm.append(Npy2Torch())
         trfm = transforms.Compose(trfm)
 

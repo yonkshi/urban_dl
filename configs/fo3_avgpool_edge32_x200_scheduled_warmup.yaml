@@ -4,8 +4,13 @@ MODEL:
   LOSS_TYPE: 'FrankensteinEdgeLoss'
   OUT_CHANNELS: 1
   BLOCK_TYPE: 'Triple'
-TRAINER:
-  EDGE_LOSS_SCALE: 20
+  POOLING_TYPE: 'AvgPooling'
+  EDGE_WEIGHTED_LOSS:
+    TYPE: 'edge_loss_weight_mask_32' # Which preprocessed edge weight to use: e.g. edge_loss_weight_mask_32
+    SCALE: 200
+    WARMUP_ENABLED: True
+    WARMUP_START: 20000
+    WARMUP_END: 30000
 AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'importance'

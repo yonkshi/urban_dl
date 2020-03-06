@@ -279,8 +279,11 @@ def frankenstein_edge_loss(y_pred, y_gts, edge_mask, scale):
     loss = ce + jaccard + edge_ce
 
     return loss, ce, jaccard, edge_ce
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 5ea9166cb33bd398febb4ef8236d8c7a49190886
 def edge_loss_warmup_schedule(cfg, global_step):
     # Scheduler for edge loss
     if cfg.MODEL.EDGE_WEIGHTED_LOSS.WARMUP_ENABLED:
@@ -296,8 +299,11 @@ def edge_loss_warmup_schedule(cfg, global_step):
     else:
         edge_loss_scale = cfg.MODEL.EDGE_WEIGHTED_LOSS.SCALE
     return edge_loss_scale
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 5ea9166cb33bd398febb4ef8236d8c7a49190886
 def setup(args):
     cfg = new_config()
     cfg.merge_from_file(f'configs/{args.config_file}.yaml')

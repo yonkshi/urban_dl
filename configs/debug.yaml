@@ -3,8 +3,9 @@ MODEL:
   LOSS_TYPE: 'FrankensteinEdgeLoss'
   OUT_CHANNELS: 1
   IN_CHANNELS: 3
-  BACKBONE:
-    ENABLED: True
+  POOLING_TYPE: '2Stride'
+  LAST_LAYER_RESIDUAL: True
+  TOPOLOGY: [128, 128, 256, 512,]
 OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
   TRAIN: ("/storage/yonk/debug_new/train/",)
