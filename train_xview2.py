@@ -32,8 +32,6 @@ from experiment_manager.config import new_config
 from experiment_manager.loss import soft_dice_loss, soft_dice_loss_balanced, jaccard_like_loss, jaccard_like_balanced_loss
 from eval_unet_xview2 import model_eval
 
-from PIL import Image
-
 # import hp
 
 def train_net(net,
@@ -90,10 +88,6 @@ def train_net(net,
     global_step = 0
     epochs = cfg.TRAINER.EPOCHS
 
-    # TODO DELETE ME
-    for name, m in net.named_parameters():
-        print(name)
-
     use_edge_loss = cfg.MODEL.LOSS_TYPE == 'FrankensteinEdgeLoss'
 
     trfm = []
@@ -105,8 +99,6 @@ def train_net(net,
     elif cfg.AUGMENTATION.CROP_TYPE == 'importance':
         trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
     if cfg.AUGMENTATION.RANDOM_FLIP_ROTATE: trfm.append(RandomFlipRotate())
-    if cfg.MODEL.IN_CHANNELS == 4:
-        trfm.append(AddCanny())
 
     trfm.append(Npy2Torch())
     trfm = transforms.Compose(trfm)
@@ -187,9 +179,6 @@ def train_net(net,
             loss_set.append(loss.item())
             positive_pixels_set.extend(image_weight.cpu().numpy())
 
-            if global_step % 1000 == 999:
-                plot_images(x[0].cpu().numpy(), y_gts[0].cpu().numpy(), ((y_pred[0] > cfg.THRESH)*1.).detach().cpu().numpy(), int(global_step / 100))
-
             if global_step % 100 == 0 or global_step == 0:
                 # time per 100 steps
                 stop = timeit.default_timer()
@@ -229,31 +218,6 @@ def train_net(net,
             model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
             model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
 
-
-def plot_images(x_n, y_gts_n, y_pred_n, idx):
-
-    canvas = np.concatenate(((np.maximum(y_pred_n - y_gts_n, 0.)),      # R: false negatives
-                             (y_pred_n * y_gts_n),                      # G: true positives
-                             (np.maximum(y_gts_n - y_pred_n, 0.))), 0)  # B: false positives
-
-    img = Image.fromarray(np.moveaxis((canvas * 255).astype(np.uint8), 0, -1))
-    img.save("imgs/error" + str(idx) + ".png")
-
-    img = Image.fromarray((y_gts_n[0] * 255).astype(np.uint8))
-    img.save("imgs/ground_truth" + str(idx) + ".png")
-
-    img = Image.fromarray((y_pred_n[0] * 255).astype(np.uint8))
-    img.save("imgs/prediction" + str(idx) + ".png")
-
-    img = Image.fromarray(np.moveaxis((x_n[:3] * 255).astype(np.uint8), 0, -1))
-    img.save("imgs/x" + str(idx) + ".png")
-
-    img = Image.fromarray((x_n[3] * 255).astype(np.uint8))
-    img.save("imgs/edges" + str(idx) + ".png")
-
-    return
-
-
 def image_sampling_weight(dataset_metadata):
     print('performing oversampling...', end='', flush=True)
     EMPTY_IMAGE_BASELINE = 1000
@@ -269,7 +233,6 @@ def gpu_stats():
     max_memory_cached = torch.cuda.max_memory_cached() /1e6
     return int(max_memory_allocated), int(max_memory_cached)
 
-
 def frankenstein_edge_loss(y_pred, y_gts, edge_mask, scale):
     ce = F.binary_cross_entropy_with_logits(y_pred, y_gts)
     jaccard = jaccard_like_balanced_loss(y_pred, y_gts)
@@ -279,11 +242,6 @@ def frankenstein_edge_loss(y_pred, y_gts, edge_mask, scale):
     loss = ce + jaccard + edge_ce
 
     return loss, ce, jaccard, edge_ce
-<<<<<<< HEAD
-
-
-=======
->>>>>>> 5ea9166cb33bd398febb4ef8236d8c7a49190886
 def edge_loss_warmup_schedule(cfg, global_step):
     # Scheduler for edge loss
     if cfg.MODEL.EDGE_WEIGHTED_LOSS.WARMUP_ENABLED:
@@ -299,11 +257,6 @@ def edge_loss_warmup_schedule(cfg, global_step):
     else:
         edge_loss_scale = cfg.MODEL.EDGE_WEIGHTED_LOSS.SCALE
     return edge_loss_scale
-<<<<<<< HEAD
-
-
-=======
->>>>>>> 5ea9166cb33bd398febb4ef8236d8c7a49190886
 def setup(args):
     cfg = new_config()
     cfg.merge_from_file(f'configs/{args.config_file}.yaml')
@@ -319,7 +272,6 @@ def setup(args):
     if args.data_dir:
         cfg.DATASETS.TRAIN = (args.data_dir,)
     return cfg
-
 
 if __name__ == '__main__':
     args = default_argument_parser().parse_known_args()[0]
@@ -362,3 +314,5 @@ if __name__ == '__main__':
             sys.exit(0)
         except SystemExit:
             os._exit(0)
+
+
