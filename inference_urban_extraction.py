@@ -76,22 +76,22 @@ def inference_tiles(data_dir: Path, experiment: str, dataset: str, city: str, co
         metadata = dataset.metadata['samples'][i]
         patch_city = metadata['city']
         patch_id = metadata['patch_id']
-
+        print(patch_city, patch_id)
         if patch_city == city:
-            print(patch_city, patch_id)
-            geotransform = item['geotransform']
-            epsg = item['epsg']
+            # print(patch_city, patch_id)
 
             y_pred = net(img.unsqueeze(0))
             y_pred = torch.sigmoid(y_pred)
 
             y_pred = y_pred.cpu().detach().numpy()
             threshold = cfg.THRESH
-            y_pred = y_pred[0, 0, ] > threshold
-            y_pred = y_pred.astype('uint8')
+            y_pred = y_pred[0, ] > threshold
+            y_pred = y_pred.transpose((1, 2, 0)).astype('uint8')
 
-            fname = f'pred_{patch_city}_{year}_{patch_id}'
-            write_tif(y_pred, geotransform, epsg, save_dir, fname, dtype=gdal.GDT_Byte)
+            file = save_dir / f'pred_{patch_city}_{year}_{patch_id}.tif'
+            transform = item['transform']
+            crs = item['crs']
+            write_tif(file, y_pred, transform, crs)
 
 
 
@@ -136,11 +136,11 @@ def combine_tiles(data_dir: Path, city: str, year: int, tile_size=256, top_left=
     mpl.image.imsave(classified_map, arr, vmin=-20, vmax=0, cmap='viridis')
 
 
-def merge_tiles(root_dir: Path, product: str, save_dir: Path = None):
+def merge_tiles(root_dir: Path, city: str, experiment: str, dataset: str, save_dir: Path = None):
 
     # getting all files of product in train and test directory
-    train_files_dir = root_dir / 'train' / product
-    test_files_dir = root_dir / 'test' / product
+    train_files_dir = root_dir / 'train' / f'pred_{experiment}_{dataset}'
+    test_files_dir = root_dir / 'test' / f'pred_{experiment}_{dataset}'
     files_in_train = [file for file in train_files_dir.glob('**/*')]
     files_in_test = [file for file in test_files_dir.glob('**/*')]
     files = files_in_train + files_in_test
@@ -181,23 +181,16 @@ def merge_tiles(root_dir: Path, product: str, save_dir: Path = None):
 if __name__ == '__main__':
 
     CONFIGS_DIR = Path.cwd() / Path('configs/urban_extraction')
-
     models_dir = Path('/storage/shafner/run_logs/unet/')
-    # models_dir = Path('C:/Users/shafner/models')
-    # models_dir = Path('/home/yonk/saved_models')
-
-    # preprocessed_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed')
     storage_dir = Path('/storage/shafner/urban_extraction')
 
-    # save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/classifications')
-    # save_dir = Path('/storage/shafner/urban_extraction_twocities/predicted/')
-
     # set experiment and dataset
-    experiment = 's1s2_allbands_augl'
-    dataset = 'twocities'
+    # 5550
+    experiment = 's1s2_allbands'
+    dataset = 'sthlm_cadastre'
 
     for train_test in ['train', 'test']:
-        city = 'Beijing'
+        city = 'Stockholm'
         data_dir = storage_dir / f'urban_extraction_{dataset}' / train_test
         inference_tiles(
             data_dir=data_dir,
@@ -212,4 +205,5 @@ if __name__ == '__main__':
 
     # product = 'pred_s1s2_allbands_twocities'
     # root_dir = preprocessed_dir / f'urban_extraction_{dataset}'
-    # merge_tiles(root_dir, product)
+    root_dir = storage_dir / f'urban_extraction_{dataset}'
+    merge_tiles(root_dir, 'Stockholm', experiment, dataset)
