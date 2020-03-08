@@ -209,6 +209,8 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
         print('dataset length', self.length)
 
         self.transform = transform
+        if transform is None:
+            self.transform = transforms.Compose([Npy2Torch()])
         self.include_index = include_index
         self.include_projection = include_projection
 
@@ -227,15 +229,10 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
         city = sample_metadata['city']
         patch_id = sample_metadata['patch_id']
 
-        img, transform, crs = self._get_sentinel_data(city, self.year, patch_id)
-        label, transform, crs = self._get_label_data(city, self.year, patch_id)
+        img, geotransform, crs = self._get_sentinel_data(city, self.year, patch_id)
+        label, geotransform, crs = self._get_label_data(city, self.year, patch_id)
 
-        if self.transform:
-            img, label, sample_id, = self.transform((img, label, patch_id,))
-        else:
-
-            # TODO: convert to pytorch tensor
-            pass
+        img, label, sample_id, = self.transform((img, label, patch_id,))
 
         sample = {
             'x': img,
@@ -248,7 +245,7 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
             sample['index'] = index
 
         if self.include_projection:
-            sample['transform'] = transform
+            sample['transform'] = geotransform
             sample['crs'] = crs
 
         return sample
@@ -261,16 +258,16 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
         # loading images and corresponding label
         if not any(self.s1_feature_selection):  # only sentinel 2 features
             img, transform, crs = read_tif(s2_file)
-            img = img[self.s2_feature_selection, ]
+            img = img[:, :, self.s2_feature_selection]
         elif not any(self.s2_feature_selection):  # only sentinel 1 features
             img, transform, crs = read_tif(s1_file)
-            img = img[self.s1_feature_selection, ]
+            img = img[:, :, self.s1_feature_selection]
         else:  # sentinel 1 and sentinel 2 features
             s1_img, transform, crs = read_tif(s1_file)
-            s1_img = s1_img[self.s1_feature_selection, ]
+            s1_img = s1_img[:, :, self.s1_feature_selection]
             s2_img, transform, crs = read_tif(s2_file)
-            s2_img = s2_img[self.s2_feature_selection, ]
-            img = np.concatenate([s1_img, s2_img], axis=0)
+            s2_img = s2_img[:, :, self.s2_feature_selection]
+            img = np.concatenate([s1_img, s2_img], axis=-1)
 
         return np.nan_to_num(img).astype(np.float32), transform, crs
 
