@@ -21,7 +21,7 @@ def write_tif(file: Path, arr, transform, crs):
     if not file.parent.exists():
         file.parent.mkdir()
 
-    bands, height, width = arr.shape
+    height, width, bands = arr.shape
     with rasterio.open(
             file,
             'w',
