@@ -8,11 +8,11 @@ def read_tif(file: Path):
         raise FileNotFoundError(f'File {file} not found')
 
     with rasterio.open(file) as dataset:
-        arr = dataset.read()
+        arr = dataset.read()  # (bands X height X width)
         transform = dataset.transform
         crs = dataset.crs
 
-    return arr, transform, crs
+    return arr.transpose((1, 2, 0)), transform, crs
 
 
 # writing an array to a geo tiff file
@@ -33,5 +33,5 @@ def write_tif(file: Path, arr, transform, crs):
             crs=crs,
             transform=transform,
     ) as dst:
-        for i in range(nbands):
-            dst.write(arr[i, ], i + 1)
+        for i in range(bands):
+            dst.write(arr[:, :, i], i + 1)
