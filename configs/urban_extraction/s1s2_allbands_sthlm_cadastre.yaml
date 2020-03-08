@@ -8,3 +8,7 @@ DATASETS:
   INFERENCE: ("/storage/yonk/debug_new/test/",)
   USE_CLAHE_VARI: False
 OUTPUT_BASE_DIR: ('/storage/shafner/run_logs/unet/')
+TRAINER:
+  LR: 0.0001
+  BATCH_SIZE: 16
+  EPOCHS: 100
