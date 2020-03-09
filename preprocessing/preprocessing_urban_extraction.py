@@ -1,7 +1,8 @@
 import shutil, json, cv2
 from pathlib import Path
+from preprocessing.utils import *
 import numpy as np
-import tifffile
+
 
 # getting list of feature names based on input parameters
 def sentinel1_feature_names(polarizations: list, metrics: list):
@@ -12,11 +13,13 @@ def sentinel1_feature_names(polarizations: list, metrics: list):
                 names.append(f'{pol}_{orbit}_{metric}')
     return names
 
+
 # getting list of feature names based on input parameters
 def sentinel2_feature_names(bands: list, indices: list, metrics: list):
     band_names = [f'{band}_{metric}' for band in bands for metric in metrics]
     index_names = [f'{index}_{metric}' for index in indices for metric in metrics]
     return band_names + index_names
+
 
 # computing the percentage of urban pixels for a file
 def get_image_weight(file: Path):
@@ -28,13 +31,14 @@ def get_image_weight(file: Path):
 
 
 def is_edge_tile(file: Path, tile_size=256):
-    arr = tifffile.imread(str(file))
+    arr, _, _ = read_tif(file)
     arr = np.array(arr)
     if arr.shape[0] == tile_size and arr.shape[1] == tile_size:
         return False
     return True
 
 
+# preprocessing dataset
 def preprocess_dataset(data_dir: Path, save_dir: Path, cities: list, year: int, label: str,
                        s1_features: list, s2_features: list, split: float, seed: int = 42):
 
@@ -105,7 +109,9 @@ def preprocess_dataset(data_dir: Path, save_dir: Path, cities: list, year: int, 
 
 
 
-def write_metadata_file(root_dir: Path, save_dir: Path, year: int, cities: list, s1_features: list, s2_features: list):
+def write_metadata_file(root_dir: Path, year: int, cities: list, s1_features: list, s2_features: list):
+
+    # TODO: use this function also in the main preprocessing function to generate metadata file
 
     # setting up raw data directories
     s1_dir = root_dir / 'sentinel1'
@@ -137,7 +143,7 @@ def write_metadata_file(root_dir: Path, save_dir: Path, year: int, cities: list,
 
     # writing metadata to .json file for train and test set
     dataset_metadata['samples'] = samples
-    with open(str(save_dir / 'metadata.json'), 'w', encoding='utf-8') as f:
+    with open(str(root_dir / 'metadata.json'), 'w', encoding='utf-8') as f:
         json.dump(dataset_metadata, f, ensure_ascii=False, indent=4)
 
 
@@ -179,16 +185,18 @@ if __name__ == '__main__':
                                                  indices=s2params['indices'],
                                                  metrics=s2params['metrics'])
 
-    preprocess_dataset(data_dir, save_dir, cities, year, label, sentinel1_features, sentinel2_features, split)
+    # preprocess_dataset(data_dir, save_dir, cities, year, label, sentinel1_features, sentinel2_features, split)
 
-    # write_metadata_file(
-    #     root_dir=metadata_dir,
-    #     save_dir=metadata_dir,
-    #     year=year,
-    #     cities=cities,
-    #     s1_features=sentinel1_features,
-    #     s2_features=sentinel2_features
-    # )
+    cities = ['Stockholm', 'Beijing', 'Milan']
+    year = 2019
+    root_dir = Path('/storage/shafner/urban_extraction/urban_extraction_2019')
+    write_metadata_file(
+        root_dir=root_dir,
+        year=year,
+        cities=cities,
+        s1_features=sentinel1_features,
+        s2_features=sentinel2_features
+    )
 
 
 
