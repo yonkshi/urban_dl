@@ -298,7 +298,6 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
         return self.length
 
 
-
 class UrbanExtractionDatasetAugmentedLabels(UrbanExtractionDataset):
     '''
     Dataset for Urban Extraction style labelled Dataset
@@ -308,6 +307,7 @@ class UrbanExtractionDatasetAugmentedLabels(UrbanExtractionDataset):
                  ndvi_threshold: float = 0.5):
         UrbanExtractionDataset.__init__(self, cfg, root_dir, transform, include_index, include_projection)
 
+        # variables for data augmentation via ndvi
         self.red_selection = self._get_feature_selection(self.metadata['sentinel2'], ['Red_median'])
         self.nir_selection = self._get_feature_selection(self.metadata['sentinel2'], ['NIR_median'])
         self.ndvi_treshold = ndvi_threshold
@@ -320,46 +320,23 @@ class UrbanExtractionDatasetAugmentedLabels(UrbanExtractionDataset):
         city = sample_metadata['city']
         patch_id = sample_metadata['patch_id']
 
-        s1_file = self.s1_dir / f'S1_{city}_{self.year}_{patch_id}.tif'
+        img, geotransform, crs = self._get_sentinel_data(city, self.year, patch_id)
+        label, geotransform, crs = self._get_label_data(city, self.year, patch_id)
+
+        # label augmentation
         s2_file = self.s2_dir / f'S2_{city}_{self.year}_{patch_id}.tif'
-
-        # loading images and corresponding label
-        # s2 data is always required due to label augmentation
-        s2_img = tifffile.imread(str(s2_file))
-        s2_file_exists = s2_file.exists()
+        s2_img, _, _ = read_tif(s2_file)
         red, nir = s2_img[:, :, self.red_selection], s2_img[:, :, self.nir_selection]
-        s2_img = s2_img[:, :, self.s2_feature_selection]
-
-        if any(self.s1_feature_selection):
-            s1_img = tifffile.imread(str(s1_file))
-            s1_img = s1_img[:, :, self.s1_feature_selection]
-            img = np.concatenate([s1_img, s2_img], axis=-1)
-        else:
-            img = s2_img
-
-        # TODO: handle better for wsf
-        product = 'pred' if self.cfg.DATALOADER.LABEL != 'guf' else 'GUF'
-        label_file = self.label_dir / f'{product}_{city}_{self.year}_{patch_id}.tif'
-        debug = label_file.exists()
-        debug1 = label_file.parent.exists()
-
-        label = tifffile.imread(str(label_file))
-
-        # removing vegetation from urban labels
         ndvi = (nir - red) / (nir + red)
         vegetation = ndvi > self.ndvi_treshold
         not_vegetation = np.logical_not(vegetation)
-        not_vegetation = not_vegetation[:, :, 0]
+        # not_vegetation = not_vegetation[:, :, 0]
         augmented_label = np.logical_and(label, not_vegetation)
+        augmented_label = augmented_label.astype(np.float32)
 
-        augmented_label = augmented_label[:, :, None].astype(np.float32)
 
-        if self.transform:
-            img, augmented_label, sample_id, = self.transform((img, augmented_label, patch_id,))
+        img, augmented_label, sample_id, = self.transform((img, augmented_label, patch_id,))
 
-        # img = np.nan_to_num(img).astype(np.float32)
-
-        # TODO: maybe adjust img_weight for new label
         sample = {
             'x': img,
             'y': augmented_label,
@@ -371,9 +348,41 @@ class UrbanExtractionDatasetAugmentedLabels(UrbanExtractionDataset):
             sample['index'] = index
 
         if self.include_projection:
-            _, geotransform, epsg = read_tif(s1_file)
-            sample['geotransform'] = geotransform
-            sample['epsg'] = epsg
+            sample['transform'] = geotransform
+            sample['crs'] = crs
 
         return sample
+
+
+class UrbanExtractionDatasetInference(UrbanExtractionDataset):
+    '''
+    Dataset for Urban Extraction style labelled Dataset
+    '''
+    def __init__(self, cfg, root_dir: Path, transform: list = None,
+                 include_index: bool = False, include_projection: bool = False,
+                 ndvi_threshold: float = 0.5):
+        UrbanExtractionDataset.__init__(self, cfg, root_dir, transform, include_index, include_projection)
+
+    def __getitem__(self, index):
+
+        # loading metadata of sample
+        sample_metadata = self.metadata['samples'][index]
+
+        city = sample_metadata['city']
+        patch_id = sample_metadata['patch_id']
+
+        img, geotransform, crs = self._get_sentinel_data(city, self.year, patch_id)
+        img, _, _, = self.transform((img, np.empty((img.shape[0], img.shape[1], 1)), patch_id,))
+
+        sample = {'x': img}
+
+        if self.include_index:
+            sample['index'] = index
+
+        if self.include_projection:
+            sample['transform'] = geotransform
+            sample['crs'] = crs
+
+        return sample
+
 
