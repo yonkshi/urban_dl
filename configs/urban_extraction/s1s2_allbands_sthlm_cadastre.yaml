@@ -1,5 +1,5 @@
 _BASE_: "s1s2_allbands.yaml"
-THRESH: 0
+THRESH: 0.38
 DATALOADER:
   LABEL: 'cadastre'
 DATASETS:
