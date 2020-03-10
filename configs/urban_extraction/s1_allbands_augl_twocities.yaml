@@ -1,4 +1,4 @@
-_BASE_: "s1s2_allbands_twocities.yaml"
+_BASE_: "s1_allbands_twocities.yaml"
 THRESH: 0
 DATALOADER:
   LABEL: 'wsf'
