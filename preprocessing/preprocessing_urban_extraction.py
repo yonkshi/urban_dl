@@ -155,12 +155,12 @@ if __name__ == '__main__':
     gee_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/')
     save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/')
 
-    cities = ['StockholmCadastre']
+    cities = ['Beijing', 'Stockholm']
     year = 2017
-    label = 'cadastre'
-    bucket = 'urban_extraction_gee_stockholm_buildings'
+    label = 'wsf'
+    bucket = 'urban_extraction_twocities_raw'
     data_dir = gee_dir / bucket
-    save_dir = save_dir / bucket
+    save_dir = save_dir / 'urban_extraction_twocities'
 
 
     split = 0.2
@@ -185,18 +185,18 @@ if __name__ == '__main__':
                                                  indices=s2params['indices'],
                                                  metrics=s2params['metrics'])
 
-    # preprocess_dataset(data_dir, save_dir, cities, year, label, sentinel1_features, sentinel2_features, split)
+    preprocess_dataset(data_dir, save_dir, cities, year, label, sentinel1_features, sentinel2_features, split)
 
-    cities = ['Stockholm', 'Beijing', 'Milan']
-    year = 2019
-    root_dir = Path('/storage/shafner/urban_extraction/urban_extraction_2019')
-    write_metadata_file(
-        root_dir=root_dir,
-        year=year,
-        cities=cities,
-        s1_features=sentinel1_features,
-        s2_features=sentinel2_features
-    )
+    # cities = ['Stockholm', 'Beijing', 'Milan']
+    # year = 2019
+    # root_dir = Path('/storage/shafner/urban_extraction/urban_extraction_2019')
+    # write_metadata_file(
+    #     root_dir=root_dir,
+    #     year=year,
+    #     cities=cities,
+    #     s1_features=sentinel1_features,
+    #     s2_features=sentinel2_features
+    # )
 
 
 
