@@ -281,6 +281,8 @@ class UrbanExtractionDataset(torch.utils.data.Dataset):
             fname = f'GUF_{city}_{patch_id}'
         elif label == 'cadastre':
             fname = f'cadastre_{city}_{patch_id}'
+        elif label == 'wsf':
+            fname = f'wsf_{city}_{patch_id}'
 
         label_file = self.label_dir / f'{fname}.tif'
         img, transform, crs = read_tif(label_file)
