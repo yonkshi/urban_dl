@@ -90,6 +90,9 @@ def train_net(net,
 
     use_edge_loss = cfg.MODEL.LOSS_TYPE == 'FrankensteinEdgeLoss'
 
+    for name, _ in net.named_parameters():
+        print(name)
+
     trfm = []
     trfm.append(BGR2RGB())
     if cfg.DATASETS.USE_CLAHE_VARI: trfm.append(VARI())
