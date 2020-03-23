@@ -25,6 +25,7 @@ import wandb
 from unet import UNet
 from unet.dataloader import Xview2Detectron2Dataset
 from unet.augmentations import *
+from unet.descriminator_model import RefinementDescriminator
 
 from experiment_manager.metrics import f1_score
 from experiment_manager.args import default_argument_parser
@@ -35,10 +36,10 @@ from eval_unet_xview2 import model_eval
 # import hp
 
 def train_net(net,
-              cfg):
+              cfg,
+              descriminator=None):
 
     log_path = cfg.OUTPUT_DIR
-    writer = SummaryWriter(log_path)
 
     run_config = {}
     run_config['CONFIG_NAME'] = cfg.NAME
@@ -78,20 +79,27 @@ def train_net(net,
         criterion = lambda pred, gts: F.binary_cross_entropy_with_logits(pred, gts) + jaccard_like_balanced_loss(pred, gts)
     elif cfg.MODEL.LOSS_TYPE == 'FrankensteinEdgeLoss':
         criterion = frankenstein_edge_loss
+    elif cfg.MODEL.LOSS_TYPE == 'AdversarialFrankensteinLoss':
+        criterion = frankenstein_adversarial_loss
 
 
 
     if torch.cuda.device_count() > 1:
         print(torch.cuda.device_count(), " GPUs!")
         net = nn.DataParallel(net)
+        if descriminator is not None:
+            descriminator = nn.DataParallel(descriminator)
     net.to(device)
+    descriminator.to(device)
+
+
     global_step = 0
     epochs = cfg.TRAINER.EPOCHS
 
     use_edge_loss = cfg.MODEL.LOSS_TYPE == 'FrankensteinEdgeLoss'
 
-    for name, _ in net.named_parameters():
-        print(name)
+    # for name, _ in net.named_parameters():
+    #     print(name)
 
     trfm = []
     trfm.append(BGR2RGB())
@@ -154,6 +162,12 @@ def train_net(net,
 
             y_pred = net(x)
 
+            if descriminator is not None:
+                d_pred = descriminator(y_pred)
+                d_true = descriminator(y_gts)
+
+
+
             if cfg.MODEL.LOSS_TYPE == 'CrossEntropyLoss':
                 # y_pred = y_pred # Cross entropy loss doesn't like single channel dimension
                 y_gts = y_gts.long()# Cross entropy loss requires a long as target
@@ -169,6 +183,14 @@ def train_net(net,
                     'edge_loss': edge_loss,
                     'step':global_step,
                     'edge_loss_scale': edge_loss_scale,
+                })
+            elif cfg.MODEL.LOSS_TYPE == 'AdversarialFrankensteinLoss':
+                loss, ce_loss, jaccard_loss, discriminator_loss = criterion(y_pred, y_gts, d_pred, d_true)
+                wandb.log({
+                    'ce_loss': ce_loss,
+                    'jaccard_loss': jaccard_loss,
+                    'discriminator_loss': discriminator_loss,
+                    'step':global_step,
                 })
             else:
                 loss = criterion(y_pred, y_gts)
@@ -243,8 +265,18 @@ def frankenstein_edge_loss(y_pred, y_gts, edge_mask, scale):
     edge_ce = (1 - y_gts)*y_pred + a + torch.log(a.exp() + torch.exp(-y_pred-a)) * edge_mask.float() * scale
     edge_ce = edge_ce.mean()
     loss = ce + jaccard + edge_ce
-
     return loss, ce, jaccard, edge_ce
+
+def frankenstein_adversarial_loss(y_pred, y_gts, adv_pred, adv_true):
+    ce = F.binary_cross_entropy_with_logits(y_pred, y_gts)
+    jaccard = jaccard_like_balanced_loss(y_pred, y_gts)
+    a = (-y_pred).clamp(0)
+    adv_loss = F.binary_cross_entropy_with_logits(adv_pred, adv_true)
+
+    loss = ce + jaccard + adv_loss
+
+    return loss, ce, jaccard, adv_loss
+
 def edge_loss_warmup_schedule(cfg, global_step):
     # Scheduler for edge loss
     if cfg.MODEL.EDGE_WEIGHTED_LOSS.WARMUP_ENABLED:
@@ -289,6 +321,11 @@ if __name__ == '__main__':
     else:
         net = UNet(cfg)
 
+    if cfg.MODEL.ADVERSARIAL_REFINEMENT.ENABLED:
+        descriminator = RefinementDescriminator(cfg)
+    else:
+        descriminator = None
+
     if args.resume and args.resume_from:
         full_model_path = path.join(cfg.OUTPUT_DIR, args.model_path)
         net.load_state_dict(torch.load(full_model_path))
@@ -308,8 +345,9 @@ if __name__ == '__main__':
     np.random.seed(cfg.SEED)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+
     try:
-        train_net(net, cfg)
+        train_net(net, cfg, descriminator)
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
         print('Saved interrupt')

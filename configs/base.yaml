@@ -27,6 +27,9 @@ MODEL:
     WARMUP_ENABLED: False
     WARMUP_START: 0
     WARMUP_END: 1
+  ADVERSARIAL_REFINEMENT:
+    ENABLED: False
+    DISCRIMINATOR: 'resnet50'
 
 
 THRESH: 0.01 # Best threshold (only to be filled after running final model evaluation)
