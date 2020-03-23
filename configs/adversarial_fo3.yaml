@@ -9,6 +9,6 @@ MODEL:
     ENABLED: True
     DISCRIMINATOR: 'resnet50'
 TRAINER:
-  BATCH_SIZE: 12
+  BATCH_SIZE: 8
 
 
