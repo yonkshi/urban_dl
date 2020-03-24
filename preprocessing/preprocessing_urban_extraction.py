@@ -39,13 +39,8 @@ def is_edge_tile(file: Path, tile_size=256):
 
 
 # preprocessing dataset
-def preprocess_dataset(data_dir: Path, save_dir: Path, cities: list, year: int, label: str,
+def preprocess_dataset(data_dir: Path, save_dir: Path, cities: list, year: int, labels: str,
                        s1_features: list, s2_features: list, split: float, seed: int = 42):
-
-    # setting up raw data directories
-    s1_dir = data_dir / 'sentinel1'
-    s2_dir = data_dir / 'sentinel2'
-    label_dir = data_dir / label
 
     # setting up save dir
     if not save_dir.exists():
@@ -57,9 +52,11 @@ def preprocess_dataset(data_dir: Path, save_dir: Path, cities: list, year: int, 
         'year': year,
         'sentinel1': s1_features,
         'sentinel2': s2_features,
+        'labels': labels
     }
 
-    # getting all guf files
+    # getting label files from first label (used edge detection in loop)
+    label_dir = data_dir / labels[0]
     label_files = [file for file in label_dir.glob('**/*')]
 
     # generating random numbers for split
@@ -79,9 +76,6 @@ def preprocess_dataset(data_dir: Path, save_dir: Path, cities: list, year: int, 
             sample_metadata['patch_id'] = patch_id
             sample_metadata['img_weight'] = get_image_weight(label_file)
 
-            s1_file = s1_dir / f'S1_{city}_{year}_{patch_id}.tif'
-            s2_file = s2_dir / f'S2_{city}_{year}_{patch_id}.tif'
-
             if random_num > split:
                 train_test_dir = save_dir / 'train'
                 samples['train'].append(sample_metadata)
@@ -93,11 +87,21 @@ def preprocess_dataset(data_dir: Path, save_dir: Path, cities: list, year: int, 
                 train_test_dir.mkdir()
 
             # copying all files into new directory
-            for file, product in zip([label_file, s1_file, s2_file], [label, 'sentinel1', 'sentinel2']):
-                new_file = train_test_dir / product / file.name
+            for j, product in enumerate(['sentinel1', 'sentinel2', *labels]):
+
+                if product == 'sentinel1':
+                    file_name = f'S1_{city}_{year}_{patch_id}.tif'
+                elif product == 'sentinel2':
+                    file_name = f'S2_{city}_{year}_{patch_id}.tif'
+                else:  # for all labels
+                    file_name = f'{product}_{city}_{patch_id}.tif'
+
+                src_file = data_dir / product / file_name
+                new_file = train_test_dir / product / file_name
                 if not new_file.parent.exists():
                     new_file.parent.mkdir()
-                shutil.copy(str(file), str(train_test_dir / product / file.name))
+                shutil.copy(str(src_file), str(new_file))
+
 
     # writing metadata to .json file for train and test set
     for train_test in ['train', 'test']:
@@ -152,15 +156,17 @@ def write_metadata_file(root_dir: Path, year: int, cities: list, s1_features: li
 
 if __name__ == '__main__':
 
-    gee_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/')
-    save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/')
+    # gee_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/')
+    gee_dir = Path('C:/Users/hafne/Desktop/projects/data/gee/')
+    # save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/')
+    save_dir = Path('C:/Users/hafne/Desktop/projects/data/preprocessed/')
 
-    cities = ['Beijing', 'Stockholm']
+    cities = ['NewYork']
     year = 2017
-    label = 'wsf'
-    bucket = 'urban_extraction_twocities_raw'
+    labels = ['bing', 'wsf']
+    bucket = 'urban_extraction_bing_raw'
     data_dir = gee_dir / bucket
-    save_dir = save_dir / 'urban_extraction_twocities'
+    save_dir = save_dir / bucket[:-4]
 
 
     split = 0.2
@@ -185,7 +191,7 @@ if __name__ == '__main__':
                                                  indices=s2params['indices'],
                                                  metrics=s2params['metrics'])
 
-    preprocess_dataset(data_dir, save_dir, cities, year, label, sentinel1_features, sentinel2_features, split)
+    preprocess_dataset(data_dir, save_dir, cities, year, labels, sentinel1_features, sentinel2_features, split)
 
     # cities = ['Stockholm', 'Beijing', 'Milan']
     # year = 2019
