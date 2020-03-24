@@ -1,7 +1,8 @@
 import shutil, json, cv2
 from pathlib import Path
+from preprocessing.utils import *
 import numpy as np
-import tifffile
+
 
 # getting list of feature names based on input parameters
 def sentinel1_feature_names(polarizations: list, metrics: list):
@@ -12,11 +13,13 @@ def sentinel1_feature_names(polarizations: list, metrics: list):
                 names.append(f'{pol}_{orbit}_{metric}')
     return names
 
+
 # getting list of feature names based on input parameters
 def sentinel2_feature_names(bands: list, indices: list, metrics: list):
     band_names = [f'{band}_{metric}' for band in bands for metric in metrics]
     index_names = [f'{index}_{metric}' for index in indices for metric in metrics]
     return band_names + index_names
+
 
 # computing the percentage of urban pixels for a file
 def get_image_weight(file: Path):
@@ -28,24 +31,20 @@ def get_image_weight(file: Path):
 
 
 def is_edge_tile(file: Path, tile_size=256):
-    arr = tifffile.imread(str(file))
+    arr, _, _ = read_tif(file)
     arr = np.array(arr)
     if arr.shape[0] == tile_size and arr.shape[1] == tile_size:
         return False
     return True
 
 
-def preprocess_dataset(root_dir: Path, save_dir: Path, experiment_name: str, year: int, cities: list,
-                       s1_features: list, s2_features: list, split: float):
+# preprocessing dataset
+def preprocess_dataset(data_dir: Path, save_dir: Path, cities: list, year: int, labels: str,
+                       s1_features: list, s2_features: list, split: float, seed: int = 42):
 
-    # setting up raw data directories
-    s1_dir = root_dir / 'sentinel1'
-    s2_dir = root_dir / 'sentinel2'
-    guf_dir = root_dir / 'guf'
-
-    # setting up directories for preprocessed data
-    train_dir = save_dir / experiment_name / 'train'
-    test_dir = save_dir / experiment_name / 'test'
+    # setting up save dir
+    if not save_dir.exists():
+        save_dir.mkdir()
 
     # container to store all the metadata
     dataset_metadata = {
@@ -53,59 +52,70 @@ def preprocess_dataset(root_dir: Path, save_dir: Path, experiment_name: str, yea
         'year': year,
         'sentinel1': s1_features,
         'sentinel2': s2_features,
+        'labels': labels
     }
 
-    # getting all guf files
-    guf_files = [file for file in guf_dir.glob('**/*')]
+    # getting label files from first label (used edge detection in loop)
+    label_dir = data_dir / labels[0]
+    label_files = [file for file in label_dir.glob('**/*')]
 
     # generating random numbers for split
-    random_numbers = list(np.random.uniform(size=len(guf_files)))
+    np.random.seed(seed)
+    random_numbers = list(np.random.uniform(size=len(label_files)))
 
     # main loop splitting into train test, removing edge tiles, and collecting metadata
-    train_samples, test_samples = [], []
-    for i, (guf_file, random_num) in enumerate(zip(guf_files, random_numbers)):
-        if not is_edge_tile(guf_file):
+    samples = {'train': [], 'test': []}
+    for i, (label_file, random_num) in enumerate(zip(label_files, random_numbers)):
+        if not is_edge_tile(label_file):
 
             sample_metadata = {}
 
-            _, city, patch_id = guf_file.stem.split('_')
+            _, city, patch_id = label_file.stem.split('_')
 
             sample_metadata['city'] = city
             sample_metadata['patch_id'] = patch_id
-            sample_metadata['img_weight'] = get_image_weight(guf_file)
-
-            s1_file = s1_dir / f'S1_{city}_{year}_{patch_id}.tif'
-            s2_file = s2_dir / f'S2_{city}_{year}_{patch_id}.tif'
+            sample_metadata['img_weight'] = get_image_weight(label_file)
 
             if random_num > split:
-                train_test_dir = train_dir
-                train_samples.append(sample_metadata)
+                train_test_dir = save_dir / 'train'
+                samples['train'].append(sample_metadata)
             else:
-                train_test_dir = test_dir
-                test_samples.append(sample_metadata)
+                train_test_dir = save_dir / 'test'
+                samples['test'].append(sample_metadata)
+
+            if not train_test_dir.exists():
+                train_test_dir.mkdir()
 
             # copying all files into new directory
-            for file, product in zip([guf_file, s1_file, s2_file], ['guf', 'sentinel1', 'sentinel2']):
-                new_file = train_test_dir / product / file.name
+            for j, product in enumerate(['sentinel1', 'sentinel2', *labels]):
+
+                if product == 'sentinel1':
+                    file_name = f'S1_{city}_{year}_{patch_id}.tif'
+                elif product == 'sentinel2':
+                    file_name = f'S2_{city}_{year}_{patch_id}.tif'
+                else:  # for all labels
+                    file_name = f'{product}_{city}_{patch_id}.tif'
+
+                src_file = data_dir / product / file_name
+                new_file = train_test_dir / product / file_name
                 if not new_file.parent.exists():
-                    new_file.parent.mkdir(parents=True)
-                shutil.copy(str(file), str(train_test_dir / product / file.name))
+                    new_file.parent.mkdir()
+                shutil.copy(str(src_file), str(new_file))
+
 
     # writing metadata to .json file for train and test set
-    dataset_metadata['dataset'] = 'train'
-    dataset_metadata['samples'] = train_samples
-    with open(str(train_dir / 'metadata.json'), 'w', encoding='utf-8') as f:
-        json.dump(dataset_metadata, f, ensure_ascii=False, indent=4)
-
-    dataset_metadata['dataset'] = 'test'
-    dataset_metadata['samples'] = test_samples
-    with open(str(test_dir / 'metadata.json'), 'w', encoding='utf-8') as f:
-        json.dump(dataset_metadata, f, ensure_ascii=False, indent=4)
+    for train_test in ['train', 'test']:
+        dataset_metadata['dataset'] = train_test
+        dataset_metadata['samples'] = samples[train_test]
+        metadata_file = save_dir / train_test / 'metadata.json'
+        with open(str(metadata_file), 'w', encoding='utf-8') as f:
+            json.dump(dataset_metadata, f, ensure_ascii=False, indent=4)
 
 
 
+def write_metadata_file(root_dir: Path, year: int, cities: list, s1_features: list, s2_features: list):
 
-def write_metadata_file(root_dir: Path, save_dir: Path, year: int, cities: list, s1_features: list, s2_features: list):
+    # TODO: use this function also in the main preprocessing function to generate metadata file
 
     # setting up raw data directories
     s1_dir = root_dir / 'sentinel1'
@@ -137,7 +147,7 @@ def write_metadata_file(root_dir: Path, save_dir: Path, year: int, cities: list,
 
     # writing metadata to .json file for train and test set
     dataset_metadata['samples'] = samples
-    with open(str(save_dir / 'metadata.json'), 'w', encoding='utf-8') as f:
+    with open(str(root_dir / 'metadata.json'), 'w', encoding='utf-8') as f:
         json.dump(dataset_metadata, f, ensure_ascii=False, indent=4)
 
 
@@ -146,23 +156,18 @@ def write_metadata_file(root_dir: Path, save_dir: Path, year: int, cities: list,
 
 if __name__ == '__main__':
 
-    # root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/urban_extraction_gee_download')
+    # gee_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/')
+    gee_dir = Path('C:/Users/hafne/Desktop/projects/data/gee/')
     # save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/')
-    # root_dir = Path('/Midgard/Data/pshi/datasets/sentinel/raw/')
-    # save_dir = Path('/Midgard/Data/pshi/datasets/sentinel/preprocessed/')
-    # experiment = 'urban_extraction_morecities'
+    save_dir = Path('C:/Users/hafne/Desktop/projects/data/preprocessed/')
 
-    root_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/')
-    save_dir = Path('C:/Users/shafner/projects/urban_extraction/data/preprocessed/')
-    # root_dir = Path('/Midgard/Data/pshi/datasets/sentinel/raw/')
-    # save_dir = Path('/Midgard/Data/pshi/datasets/sentinel/preprocessed/')
-    # experiment = 'urban_extraction_twocities'
+    cities = ['NewYork']
+    year = 2017
+    labels = ['bing', 'wsf']
+    bucket = 'urban_extraction_bing_raw'
+    data_dir = gee_dir / bucket
+    save_dir = save_dir / bucket[:-4]
 
-    metadata_dir = Path('C:/Users/shafner/projects/urban_extraction/data/gee/urban_extraction_2019')
-
-
-    year = 2019
-    cities = ['Stockholm', 'Beijing', 'Milan']
 
     split = 0.2
 
@@ -186,23 +191,18 @@ if __name__ == '__main__':
                                                  indices=s2params['indices'],
                                                  metrics=s2params['metrics'])
 
-    write_metadata_file(
-        root_dir=metadata_dir,
-        save_dir=metadata_dir,
-        year=year,
-        cities=cities,
-        s1_features=sentinel1_features,
-        s2_features=sentinel2_features
-    )
+    preprocess_dataset(data_dir, save_dir, cities, year, labels, sentinel1_features, sentinel2_features, split)
 
-
-    # preprocess_dataset(
+    # cities = ['Stockholm', 'Beijing', 'Milan']
+    # year = 2019
+    # root_dir = Path('/storage/shafner/urban_extraction/urban_extraction_2019')
+    # write_metadata_file(
     #     root_dir=root_dir,
-    #     save_dir=save_dir,
-    #     experiment_name=experiment,
     #     year=year,
     #     cities=cities,
     #     s1_features=sentinel1_features,
-    #     s2_features=sentinel2_features,
-    #     split=split
+    #     s2_features=sentinel2_features
     # )
+
+
+

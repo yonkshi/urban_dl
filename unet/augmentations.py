@@ -2,7 +2,7 @@ import os
 
 import torchvision.transforms.functional as TF
 
-import cv2
+# import cv2
 import numpy as np
 import torch
 from scipy import ndimage

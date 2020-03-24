@@ -206,10 +206,11 @@ def train_net(net,
 
             # torch.cuda.empty_cache()
             global_step += 1
-        # Save every epoch
-        check_point_name = f'cp_{global_step}.pkl'
-        save_path = os.path.join(log_path, check_point_name)
-        torch.save(net.state_dict(), save_path)
+        # Save every 20 epochs
+        if epoch % 20 == 0:
+            check_point_name = f'cp_{global_step}.pkl'
+            save_path = os.path.join(log_path, check_point_name)
+            torch.save(net.state_dict(), save_path)
         if epoch % 2 == 0:
             # Evaluation after every other epoch
             model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)

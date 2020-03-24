@@ -1,0 +1,10 @@
+_BASE_: "s1_allbands_twocities.yaml"
+THRESH: 0
+DATALOADER:
+  LABEL: 'wsf'
+DATASETS:
+  TRAIN: ("/storage/shafner/urban_extraction/urban_extraction_twocities/train/",)
+  TEST: ("/storage/shafner/urban_extraction/urban_extraction_twocities/test/",)
+  INFERENCE: ("/storage/yonk/debug_new/test/",)
+  USE_CLAHE_VARI: False
+OUTPUT_BASE_DIR: ('/storage/shafner/run_logs/unet/')
