@@ -5,3 +5,5 @@ DATASETS:
   TEST: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/urban_extraction_bing/test/",)
 DATALOADER:
   LABEL: 'bing'
+TRAINER:
+  EPOCHS: 50
