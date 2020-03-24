@@ -1,8 +1,8 @@
 _BASE_: "s1s2_allbands.yaml"
 THRESH: 0.00
 DATASETS:
-  TRAIN: ("/storage/shafner/urban_extraction/urban_extraction_bing/train/",)
-  TEST: ("/storage/shafner/urban_extraction/urban_extraction_bing/test/",)
+  TRAIN: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/urban_extraction_bing/train/",)
+  TEST: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/urban_extraction_bing/test/",)
 DATALOADER:
   LABEL: 'bing'
 OUTPUT_BASE_DIR: ('/storage/shafner/run_logs/unet/')
