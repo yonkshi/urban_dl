@@ -5,4 +5,3 @@ DATASETS:
   TEST: ("/Midgard/Data/pshi/datasets/sentinel/preprocessed/urban_extraction_bing/test/",)
 DATALOADER:
   LABEL: 'bing'
-OUTPUT_BASE_DIR: ('/storage/shafner/run_logs/unet/')

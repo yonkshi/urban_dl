@@ -26,7 +26,7 @@ DATASETS:
   INFERENCE: ("/local_storage/datasets/xview2/full_new/real_test_set/",)
   PRE_OR_POST: 'pre' # 'pre' vs 'post' disaster images to use
   USE_CLAHE_VARI: False
-OUTPUT_BASE_DIR: ('/Midgard/home/pshi/run_logs/unet/')
+OUTPUT_BASE_DIR: ('/Midgard/home/pshi/run_logs/urban_extraction_unet/')
 TRAINER:
   LR: 0.0001
   BATCH_SIZE: 16
