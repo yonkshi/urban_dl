@@ -9,6 +9,7 @@ MODEL:
   ADVERSARIAL_REFINEMENT:
     ENABLED: True
     DISCRIMINATOR: 'resnet50'
+    ENABLE_GRADIENT_REVERSAL: True
 OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
   TRAIN: ("/storage/yonk/debug_new/train/",)

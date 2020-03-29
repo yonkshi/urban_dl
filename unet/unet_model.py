@@ -137,3 +137,4 @@ class MultiScaleContextForUNet(nn.Module):
                 context += layer(x)
 
         return context
+

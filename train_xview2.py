@@ -25,7 +25,7 @@ import wandb
 from unet import UNet
 from unet.dataloader import Xview2Detectron2Dataset
 from unet.augmentations import *
-from unet.descriminator_model import RefinementDescriminator
+from unet.descriminator_model import RefinementDescriminator, GradientReversal, RevGrad
 
 from experiment_manager.metrics import f1_score
 from experiment_manager.args import default_argument_parser
