@@ -14,7 +14,7 @@ from sklearn.metrics import confusion_matrix as confmatrix
 import wandb
 import matplotlib.pyplot as plt
 
-from unet import UNet
+from unet import UNet, Dpn92_Unet_Double
 from unet.dataloader import Xview2Detectron2DamageLevelDataset
 from unet.augmentations import *
 
@@ -456,6 +456,8 @@ if __name__ == '__main__':
                            in_channels= cfg.MODEL.IN_CHANNELS,
                            classes=cfg.MODEL.OUT_CHANNELS
             )
+    elif cfg.MODEL.SIAMESE.ENABLED:
+        net = Dpn92_Unet_Double()
     else:
         net = UNet(cfg)
 

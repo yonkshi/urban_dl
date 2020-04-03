@@ -20,6 +20,9 @@ MODEL:
   BACKBONE:
     ENABLED: False
     TYPE: 'resnet34'
+  SIAMESE:
+    ENABLED: False
+    TYPE: 'DPN92'
   COMPLEX_ARCHITECTURE:
     ENABLED: False
     TYPE: 'pspnet'

@@ -18,6 +18,7 @@ MODEL:
     ENABLED: False
     TYPE: 'Simple' # [Simple, PyramidSum, ParallelSum]
     DILATION: []
+
   BACKBONE:
     ENABLED: False
     TYPE: 'resnet34'
