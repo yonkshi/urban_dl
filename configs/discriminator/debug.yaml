@@ -1,0 +1,30 @@
+_BASE_: "base.yaml"
+MODEL:
+  LOSS_TYPE: 'AdversarialFrankensteinLoss'
+  OUT_CHANNELS: 1
+  IN_CHANNELS: 3
+  POOLING_TYPE: '2Stride'
+  LAST_LAYER_RESIDUAL: True
+  TOPOLOGY: [128, 128, 256, 512,]
+  ADVERSARIAL_REFINEMENT:
+    ENABLED: True
+    DISCRIMINATOR: 'resnet50'
+    ENABLE_GRADIENT_REVERSAL: True
+OUTPUT_BASE_DIR: ('logs/')
+DATASETS:
+  TRAIN: ("/storage/yonk/debug_new/train/",)
+  TEST: ("/storage/yonk/debug_new/test/",)
+  INFERENCE: ("/storage/yonk/debug_new/test/",)
+  USE_CLAHE_VARI: False
+TRAINER:
+  LR: 0.001
+  BATCH_SIZE: 4
+  EDGE_LOSS_SCALE: 2
+DATALOADER:
+  NUM_WORKER: 0
+AUGMENTATION:
+  # Random cropping of the images
+  CROP_TYPE: 'importance'
+  CROP_SIZE: 256
+  IMAGE_OVERSAMPLING_TYPE: 'simple'
+  RANDOM_FLIP_ROTATE: True

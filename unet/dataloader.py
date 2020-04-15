@@ -179,3 +179,78 @@ class Xview2Detectron2DamageLevelDataset(Xview2Detectron2Dataset):
 
         return masks
 
+class Xview2Detectron2DiscriminatorPretrainDataset(Xview2Detectron2Dataset):
+    def __init__(self,
+                 file_path,
+                 pre_or_post,
+                 background_class = 'new-channel',
+                 *args, **kwargs
+                 ):
+        super().__init__(file_path, pre_or_post, *args, **kwargs)
+        self.background_class = background_class
+
+    def __getitem__(self, index):
+
+        data_sample = self.dataset_metadata[index][self.pre_or_post]
+        sample_name = data_sample['file_name']
+
+        predicted =self._load_predicted(sample_name)
+        gts = self._extract_label(data_sample['annotations'], sample_name)
+        # label = label[None, ...] # C x H x W
+
+        if self.transform:
+            image_path = os.path.join(self.dataset_path, sample_name)
+            predicted, gts, _ = self.transform([predicted, gts, image_path])
+
+
+        ret = {
+            'gts': gts,
+            'predicted': predicted,
+            'img_name':sample_name,
+        }
+
+        if self.include_index:
+            ret['index'] = index
+        if self.include_image_weight:
+            # Used for oversampling stats
+            if hasattr(data_sample, 'image_weight'):
+                ret['image_weight'] = data_sample['image_weight']
+            else:
+                ret['image_weight'] = gts.sum()
+
+        return ret
+
+    def _load_predicted(self, image_filename):
+
+        # Load predisaster counter part
+        img_name_split = image_filename.split('_')
+        img_name_split[-2] = 'pre'
+        image_filename = '_'.join(img_name_split)
+
+        img_path = os.path.join(self.dataset_path, 'loc_predicted', image_filename)
+        img = imread_cached(img_path).astype(np.float32)
+        img = img [...,[0]] # PNG has 3 chan, we just need one channel
+        return img
+
+    def __call__(self, args):
+        input, label, image_path = args
+        image_name = os.path.basename(image_path)
+
+        # Load predisaster counter part
+        img_name_split = image_name.split('_')
+        img_name_split[-2] = 'pre'
+        image_name = '_'.join(img_name_split)
+
+        dir_name = os.path.dirname(image_path)
+        # Load preprocessed mask if exist
+        subdir = 'label_mask' if self.use_gts_mask else 'loc_predicted'
+        mask_path = os.path.join(dir_name, subdir, image_name)
+
+        assert os.path.exists(mask_path), 'Mask data is not generated, please double check \n' + mask_path
+
+        mask = imread_cached(mask_path).astype(np.float32)
+        mask = mask[...,0][...,None] # [H, W, 3] -> [H, W, 1]
+
+        input = np.concatenate([input, mask], axis=-1)
+
+        return input, label, image_path
