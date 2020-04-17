@@ -323,6 +323,9 @@ if __name__ == '__main__':
 
     if cfg.MODEL.ADVERSARIAL_REFINEMENT.ENABLED:
         descriminator = RefinementDescriminator(cfg)
+        if cfg.MODEL.ADVERSARIAL_REFINEMENT.USE_PRETRAINED_MODEL:
+            desc_pretrained_path = path.join(cfg.OUTPUT_DIR, '') # TODO Pretrained path
+            descriminator.load_state_dict(torch.load(desc_pretrained_path))
     else:
         descriminator = None
 
@@ -330,6 +333,7 @@ if __name__ == '__main__':
         full_model_path = path.join(cfg.OUTPUT_DIR, args.model_path)
         net.load_state_dict(torch.load(full_model_path))
         print('Model loaded from {}'.format(full_model_path))
+
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # cudnn.benchmark = True # faster convolutions, but more memory
