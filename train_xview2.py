@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 import datetime
 import enum
 import timeit
+from collections import OrderedDict
 
 import numpy as np
 import torch
@@ -324,8 +325,19 @@ if __name__ == '__main__':
     if cfg.MODEL.ADVERSARIAL_REFINEMENT.ENABLED:
         descriminator = RefinementDescriminator(cfg)
         if cfg.MODEL.ADVERSARIAL_REFINEMENT.USE_PRETRAINED_MODEL:
-            desc_pretrained_path = path.join(cfg.OUTPUT_DIR, '') # TODO Pretrained path
-            descriminator.load_state_dict(torch.load(desc_pretrained_path))
+            desc_pretrained_path = path.join(cfg.OUTPUT_BASE_DIR, 'base/cp_model_329840.pth') # TODO Pretrained path
+            state_dict = torch.load(desc_pretrained_path)
+            # Hacky hack fix to rename parameter names:
+            new_state_dict = OrderedDict()
+            for name, val in state_dict.items():
+                if name.startswith('output.0'):
+                    name = name.replace('output.0', 'output.1')
+                elif name.startswith('output.2'):
+                    name = name.replace('output.2', 'output.3')
+
+                new_state_dict[name] = val
+
+            descriminator.load_state_dict(new_state_dict)
     else:
         descriminator = None
 
