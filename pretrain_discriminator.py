@@ -107,7 +107,7 @@ def train_net(descriminator_net,
                 pause=Events.ITERATION_COMPLETED)
 
     # Checkpoint handler
-    cp_handler = ModelCheckpoint(log_path, 'cp', create_dir=True, require_empty=False)
+    cp_handler = ModelCheckpoint(log_path, 'cp', create_dir=True, n_saved=None, require_empty=False)
     trainer.add_event_handler(Events.EPOCH_COMPLETED(every=8), cp_handler, {'model': discriminator_net})
 
     @trainer.on(Events.ITERATION_COMPLETED(every=100))
