@@ -325,6 +325,7 @@ if __name__ == '__main__':
     if cfg.MODEL.ADVERSARIAL_REFINEMENT.ENABLED:
         descriminator = RefinementDescriminator(cfg)
         if cfg.MODEL.ADVERSARIAL_REFINEMENT.USE_PRETRAINED_MODEL:
+
             desc_pretrained_path = path.join(cfg.OUTPUT_BASE_DIR, 'base/cp_model_329840.pth') # TODO Pretrained path
             state_dict = torch.load(desc_pretrained_path)
             # Hacky hack fix to rename parameter names:
@@ -338,13 +339,14 @@ if __name__ == '__main__':
                 new_state_dict[name] = val
 
             descriminator.load_state_dict(new_state_dict)
+            print('><>< DISCRIMINATOR MODEL LOADED! ' + desc_pretrained_path)
     else:
         descriminator = None
 
     if args.resume and args.resume_from:
         full_model_path = path.join(cfg.OUTPUT_DIR, args.model_path)
         net.load_state_dict(torch.load(full_model_path))
-        print('Model loaded from {}'.format(full_model_path))
+        print('><>< Model loaded from {}'.format(full_model_path))
 
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
