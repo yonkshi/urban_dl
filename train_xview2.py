@@ -347,7 +347,7 @@ if __name__ == '__main__':
         full_model_path = path.join(cfg.OUTPUT_DIR, args.resume_from)
         state_dict
         for name, param in torch.load(full_model_path).items():
-            name = name.replace('mpconv.1.conv', 'mpconv.conv')
+            # name = name.replace('mpconv.1.conv', 'mpconv.conv')
             state_dict[name] = param
         net.load_state_dict(state_dict)
         print('><>< Model loaded from {}'.format(full_model_path))
