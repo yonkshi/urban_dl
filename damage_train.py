@@ -457,7 +457,8 @@ if __name__ == '__main__':
                            classes=cfg.MODEL.OUT_CHANNELS
             )
     elif cfg.MODEL.SIAMESE.ENABLED:
-        net = Dpn92_Unet_Double()
+        use_pretrained = cfg.MODEL.SIAMESE.PRETRAINED
+        net = Dpn92_Unet_Double(use_pretrained)
     else:
         net = UNet(cfg)
 

@@ -187,7 +187,7 @@ class ConvRelu(nn.Module):
         return self.layer(x)
 
 class Dpn92_Unet_Double(nn.Module):
-    def __init__(self, pretrained='imagenet+5k', **kwargs):
+    def __init__(self, pretrained=False, **kwargs):
         super(Dpn92_Unet_Double, self).__init__()
 
         encoder_filters = [64, 336, 704, 1552, 2688]
@@ -210,7 +210,8 @@ class Dpn92_Unet_Double(nn.Module):
         self.res = nn.Conv2d(decoder_filters[-5] * 2, 5, 1, stride=1, padding=0)
 
         self._initialize_weights()
-
+        if pretrained:
+            pretrained = 'imagenet+5k'
         encoder = dpn92(pretrained=pretrained)
 
         # conv1_new = nn.Conv2d(6, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)

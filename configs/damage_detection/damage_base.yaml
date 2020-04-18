@@ -23,6 +23,7 @@ MODEL:
   SIAMESE:
     ENABLED: False
     TYPE: 'DPN92'
+    PRETRAINED: False
   COMPLEX_ARCHITECTURE:
     ENABLED: False
     TYPE: 'pspnet'
