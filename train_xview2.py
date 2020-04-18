@@ -344,7 +344,7 @@ if __name__ == '__main__':
         descriminator = None
 
     if args.resume and args.resume_from:
-        full_model_path = path.join(cfg.OUTPUT_DIR, args.model_path)
+        full_model_path = path.join(cfg.OUTPUT_DIR, args.resume_from)
         net.load_state_dict(torch.load(full_model_path))
         print('><>< Model loaded from {}'.format(full_model_path))
 
