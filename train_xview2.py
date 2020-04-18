@@ -331,10 +331,12 @@ if __name__ == '__main__':
             # Hacky hack fix to rename parameter names:
             new_state_dict = OrderedDict()
             for name, val in state_dict.items():
-                # if name.startswith('output.0'):
-                #     name = name.replace('output.0', 'output.1')
-                # elif name.startswith('output.2'):
-                #     name = name.replace('output.2', 'output.3')
+                if cfg.MODEL.ADVERSARIAL_REFINEMENT.ENABLE_GRADIENT_REVERSAL:
+                    # HACK: Model name mismatch in certain configurations
+                    if name.startswith('output.0'):
+                        name = name.replace('output.0', 'output.1')
+                    elif name.startswith('output.2'):
+                        name = name.replace('output.2', 'output.3')
 
                 new_state_dict[name] = val
 
