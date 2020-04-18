@@ -22,7 +22,7 @@ MODEL:
     TYPE: 'resnet34'
   SIAMESE:
     ENABLED: False
-    TYPE: 'DPN92'
+    TYPE: 'DPN92' # DPN92 is default, or SENET152
     PRETRAINED: False
   COMPLEX_ARCHITECTURE:
     ENABLED: False

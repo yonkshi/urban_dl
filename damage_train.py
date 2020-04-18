@@ -14,7 +14,7 @@ from sklearn.metrics import confusion_matrix as confmatrix
 import wandb
 import matplotlib.pyplot as plt
 
-from unet import UNet, Dpn92_Unet_Double
+from unet import UNet, Dpn92_Unet_Double, SeNet154_Unet_Double
 from unet.dataloader import Xview2Detectron2DamageLevelDataset
 from unet.augmentations import *
 
@@ -458,7 +458,11 @@ if __name__ == '__main__':
             )
     elif cfg.MODEL.SIAMESE.ENABLED:
         use_pretrained = cfg.MODEL.SIAMESE.PRETRAINED
-        net = Dpn92_Unet_Double(use_pretrained)
+        if cfg.MODEL.SIAMESE.TYPE == 'SENET152':
+            pass
+            net = SeNet154_Unet_Double(use_pretrained)
+        else:
+            net = Dpn92_Unet_Double(use_pretrained)
     else:
         net = UNet(cfg)
 
