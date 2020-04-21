@@ -34,6 +34,7 @@ MODEL:
     MASKED_GRADIENT: False
   BLOCK_ACTIVATION: False
   POOLING_TYPE: 'MaxPooling' # 'MaxPooling', 'AvgPooling', '2Stride'
+  LAST_LAYER_RESIDUAL: False # Switches last layer to a Residual connection to preserve feature information
 
 THRESH: 0.1 # Best threshold (only to be filled after running final model evaluation)
 DATASETS:
