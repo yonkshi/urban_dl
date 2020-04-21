@@ -112,11 +112,12 @@ class down(nn.Module):
         elif pooling_layer == '2Stride':
             self.pooling_layer = nn.Conv2d(in_ch, in_ch, 2, 2)
 
-        self.mpconv = nn.Sequential(conv_block(in_ch, out_ch, activation), )
+        self.mpconv = nn.Sequential(
+            self.pooling_layer,
+            conv_block(in_ch, out_ch, activation), )
 
     def forward(self, x):
-        x1 = self.pooling_layer(x)
-        out = self.mpconv(x1)
+        out = self.mpconv(x)
         return out
 
 
