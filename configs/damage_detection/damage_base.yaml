@@ -1,6 +1,7 @@
 SEED: 1339 # best seed so far 1339 or 43
 MODEL:
   OUT_CHANNELS: 5
+
   IN_CHANNELS: 4
   LOSS_TYPE: 'SoftDiceMulticlassLoss'
   TOPOLOGY: [64, 128, 256, 512,]
@@ -31,6 +32,7 @@ MODEL:
     TYPE: 'new-class' # 'new-class', 'no-damage', 'None'
     MASK_OUTPUT: False
     MASKED_GRADIENT: False
+  BLOCK_ACTIVATION: False
 
 THRESH: 0.1 # Best threshold (only to be filled after running final model evaluation)
 DATASETS:
