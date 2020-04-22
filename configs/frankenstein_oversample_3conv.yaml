@@ -4,6 +4,8 @@ MODEL:
   LOSS_TYPE: 'FrankensteinLoss'
   OUT_CHANNELS: 1
   BLOCK_TYPE: 'Triple'
+DATASETS:
+  TEST: ("/local_storage/datasets/xview2/full_new/test/",)
 TRAINER:
   BATCH_SIZE: 16
 DATALOADER:

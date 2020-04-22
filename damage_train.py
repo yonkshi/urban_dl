@@ -494,7 +494,7 @@ if __name__ == '__main__':
                 project='urban_dl',
                 tags=['eval', 'dmg'],
             )
-            dmg_model_eval(net, cfg, device, run_type='TEST', max_samples=1000,  use_confusion_matrix=True, include_disaster_type_breakdown=True)
+            dmg_model_eval(net, cfg, device, run_type='TEST', max_samples=2000,  use_confusion_matrix=True, include_disaster_type_breakdown=True)
             dmg_model_eval(net, cfg, device, run_type='TRAIN', max_samples=1000, use_confusion_matrix=True, include_disaster_type_breakdown=True)
         else:
             wandb.init(
