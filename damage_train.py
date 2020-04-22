@@ -101,22 +101,6 @@ def train_net(net,
             y_gts = batch['y'].to(device)
             image_weight = batch['image_weight']
 
-            # # TODO DEBUG
-            # xtest  = x.cpu().permute(0,2,3,1).contiguous().numpy()
-            # ytest = y_gts.cpu().permute(0,2,3,1).contiguous().numpy()
-            # testy = ytest[0, ..., 1:4] # ignore bg
-            # plt.imshow(testy)
-            # plt.savefig('test_y.png')
-            #
-            # postx = xtest[0, ..., :3]
-            # plt.imshow(postx)
-            # plt.savefig('test_post.png')
-            #
-            # prex = xtest[0, ..., 4:7]
-            # plt.imshow(prex)
-            # plt.savefig('test_pre.png')
-            # # TODO END DEBUGn
-
             optimizer.zero_grad()
 
             y_pred = net(x)
