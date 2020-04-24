@@ -32,6 +32,9 @@ MODEL:
     DISCRIMINATOR: 'resnet50'
     ENABLE_GRADIENT_REVERSAL: False
     USE_PRETRAINED_MODEL: False
+    PRETRAINED_ON_IMAGENET: False
+    INPUT_PRODUCT: False # Multiply mask with input image.
+
 
 
 THRESH: 0.01 # Best threshold (only to be filled after running final model evaluation)
