@@ -1,0 +1,13 @@
+_BASE_: "frankenstein_oversample_3conv.yaml"
+THRESH: 0.52
+MODEL:
+  LOSS_TYPE: 'AdversarialFrankensteinLoss'
+  OUT_CHANNELS: 1
+  BLOCK_TYPE: 'Triple'
+  ADVERSARIAL_REFINEMENT:
+    ENABLED: True
+    INPUT_PRODUCT: True
+TRAINER:
+  BATCH_SIZE: 12
+
+

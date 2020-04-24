@@ -164,7 +164,6 @@ def train_net(net,
             y_pred = net(x)
 
             if descriminator is not None:
-                # TODO Add condision
                 if cfg.MODEL.ADVERSARIAL_REFINEMENT.INPUT_PRODUCT:
                     y_pred = y_pred * x
                     y_gts = y_gts * x
