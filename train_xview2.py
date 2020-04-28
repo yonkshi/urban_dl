@@ -277,7 +277,7 @@ def frankenstein_adversarial_loss(y_pred, y_gts, adv_pred, adv_true):
     a = (-y_pred).clamp(0)
     adv_loss = F.binary_cross_entropy_with_logits(adv_pred, adv_true)
 
-    loss = ce + jaccard + adv_loss
+    loss = adv_loss - ce - jaccard
 
     return loss, ce, jaccard, adv_loss
 
