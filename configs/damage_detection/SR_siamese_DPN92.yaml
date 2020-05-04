@@ -5,7 +5,7 @@ MODEL:
   SIAMESE:
     ENABLED: True
     PRETRAINED: True
-    TYPE: 'SENET152'
+    TYPE: 'DPN92'
 DATASETS:
   TEST: ("/Midgard/Data/pshi/datasets/xview2/xview2_validation/test/",)
   LOCALIZATION_MASK:
@@ -13,7 +13,7 @@ DATASETS:
     TRAIN_USE_GTS_MASK: False # If false, we will use predicted localization to train
   INCLUDE_PRE_DISASTER: True
 TRAINER:
-  BATCH_SIZE: 2
+  BATCH_SIZE: 6
   CE_CLASS_BALANCE:
     ENABLED: True
     WEIGHTS: [0.036552, 0.0040245, 0.003355, 0.003686, 0.95238]

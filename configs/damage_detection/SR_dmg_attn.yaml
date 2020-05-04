@@ -1,19 +1,16 @@
 _BASE_: "damage_base.yaml"
 MODEL:
   LOSS_TYPE: 'ComboLoss'
-  IN_CHANNELS: 6
-  SIAMESE:
-    ENABLED: True
-    PRETRAINED: True
-    TYPE: 'SENET152'
+  IN_CHANNELS: 7
+  USE_ATTENTION: True
 DATASETS:
   TEST: ("/Midgard/Data/pshi/datasets/xview2/xview2_validation/test/",)
   LOCALIZATION_MASK:
-    ENABLED: False
+    ENABLED: True
     TRAIN_USE_GTS_MASK: False # If false, we will use predicted localization to train
   INCLUDE_PRE_DISASTER: True
 TRAINER:
-  BATCH_SIZE: 2
+  BATCH_SIZE: 12
   CE_CLASS_BALANCE:
     ENABLED: True
     WEIGHTS: [0.036552, 0.0040245, 0.003355, 0.003686, 0.95238]
