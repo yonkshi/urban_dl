@@ -23,6 +23,7 @@ from experiment_manager.metrics import MultiClassF1
 from experiment_manager.config import new_config
 from experiment_manager.loss import *
 from eval_unet_xview2 import inference_loop
+from eval_util.xview2_scoring import RowPairCalculator, XviewMetrics
 
 # import hp
 
@@ -175,6 +176,7 @@ def dmg_model_eval(net, cfg, device,
     confusion_matrix_with_bg = []
     confusion_matrices_by_disaster_type = {}
     component_f1 = []
+    allrows = []
     def evaluate(x, y_true, y_pred, img_filenames):
         if cfg.MODEL.BACKGROUND.MASK_OUTPUT:
             # No background class, manually mask out background
@@ -186,6 +188,13 @@ def dmg_model_eval(net, cfg, device,
         if include_component_f1:
             loss, loss_component = soft_dice_loss_multi_class_debug(y_pred, y_true)
             component_f1.append(loss_component.cpu().detach().numpy())
+
+        # === Official F1 evaluation
+        y_pred_np = y_pred.cpu().detach().numpy()
+        y_true_np = y_true.cpu().detach().numpy()
+        # loc_row is not being used, but to keep original code intact, we keep it here
+        row = RowPairCalculator.get_row_pair(np.zeros([2]), y_pred_np, np.zeros([2]), y_true_np)
+        allrows.append(row)
 
         # === Confusion Matrix stuff
         if use_confusion_matrix:
@@ -249,6 +258,15 @@ def dmg_model_eval(net, cfg, device,
             wandb.log({
                 f'disaster-{disaster_type}-f1': f1
             })
+    # official Xivew2 scoring
+    offical_score = XviewMetrics(allrows)
+
+    print(f'official_f1', offical_score.df1)
+    wandb.log({
+        f'official-f1': offical_score.df1
+    })
+
+
 
     if include_disaster_type_breakdown and use_confusion_matrix:
         for disaster_type, cm in confusion_matrices_by_disaster_type.items():
