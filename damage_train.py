@@ -306,9 +306,9 @@ def plot_confmtx(name, confusion_matrix):
     :param confusion_matrix:
     :return:
     '''
-    print('confusion_matrix ', confusion_matrix)
+    # print('confusion_matrix ', confusion_matrix)
     normalized_cm = confusion_matrix / confusion_matrix.sum(axis=-1, keepdims=True)
-    print('confusion_matrix normalized', normalized_cm)
+    # print('confusion_matrix normalized', normalized_cm)
     # normalized_cm = confusion_matrix_with_bg / confusion_matrix_with_bg.sum(axis=0, keepdims=True)
     labels = ['no-damage', 'minor-damage', 'major-damage', 'destroyed', 'background', ]
 
