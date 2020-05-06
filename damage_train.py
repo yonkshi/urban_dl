@@ -182,7 +182,7 @@ def dmg_model_eval(net, cfg, device,
             # No background class, manually mask out background
             localization_mask = x[:,[3]] # 3 is a hard coded mask index
             y_pred = localization_mask * y_pred
-        measurer.add_sample(y_true, y_pred)
+        tp, tn, fp, fn = measurer.add_sample(y_true, y_pred)
 
         # === Component F1 score
         if include_component_f1:
@@ -190,9 +190,10 @@ def dmg_model_eval(net, cfg, device,
             component_f1.append(loss_component.cpu().detach().numpy())
 
         # === Official F1 evaluation
-        y_pred_np = y_pred.cpu().detach().numpy()
-        y_true_np = y_true.cpu().detach().numpy()
+        y_pred_np = y_pred.argmax(dim=1).cpu().detach().numpy() # One-hot to not-one-hot
+        y_true_np = y_true.argmax(dim=1).cpu().detach().numpy()
         # loc_row is not being used, but to keep original code intact, we keep it here
+
         row = RowPairCalculator.get_row_pair(np.zeros([2]), y_pred_np, np.zeros([2]), y_true_np)
         allrows.append(row)
 
@@ -441,24 +442,24 @@ if __name__ == '__main__':
     cfg = setup(args)
 
     out_channels = cfg.MODEL.OUT_CHANNELS
-    if cfg.MODEL.BACKBONE.ENABLED:
-        if cfg.MODEL.COMPLEX_ARCHITECTURE.ENABLED:
-            if cfg.MODEL.COMPLEX_ARCHITECTURE.TYPE == 'pspnet':
-                net = smp.PSPNet(cfg.MODEL.BACKBONE.TYPE,
-                               encoder_weights=None,
-                               encoder_depth=3,
-                               in_channels=cfg.MODEL.IN_CHANNELS,
-                               classes=cfg.MODEL.OUT_CHANNELS
-                               )
-        else:
-            net = smp.Unet(cfg.MODEL.BACKBONE.TYPE,
-                           encoder_weights=None,
-                           encoder_depth=5,
-                           decoder_channels = [512,256,128,64,32],
-                           in_channels= cfg.MODEL.IN_CHANNELS,
-                           classes=cfg.MODEL.OUT_CHANNELS
-            )
-    elif cfg.MODEL.SIAMESE.ENABLED:
+    # if cfg.MODEL.BACKBONE.ENABLED:
+    #     if cfg.MODEL.COMPLEX_ARCHITECTURE.ENABLED:
+    #         if cfg.MODEL.COMPLEX_ARCHITECTURE.TYPE == 'pspnet':
+    #             net = smp.PSPNet(cfg.MODEL.BACKBONE.TYPE,
+    #                            encoder_weights=None,
+    #                            encoder_depth=3,
+    #                            in_channels=cfg.MODEL.IN_CHANNELS,
+    #                            classes=cfg.MODEL.OUT_CHANNELS
+    #                            )
+    #     else:
+    #         net = smp.Unet(cfg.MODEL.BACKBONE.TYPE,
+    #                        encoder_weights=None,
+    #                        encoder_depth=5,
+    #                        decoder_channels = [512,256,128,64,32],
+    #                        in_channels= cfg.MODEL.IN_CHANNELS,
+    #                        classes=cfg.MODEL.OUT_CHANNELS
+    #         )
+    if cfg.MODEL.SIAMESE.ENABLED:
         use_pretrained = cfg.MODEL.SIAMESE.PRETRAINED
         if cfg.MODEL.SIAMESE.TYPE == 'SENET152':
             net = SeNet154_Unet_Double(use_pretrained)

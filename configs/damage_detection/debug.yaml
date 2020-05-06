@@ -13,8 +13,8 @@ MODEL:
     TYPE: 'dpn92'
     PRETRAINED: True
   BACKBONE:
-    ENABLED: False
-    TYPE: 'resnet50'
+    ENABLED: True
+    TYPE: 'resnext50'
   COMPLEX_ARCHITECTURE:
     ENABLED: False
     TYPE: 'pspnet'

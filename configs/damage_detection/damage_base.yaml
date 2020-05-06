@@ -21,6 +21,7 @@ MODEL:
   BACKBONE:
     ENABLED: False
     TYPE: 'resnet34'
+    PRETRAINED: Falsess
   SIAMESE:
     ENABLED: False
     TYPE: 'DPN92' # DPN92 is default, or SENET152

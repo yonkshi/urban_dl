@@ -28,8 +28,6 @@ class UNet(nn.Module):
 
         self._cfg = cfg
 
-
-
         first_chan = cfg.MODEL.TOPOLOGY[0]
         self.inc = inconv(n_channels, first_chan, conv_block, self.activation)
         self.outc = outconv(first_chan, n_classes)
@@ -56,11 +54,17 @@ class UNet(nn.Module):
             down_dict[f'down{idx+1}'] = layer
             up_topo.append(out_dim)
         self.down_seq = nn.ModuleDict(down_dict)
-        bottleneck_dim = out_dim
+        # TODO Pretrained Encoder: ResNeXt-50
+        # TODO Pretrained Encoder: VGG-16
 
-        # context layer
-        if self.multiscale_context_enabled:
-            self.multiscale_context = MultiScaleContextForUNet(cfg, bottleneck_dim)
+        if cfg.MODEL.BACKBONE.ENABLED:
+            pretrained = cfg.MODEL.BACKBONE.PRETRAINED
+            if cfg.MODEL.BACKBONE.TYPE == 'resnext50':
+                import torchvision.models as models
+                vgg19 = models.resnext50_32x4d(pretrained=pretrained)
+                print('hello')
+                pass
+        bottleneck_dim = out_dim
 
         # Upward layers
         for idx in reversed(range(n_layers)):
