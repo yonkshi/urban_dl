@@ -114,15 +114,15 @@ class MultiClassF1():
             y_true_mask = y_true[:, [-1]]
 
 
-        y_true_bin = y_true == 1. # [B,  C, ...]
+        y_true_bin = y_true.bool() # [B,  C, ...]
         # Make y_pred from decimal to one hot along dim C
         y_pred_argmax = torch.argmax(y_pred, dim=1, keepdim=True)  # [B, C, ...]
         y_pred_oh = torch.zeros_like(y_pred, dtype=torch.bool).scatter_(1, y_pred_argmax,True) # one-hot
 
         # remove the background
         _tp = (y_true_bin & y_pred_oh)[:,:-1]
-        _tn = ((~y_true_bin & ~y_pred_oh))[:,:-1] # * y_true_mask
-        _fp = ((~y_true_bin & y_pred_oh))[:,:-1] # * y_true_mask
+        _tn = ((~y_true_bin & ~y_pred_oh) * y_true_mask)[:,:-1] #
+        _fp = ((~y_true_bin & y_pred_oh) * y_true_mask)[:,:-1] # * y_true_mask
         _fn = (y_true_bin & ~y_pred_oh)[:,:-1]
 
         tp = _tp.float().sum(dim=self._data_dims)

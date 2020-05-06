@@ -224,6 +224,7 @@ def dmg_model_eval(net, cfg, device,
     use_gts_mask = run_type == 'TRAIN' and cfg.DATASETS.LOCALIZATION_MASK.TRAIN_USE_GTS_MASK
     dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
 
+    # TODO some transforms shouldn't exist in evaluation
     trfm = build_transforms(cfg, use_gts_mask = use_gts_mask)
     bg_class = 'new-class' if cfg.MODEL.BACKGROUND.TYPE == 'new-class' else None
     dataset = Xview2Detectron2DamageLevelDataset(dset_source,
@@ -372,9 +373,9 @@ def build_transforms(cfg, for_training=False, use_gts_mask = False):
     if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
     if cfg.AUGMENTATION.CROP_TYPE == 'uniform' and for_training:
         trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
-    elif cfg.AUGMENTATION.CROP_TYPE == 'importance':
+    elif cfg.AUGMENTATION.CROP_TYPE == 'importance' and for_training:
         trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
-    if cfg.AUGMENTATION.RANDOM_FLIP_ROTATE:
+    if cfg.AUGMENTATION.RANDOM_FLIP_ROTATE and for_training:
         trfm.append(RandomFlipRotate())
     trfm.append(Npy2Torch())
     if cfg.AUGMENTATION.ENABLE_VARI: trfm.append(VARI())
