@@ -475,7 +475,8 @@ if __name__ == '__main__':
         full_model_path = path.join(cfg.OUTPUT_DIR, args.resume_from)
         # Removing the module.** in front of keys
         filtered_dict = {}
-        for k, v in torch.load(full_model_path).items():
+        state_dict = torch.load(full_model_path)
+        for k, v in torch.load(full_model_path)['state_dict'].items():
             k = '.'.join(k.split('.')[1:])
             filtered_dict[k] = v
         net.load_state_dict(filtered_dict)
