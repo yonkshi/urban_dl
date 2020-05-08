@@ -7,6 +7,7 @@ import numpy as np
 from .unet_parts import *
 from .dpn import *
 from .senet import se_resnext50_32x4d, senet154
+import copy
 
 class UNet(nn.Module):
     def __init__(self, cfg):
@@ -29,7 +30,7 @@ class UNet(nn.Module):
         self._cfg = cfg
 
         first_chan = cfg.MODEL.TOPOLOGY[0]
-        self.inc = inconv(n_channels, first_chan, conv_block, self.activation)
+
         self.outc = outconv(first_chan, n_classes)
         self.multiscale_context_enabled = cfg.MODEL.MULTISCALE_CONTEXT.ENABLED
         self.multiscale_context_type = cfg.MODEL.MULTISCALE_CONTEXT.TYPE
@@ -44,27 +45,40 @@ class UNet(nn.Module):
         up_dict = OrderedDict()
 
         # Downward layers
-        for idx in range(n_layers):
-            is_not_last_layer = idx != n_layers-1
-            in_dim = down_topo[idx]
-            out_dim = down_topo[idx+1] if is_not_last_layer else down_topo[idx] # last layer
-            layer = down(in_dim, out_dim, conv_block, self.activation, self._cfg.MODEL.POOLING_TYPE)
-
-            print(f'down{idx+1}: in {in_dim}, out {out_dim}')
-            down_dict[f'down{idx+1}'] = layer
-            up_topo.append(out_dim)
-        self.down_seq = nn.ModuleDict(down_dict)
-        # TODO Pretrained Encoder: ResNeXt-50
-        # TODO Pretrained Encoder: VGG-16
-
         if cfg.MODEL.BACKBONE.ENABLED:
+
             pretrained = cfg.MODEL.BACKBONE.PRETRAINED
             if cfg.MODEL.BACKBONE.TYPE == 'resnext50':
                 import torchvision.models as models
                 vgg19 = models.resnext50_32x4d(pretrained=pretrained)
+                up_topo = [64, 128, 256, 512, 1024]
+                self.inc = nn.Sequential(
+                    StackPretrained(vgg19.conv1),
+                    StackPretrained(vgg19.bn1)
+                )
+                down_dict['layer1'] = StackPretrained(vgg19.layer1)
+                down_dict['layer2'] = StackPretrained(vgg19.layer2)
+                down_dict['layer3'] = StackPretrained(vgg19.layer3)
+                down_dict['layer4'] = StackPretrained(vgg19.layer4)
+                n_layers = 5 # num of layers
+                # TODO update up_topo
                 print('hello')
                 pass
-        bottleneck_dim = out_dim
+        else:
+            self.inc = inconv(n_channels, first_chan, conv_block, self.activation)
+            for idx in range(n_layers):
+                is_not_last_layer = idx != n_layers-1
+                in_dim = down_topo[idx]
+                out_dim = down_topo[idx+1] if is_not_last_layer else down_topo[idx] # last layer
+                layer = down(in_dim, out_dim, conv_block, self.activation, self._cfg.MODEL.POOLING_TYPE)
+
+                print(f'down{idx+1}: in {in_dim}, out {out_dim}')
+                down_dict[f'down{idx+1}'] = layer
+                up_topo.append(out_dim)
+            pass
+        self.down_seq = nn.ModuleDict(down_dict)
+        # TODO Pretrained Encoder: ResNeXt-50
+        # TODO Pretrained Encoder: VGG-16
 
         # Upward layers
         for idx in reversed(range(n_layers)):
@@ -93,12 +107,6 @@ class UNet(nn.Module):
             out = layer(inputs[-1])
             inputs.append(out)
 
-        #Multiscale context
-        if self.multiscale_context_enabled:
-            bottleneck_features = inputs.pop()
-            context = self.multiscale_context(bottleneck_features)
-            inputs.append(context)
-
         # Upward U:
         inputs.reverse()
         x1 = inputs.pop(0)
@@ -111,6 +119,21 @@ class UNet(nn.Module):
 
         return out
 
+class StackPretrained(nn.Module):
+    '''
+    Stacking module for stacking two pretrained networks
+    '''
+    def __init__(self, module):
+        super().__init__()
+        self.module1 = module
+        self.module2 = copy.deepcopy(module)
+
+    def forward(self, x):
+        x1, x2 = torch.chunk(x, 2, dim=1) # E.g. split 6-chan into 2x 3-chans
+        o1 = self.module1(x1)
+        o2 = self.module2(x2)
+
+        return torch.cat([o1, o2], dim=1) # merge it back together
 class MultiScaleContextForUNet(nn.Module):
     def __init__(self, cfg, bottlneck_dim):
         super().__init__()

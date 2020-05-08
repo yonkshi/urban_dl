@@ -107,7 +107,7 @@ class RowPairCalculator:
 
         lrow = cls.compute_tp_fn_fp(lp_b, lt_b, 1)
         drow = []
-        for i in range(4): drow += cls.compute_tp_fn_fp(dp, dt, i) # Ignore last channel as background
+        for i in range(1,5): drow += cls.compute_tp_fn_fp(dp, dt, i) # Ignore last channel as background
         return lrow, drow
 
 
@@ -279,7 +279,7 @@ class XviewMetrics:
 
         d = {'score': self.score,
              'damage_f1': self.df1,
-             'localization_f1': self.lf1}
+             'localization_f1': self.lf1,}
         d['damage_f1_no_damage'] = self.df1s[0]
         d['damage_f1_minor_damage'] = self.df1s[1]
         d['damage_f1_major_damage'] = self.df1s[2]
