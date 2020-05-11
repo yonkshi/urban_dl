@@ -107,7 +107,7 @@ class RowPairCalculator:
 
         lrow = cls.compute_tp_fn_fp(lp_b, lt_b, 1)
         drow = []
-        for i in range(1,5): drow += cls.compute_tp_fn_fp(dp, dt, i) # Ignore last channel as background
+        for i in range(4): drow += cls.compute_tp_fn_fp(dp, dt, i) # Ignore last channel as background
         return lrow, drow
 
 
