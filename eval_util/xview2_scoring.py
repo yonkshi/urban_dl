@@ -69,7 +69,7 @@ class RowPairCalculator:
     def extract_buildings(x: np.ndarray):
         """ Returns a mask of the buildings in x """
         buildings = x.copy()
-        buildings[x > 0] = 1
+        buildings[x < 4] = 1
         return buildings
 
     @staticmethod
@@ -104,6 +104,8 @@ class RowPairCalculator:
 
         # dp = dp * lp_b  # only give credit to damages where buildings are predicted
         # dp, dt = dp[dt_b == 1], dt[dt_b == 1]  # only score damage where there exist buildings in target damage
+        dt = dt * dt_b
+        # dp = dp * dt_b
 
         lrow = cls.compute_tp_fn_fp(lp_b, lt_b, 1)
         drow = []
