@@ -488,7 +488,7 @@ if __name__ == '__main__':
         # Removing the module.** in front of keys
         filtered_dict = {}
         state_dict = torch.load(full_model_path)
-        for k, v in torch.load(full_model_path).items(): # ['state_dict']
+        for k, v in torch.load(full_model_path)['state_dict'].items(): # ['state_dict']
             k = '.'.join(k.split('.')[1:])
             filtered_dict[k] = v
         net.load_state_dict(filtered_dict)
