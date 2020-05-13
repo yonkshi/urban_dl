@@ -111,8 +111,7 @@ class MultiClassF1():
 
             # y_pred = y_pred[:, :-1]
             # y_true = y_true[:, :-1]
-            y_true_mask = y_true[:, [-1]]
-
+            y_true_mask = 1 - y_true[:, [-1]]
 
         y_true_bin = y_true.bool() # [B,  C, ...]
         # Make y_pred from decimal to one hot along dim C
