@@ -180,7 +180,7 @@ def dmg_model_eval(net, cfg, device,
     def evaluate(x, y_true, y_pred, img_filenames):
 
         # TODO Only enable me if testing pretrained winner model where bg is class 0 !!
-        y_pred = y_pred[:,[1,2,3,4,0]]
+        # y_pred = y_pred[:,[1,2,3,4,0]]
 
         if cfg.MODEL.BACKGROUND.MASK_OUTPUT:
             # No background class, manually mask out background
