@@ -44,5 +44,7 @@ AUGMENTATION:
   CROP_SIZE: 512
   IMAGE_OVERSAMPLING_TYPE: 'simple'
   RANDOM_FLIP_ROTATE: True
+  ZERO_MEAN: True # convert [0, 255] to [-1, 1]
+
 
 
