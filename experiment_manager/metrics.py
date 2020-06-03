@@ -111,7 +111,7 @@ class MultiClassF1():
 
             # y_pred = y_pred[:, :-1]
             # y_true = y_true[:, :-1]
-            y_true_mask = 1 - y_true[:, [-1]]
+            y_true_mask = 1 - y_true[:, [-1]] # [ B, 1, H, W]
 
         y_true_bin = y_true.bool() # [B,  C, ...]
         # Make y_pred from decimal to one hot along dim C
@@ -120,9 +120,9 @@ class MultiClassF1():
 
         # remove the background
         _tp = (y_true_bin & y_pred_oh)[:,:-1]
-        _tn = ((~y_true_bin & ~y_pred_oh) * y_true_mask)[:,:-1] #
+        _tn = ((~y_true_bin & ~y_pred_oh) * y_true_mask)[:,:-1] #n
         _fp = ((~y_true_bin & y_pred_oh) * y_true_mask)[:,:-1] # * y_true_mask
-        _fn = (y_true_bin & ~y_pred_oh)[:,:-1]
+        _fn = ((y_true_bin & ~y_pred_oh) * y_true_mask)[:,:-1]
 
         tp = _tp.float().sum(dim=self._data_dims)
         tn = _tn.float().sum(dim=self._data_dims)

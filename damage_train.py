@@ -202,12 +202,12 @@ def dmg_model_eval(net, cfg, device,
         allrows.append(row)
 
         # # # TODO DEBUG TP FP FN
-        # for i in range(4):
-        #     cls = i * 3
-        #     print(f'TP {i}:', row[1][cls+0], int(tp[i].item()))
-        #     print(f'FN {i}:', row[1][cls + 1], int(fn[i].item()))
-        #     print(f'FP {i}:', row[1][cls + 2], int(fp[i].item()))
-        #     print('')
+        for i in range(4):
+            cls = i * 3
+            print(f'TP {i}:', row[1][cls+0], int(tp[i].item()))
+            print(f'FN {i}:', row[1][cls + 1], int(fn[i].item()))
+            print(f'FP {i}:', row[1][cls + 2], int(fp[i].item()))
+            print('')
 
         # === Confusion Matrix stuff
         if use_confusion_matrix:
@@ -391,6 +391,7 @@ def build_transforms(cfg, for_training=False, use_gts_mask = False):
         trfm.append(RandomFlipRotate())
     trfm.append(Npy2Torch())
     if cfg.AUGMENTATION.ENABLE_VARI: trfm.append(VARI())
+    if cfg.AUGMENTATION.ZERO_MEAN: trfm.append(ZeroMeanUnitImage())
     trfm = transforms.Compose(trfm)
     return trfm
 
@@ -488,7 +489,11 @@ if __name__ == '__main__':
         # Removing the module.** in front of keys
         filtered_dict = {}
         state_dict = torch.load(full_model_path)
-        for k, v in torch.load(full_model_path).items(): # ['state_dict']
+
+        # For winning model, quick hack to remove the state_dict
+        if 'state_dict' in state_dict.keys():
+            state_dict = state_dict['state_dict']
+        for k, v in state_dict.items(): # ['state_dict']
             k = '.'.join(k.split('.')[1:])
             filtered_dict[k] = v
         net.load_state_dict(filtered_dict)

@@ -71,6 +71,7 @@ AUGMENTATION:
   IMAGE_OVERSAMPLING_TYPE: 'none' # [none, simple]
   ENABLE_VARI: False # False NDVI for detecting vegetation
   RANDOM_FLIP_ROTATE: False
+  ZERO_MEAN: False # convert [0, 255] to [-1, 1]
 
 
 

@@ -56,6 +56,13 @@ class BGR2RGB():
         input = bgr2rgb(input)
         return input, label, image_path
 
+class ZeroMeanUnitImage():
+    def __call__(self, args):
+        input, label, image_path = args
+        input /= 127
+        input -= 1
+        return input, label, image_path
+
 class UniformCrop():
     '''
     Performs uniform cropping on numpy images (cv2 images)
@@ -172,5 +179,6 @@ class RandomFlipRotate():
         input = input.copy()
         label = label.copy()
         return input, label, image_path
+
 def bgr2rgb(img):
     return img[..., [2,1,0]]

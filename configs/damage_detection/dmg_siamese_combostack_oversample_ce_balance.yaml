@@ -23,7 +23,7 @@ AUGMENTATION:
   CROP_TYPE: 'importance'
   CROP_SIZE: 512
   IMAGE_OVERSAMPLING_TYPE: 'simple'
-
+  ZERO_MEAN: True # convert [0, 255] to [-1, 1]
 
 
 
