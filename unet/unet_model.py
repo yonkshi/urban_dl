@@ -50,16 +50,20 @@ class UNet(nn.Module):
             pretrained = cfg.MODEL.BACKBONE.PRETRAINED
             if cfg.MODEL.BACKBONE.TYPE == 'resnext50':
                 import torchvision.models as models
-                vgg19 = models.resnext50_32x4d(pretrained=pretrained)
-                up_topo = [64, 128, 256, 512, 1024]
+                resnext50 = models.resnext50_32x4d(pretrained=pretrained)
+                up_topo = [64, 256, 512, 1024, 2048]
                 self.inc = nn.Sequential(
-                    StackPretrained(vgg19.conv1),
-                    StackPretrained(vgg19.bn1)
+                    nn.Conv2d(n_channels, 3, kernel_size=3), # Attaching
+
                 )
-                down_dict['layer1'] = StackPretrained(vgg19.layer1)
-                down_dict['layer2'] = StackPretrained(vgg19.layer2)
-                down_dict['layer3'] = StackPretrained(vgg19.layer3)
-                down_dict['layer4'] = StackPretrained(vgg19.layer4)
+                down_dict['layer0'] = nn.Sequential( resnext50.conv1, resnext50.bn1, )
+
+                down_dict['layer1'] = resnext50.layer1
+                down_dict['layer2'] = resnext50.layer2
+                down_dict['layer3'] = resnext50.layer3
+                down_dict['layer4'] = resnext50.layer4
+
+                down_dict['layer5'] = nn.Conv2d(2048, 2048, kernel_size=1)
                 n_layers = 5 # num of layers
                 # TODO update up_topo
                 print('hello')

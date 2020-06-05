@@ -13,7 +13,7 @@ MODEL:
     TYPE: 'dpn92'
     PRETRAINED: True
   BACKBONE:
-    ENABLED: False
+    ENABLED: True
     TYPE: 'resnext50'
   COMPLEX_ARCHITECTURE:
     ENABLED: False
@@ -44,7 +44,7 @@ AUGMENTATION:
   CROP_SIZE: 512
   IMAGE_OVERSAMPLING_TYPE: 'simple'
   RANDOM_FLIP_ROTATE: True
-  ZERO_MEAN: True # convert [0, 255] to [-1, 1]
+  ZERO_MEAN: False # convert [0, 255] to [-1, 1]
 
 
 
