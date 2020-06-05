@@ -59,7 +59,7 @@ class BGR2RGB():
 class ZeroMeanUnitImage():
     def __call__(self, args):
         input, label, image_path = args
-        input /= 127
+        input /= 128
         input -= 1
         return input, label, image_path
 
