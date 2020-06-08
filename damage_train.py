@@ -180,7 +180,7 @@ def dmg_model_eval(net, cfg, device,
     def evaluate(x, y_true, y_pred, img_filenames):
 
         # TODO Only enable me if testing pretrained winner model where bg is class 0 !!
-        y_pred = y_pred[:,[1,2,3,4,0]]
+        # y_pred = y_pred[:,[1,2,3,4,0]]
 
         if cfg.MODEL.BACKGROUND.MASK_OUTPUT:
             # No background class, manually mask out background
@@ -194,12 +194,12 @@ def dmg_model_eval(net, cfg, device,
             component_f1.append(loss_component.cpu().detach().numpy())
 
         # === Official F1 evaluation
-        y_pred_np = y_pred.argmax(dim=1).cpu().detach().numpy() # One-hot to not-one-hot
-        y_true_np = y_true.argmax(dim=1).cpu().detach().numpy()
-        # loc_row is not being used, but to keep original code intact, we keep it here
-
-        row = RowPairCalculator.get_row_pair(np.zeros([2]), y_pred_np, np.zeros([2]), y_true_np)
-        allrows.append(row)
+        # y_pred_np = y_pred.argmax(dim=1).cpu().detach().numpy() # One-hot to not-one-hot
+        # y_true_np = y_true.argmax(dim=1).cpu().detach().numpy()
+        # # loc_row is not being used, but to keep original code intact, we keep it here
+        #
+        # row = RowPairCalculator.get_row_pair(np.zeros([2]), y_pred_np, np.zeros([2]), y_true_np)
+        # allrows.append(row)
 
         # # # TODO DEBUG TP FP FN
         # for i in range(4):
@@ -273,12 +273,11 @@ def dmg_model_eval(net, cfg, device,
                 f'disaster-{disaster_type}-f1': f1
             })
     # official Xivew2 scoring
-    offical_score = XviewMetrics(allrows)
-
-    print(f'official_f1', offical_score.df1)
-    wandb.log({
-        f'official-f1': offical_score.df1
-    })
+    # offical_score = XviewMetrics(allrows)
+    # print(f'official_f1', offical_score.df1)
+    # wandb.log({
+    #     f'official-f1': offical_score.df1
+    # })
 
 
 
