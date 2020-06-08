@@ -155,7 +155,7 @@ class StackPreDisasterImage():
         cp_image = imread_cached(cp_image_path).astype(np.float32)
 
         # RGB -> BGR and stack
-        cp_image = bgr2rgb(cp_image)
+        # cp_image = bgr2rgb(cp_image)
         input = np.concatenate([input, cp_image], axis=-1)
         return input, label, image_path
 
