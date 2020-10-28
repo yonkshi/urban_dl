@@ -536,7 +536,8 @@ if __name__ == '__main__':
                     break
                 except RuntimeError as runerr:
                     new_batch_size = orginal_batch_size - i
-                    print('Original batch size too large, trying batch size:' + new_batch_size, file=sys.stderr)
+                    print(runerr)
+                    print('Original batch size too large, trying batch size:' + str(new_batch_size), file=sys.stderr)
                     cfg.TRAINER.BATCH_SIZE = new_batch_size
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
