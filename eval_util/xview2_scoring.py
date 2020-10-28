@@ -69,14 +69,14 @@ class RowPairCalculator:
     def extract_buildings(x: np.ndarray):
         """ Returns a mask of the buildings in x """
         buildings = x.copy()
-        buildings[x > 0] = 1
+        buildings[x < 4] = 1
+        buildings[x >= 4] = 0
         return buildings
 
     @staticmethod
-    def compute_tp_fn_fp(pred: np.ndarray, targ: np.ndarray, c: int) -> List[int]:
+    def compute_tp_fn_fp(pred: np.ndarray, targ: np.ndarray, c: int):
         """
         Computes the number of TPs, FNs, FPs, between a prediction (x) and a target (y) for the desired class (c)
-
         Args:
             pred (np.ndarray): prediction
             targ (np.ndarray): target
@@ -88,23 +88,27 @@ class RowPairCalculator:
         return [TP, FN, FP]
 
     @classmethod
-    def get_row_pair(cls, ph: PathHandler):
+    def get_row_pair(cls, loc_pred, dmg_pred, loc_gts, dmg_gts):
         """
         Builds a row of TPs, FNs, and FPs for both the localization dataframe and the damage dataframe.
         This pair of rows are built in the same function as damages are only assessed where buildings are predicted.
-
         Args:
             ph (PathHandler): used to load the required prediction and target images
         """
-        lp, dp, lt, dt = ph.load_images()
+
+        # TODO Yonk: LocPred, DmgPred, LocTruth, DmgTruth
+        lp, dp, lt, dt = loc_pred, dmg_pred, loc_gts, dmg_gts
+
         lp_b, lt_b, dt_b = map(cls.extract_buildings, (lp, lt, dt))  # convert all damage scores 1-4 to 1
 
-        dp = dp * lp_b  # only give credit to damages where buildings are predicted
-        dp, dt = dp[dt_b == 1], dt[dt_b == 1]  # only score damage where there exist buildings in target damage
+        # dp = dp * lp_b  # only give credit to damages where buildings are predicted
+        # dp, dt = dp[dt_b == 1], dt[dt_b == 1]  # only score damage where there exist buildings in target damage
+        dt = dt[dt_b == 1]
+        dp = dp[dt_b == 1]
 
         lrow = cls.compute_tp_fn_fp(lp_b, lt_b, 1)
         drow = []
-        for i in range(1, 5): drow += cls.compute_tp_fn_fp(dp, dt, i)
+        for i in range(4): drow += cls.compute_tp_fn_fp(dp, dt, i) # Ignore last channel as background
         return lrow, drow
 
 
@@ -154,7 +158,6 @@ class F1Recorder:
 class XviewMetrics:
     """
     Calculates the xview2 metrics given a directory of predictions and a directory of targets
-
     Directory of predictions and directory of targets must be two separate directories. These
     could be structured as followed:
         .
@@ -172,18 +175,18 @@ class XviewMetrics:
             └── ...
     """
 
-    def __init__(self, pred_dir, targ_dir):
-        self.pred_dir, self.targ_dir = Path(pred_dir), Path(targ_dir)
-        assert self.pred_dir.is_dir(), f"Could not find prediction directory: '{pred_dir}'"
-        assert self.targ_dir.is_dir(), f"Could not find target directory: '{targ_dir}'"
+    def __init__(self, all_rows):
+        # self.pred_dir, self.targ_dir = Path(pred_dir), Path(targ_dir)
+        # assert self.pred_dir.is_dir(), f"Could not find prediction directory: '{pred_dir}'"
+        # assert self.targ_dir.is_dir(), f"Could not find target directory: '{targ_dir}'"
 
         self.dmg2str = {1: f'No damage     (1) ',
                         2: f'Minor damage  (2) ',
                         3: f'Major damage  (3) ',
                         4: f'Destroyed     (4) '}
 
-        self.get_path_handlers()
-        self.get_dfs()
+        # self.get_path_handlers()
+        self.get_dfs(all_rows)
         self.get_lf1r()
         self.get_df1rs()
 
@@ -200,23 +203,23 @@ class XviewMetrics:
         s += f'    Score | f1: {self.score:.4f}\n'
         return s.rstrip()
 
-    def get_path_handlers(self):
-        self.path_handlers = []
-        for path in self.targ_dir.glob('*.png'):
-            test_hold, loc_dmg, img_id, target = path.name.rstrip('.png').split('_')
-            assert loc_dmg in ['localization',
-                               'damage'], f"target filenames must have 'localization' or 'damage' in filename, got {path}"
-            assert target == 'target', f"{target} should equal 'target' when getting path handlers"
-            if loc_dmg == 'localization':  # localization or damage is fine here
-                self.path_handlers.append(PathHandler(self.pred_dir, self.targ_dir, img_id, test_hold))
+    # def get_path_handlers(self):
+    #     self.path_handlers = []
+    #     for path in self.targ_dir.glob('*.png'):
+    #         test_hold, loc_dmg, img_id, target = path.name.rstrip('.png').split('_')
+    #         assert loc_dmg in ['localization',
+    #                            'damage'], f"target filenames must have 'localization' or 'damage' in filename, got {path}"
+    #         assert target == 'target', f"{target} should equal 'target' when getting path handlers"
+    #         if loc_dmg == 'localization':  # localization or damage is fine here
+    #             self.path_handlers.append(PathHandler(self.pred_dir, self.targ_dir, img_id, test_hold))
 
-    def get_dfs(self):
+    def get_dfs(self, all_rows):
         """
         builds the localization dataframe (self.ldf) and damage dataframe (self.ddf) from
         path handlers (self.path_handlers)
         """
-        with Pool() as p:
-            all_rows = p.map(RowPairCalculator.get_row_pair, self.path_handlers)
+        # with Pool() as p:
+        #     all_rows = p.map(RowPairCalculator.get_row_pair, self.path_handlers)
 
         lcolumns = ['lTP', 'lFN', 'lFP']
         self.ldf = pd.DataFrame([lrow for lrow, drow in all_rows], columns=lcolumns)
@@ -276,7 +279,7 @@ class XviewMetrics:
 
         d = {'score': self.score,
              'damage_f1': self.df1,
-             'localization_f1': self.lf1}
+             'localization_f1': self.lf1,}
         d['damage_f1_no_damage'] = self.df1s[0]
         d['damage_f1_minor_damage'] = self.df1s[1]
         d['damage_f1_major_damage'] = self.df1s[2]
