@@ -536,7 +536,7 @@ if __name__ == '__main__':
                     break
                 except RuntimeError as runerr:
                     new_batch_size = orginal_batch_size - i * 2
-                    print(runerr)
+                    print("Run Time Error:" + str(runerr), file=sys.stderr)
                     print('!!!! ---> Original batch size too large, trying batch size:' + str(new_batch_size), file=sys.stderr)
                     cfg.TRAINER.BATCH_SIZE = new_batch_size
     except KeyboardInterrupt:
