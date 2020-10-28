@@ -535,6 +535,9 @@ if __name__ == '__main__':
                     train_net(net, cfg)
                     break
                 except RuntimeError as runerr:
+                    # Check if runtime error is CUDA error
+                    if 'CUDA out of memory' not in str(runerr):
+                        raise runerr
                     new_batch_size = orginal_batch_size - i * 2
                     print("Run Time Error:" + str(runerr), file=sys.stderr)
                     print('!!!! ---> Original batch size too large, trying batch size:' + str(new_batch_size), file=sys.stderr)
