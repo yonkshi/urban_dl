@@ -484,7 +484,7 @@ if __name__ == '__main__':
         if args.eval_only:
             wandb.init(
                 name=cfg.NAME,
-                project='urban_dl',
+                project='urban_dl_final',
                 tags=['eval', 'dmg'],
             )
             dmg_model_eval(net, cfg, device, run_type='TEST', max_samples=1000,  use_confusion_matrix=True, include_disaster_type_breakdown=True)
@@ -492,7 +492,7 @@ if __name__ == '__main__':
         else:
             wandb.init(
                 name=cfg.NAME,
-                project='urban_dl',
+                project='urban_dl_final',
                 tags=['run', 'dmg'],
                 reinit=True
             )
