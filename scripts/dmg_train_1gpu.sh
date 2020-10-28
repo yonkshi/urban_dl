@@ -27,8 +27,8 @@ SLURM_ARRAY_TASK_ID=0
 
 sbatch << HERE
 #!/usr/bin/env bash
-#SBATCH --output="${LOG_PATH}/%x_%J.out"
-#SBATCH --error="${LOG_PATH}/%x_%J.err"
+#SBATCH --output="${LOG_PATH}/%x.out"
+#SBATCH --error="${LOG_PATH}/%x.err"
 #SBATCH --mail-type=FAIL
 #SBATCH --constrain="gondor|shire|khazadum|rivendell|belegost"
 #SBATCH --mail-user="pyshi@kth.se"
