@@ -399,7 +399,10 @@ def combo_loss(p, y, class_weights=None):
     ce = F.cross_entropy(p, y_, weight=class_weights)
     dice = soft_dice_loss_multi_class(p, y)
     loss =  ce + dice
-    return loss, (ce, dice)
+    # only return component loss if using weighted ce
+    if class_weights is not None: return loss, (ce, dice)
+    return loss
+
 
 def image_sampling_weight(dataset_metadata):
     print('performing oversampling...', end='', flush=True)
