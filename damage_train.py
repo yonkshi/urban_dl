@@ -14,7 +14,7 @@ from sklearn.metrics import confusion_matrix as confmatrix
 import wandb
 import matplotlib.pyplot as plt
 
-from unet import UNet
+from unet import UNet, Dpn92_Unet_Double, SeNet154_Unet_Double, SeResNext50_Unet_Double
 from unet.dataloader import Xview2Detectron2DamageLevelDataset
 from unet.augmentations import *
 
@@ -23,6 +23,7 @@ from experiment_manager.metrics import MultiClassF1
 from experiment_manager.config import new_config
 from experiment_manager.loss import *
 from eval_unet_xview2 import inference_loop
+from eval_util.xview2_scoring import RowPairCalculator, XviewMetrics
 
 # import hp
 
@@ -101,22 +102,6 @@ def train_net(net,
             y_gts = batch['y'].to(device)
             image_weight = batch['image_weight']
 
-            # # TODO DEBUG
-            # xtest  = x.cpu().permute(0,2,3,1).contiguous().numpy()
-            # ytest = y_gts.cpu().permute(0,2,3,1).contiguous().numpy()
-            # testy = ytest[0, ..., 1:4] # ignore bg
-            # plt.imshow(testy)
-            # plt.savefig('test_y.png')
-            #
-            # postx = xtest[0, ..., :3]
-            # plt.imshow(postx)
-            # plt.savefig('test_post.png')
-            #
-            # prex = xtest[0, ..., 4:7]
-            # plt.imshow(prex)
-            # plt.savefig('test_pre.png')
-            # # TODO END DEBUGn
-
             optimizer.zero_grad()
 
             y_pred = net(x)
@@ -191,17 +176,38 @@ def dmg_model_eval(net, cfg, device,
     confusion_matrix_with_bg = []
     confusion_matrices_by_disaster_type = {}
     component_f1 = []
+    allrows = []
     def evaluate(x, y_true, y_pred, img_filenames):
+
+        # TODO Only enable me if testing pretrained winner model where bg is class 0 !!
+        y_pred = y_pred[:,[1,2,3,4,0]]
+
         if cfg.MODEL.BACKGROUND.MASK_OUTPUT:
             # No background class, manually mask out background
             localization_mask = x[:,[3]] # 3 is a hard coded mask index
             y_pred = localization_mask * y_pred
-        measurer.add_sample(y_true, y_pred)
+        tp, tn, fp, fn = measurer.add_sample(y_true, y_pred)
 
         # === Component F1 score
         if include_component_f1:
             loss, loss_component = soft_dice_loss_multi_class_debug(y_pred, y_true)
             component_f1.append(loss_component.cpu().detach().numpy())
+
+        # === Official F1 evaluation
+        # y_pred_np = y_pred.argmax(dim=1).cpu().detach().numpy() # One-hot to not-one-hot
+        # y_true_np = y_true.argmax(dim=1).cpu().detach().numpy()
+        # # loc_row is not being used, but to keep original code intact, we keep it here
+        #
+        # row = RowPairCalculator.get_row_pair(np.zeros([2]), y_pred_np, np.zeros([2]), y_true_np)
+        # allrows.append(row)
+
+        # # # TODO DEBUG TP FP FN
+        # for i in range(4):
+        #     cls = i * 3
+        #     print(f'TP {i}:', row[1][cls+0], int(tp[i].item()))
+        #     print(f'FN {i}:', row[1][cls + 1], int(fn[i].item()))
+        #     print(f'FP {i}:', row[1][cls + 2], int(fp[i].item()))
+        #     print('')
 
         # === Confusion Matrix stuff
         if use_confusion_matrix:
@@ -230,6 +236,7 @@ def dmg_model_eval(net, cfg, device,
     use_gts_mask = run_type == 'TRAIN' and cfg.DATASETS.LOCALIZATION_MASK.TRAIN_USE_GTS_MASK
     dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
 
+    # TODO some transforms shouldn't exist in evaluation
     trfm = build_transforms(cfg, use_gts_mask = use_gts_mask)
     bg_class = 'new-class' if cfg.MODEL.BACKGROUND.TYPE == 'new-class' else None
     dataset = Xview2Detectron2DamageLevelDataset(dset_source,
@@ -265,6 +272,14 @@ def dmg_model_eval(net, cfg, device,
             wandb.log({
                 f'disaster-{disaster_type}-f1': f1
             })
+    # official Xivew2 scoring
+    # offical_score = XviewMetrics(allrows)
+    # print(f'official_f1', offical_score.df1)
+    # wandb.log({
+    #     f'official-f1': offical_score.df1
+    # })
+
+
 
     if include_disaster_type_breakdown and use_confusion_matrix:
         for disaster_type, cm in confusion_matrices_by_disaster_type.items():
@@ -302,9 +317,9 @@ def plot_confmtx(name, confusion_matrix):
     :param confusion_matrix:
     :return:
     '''
-    print('confusion_matrix ', confusion_matrix)
+    # print('confusion_matrix ', confusion_matrix)
     normalized_cm = confusion_matrix / confusion_matrix.sum(axis=-1, keepdims=True)
-    print('confusion_matrix normalized', normalized_cm)
+    # print('confusion_matrix normalized', normalized_cm)
     # normalized_cm = confusion_matrix_with_bg / confusion_matrix_with_bg.sum(axis=0, keepdims=True)
     labels = ['no-damage', 'minor-damage', 'major-damage', 'destroyed', 'background', ]
 
@@ -362,19 +377,20 @@ def load_pretrained(net:nn.Module, cfg):
 
 def build_transforms(cfg, for_training=False, use_gts_mask = False):
     trfm = []
-    trfm.append(BGR2RGB())
+    # trfm.append(BGR2RGB())
 
     if cfg.DATASETS.LOCALIZATION_MASK.ENABLED: trfm.append(IncludeLocalizationMask(use_gts_mask))
     if cfg.DATASETS.INCLUDE_PRE_DISASTER: trfm.append(StackPreDisasterImage())
     if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
     if cfg.AUGMENTATION.CROP_TYPE == 'uniform' and for_training:
         trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
-    elif cfg.AUGMENTATION.CROP_TYPE == 'importance':
+    elif cfg.AUGMENTATION.CROP_TYPE == 'importance' and for_training:
         trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
-    if cfg.AUGMENTATION.RANDOM_FLIP_ROTATE:
+    if cfg.AUGMENTATION.RANDOM_FLIP_ROTATE and for_training:
         trfm.append(RandomFlipRotate())
     trfm.append(Npy2Torch())
     if cfg.AUGMENTATION.ENABLE_VARI: trfm.append(VARI())
+    if cfg.AUGMENTATION.ZERO_MEAN: trfm.append(ZeroMeanUnitImage())
     trfm = transforms.Compose(trfm)
     return trfm
 
@@ -439,23 +455,31 @@ if __name__ == '__main__':
     cfg = setup(args)
 
     out_channels = cfg.MODEL.OUT_CHANNELS
-    if cfg.MODEL.BACKBONE.ENABLED:
-        if cfg.MODEL.COMPLEX_ARCHITECTURE.ENABLED:
-            if cfg.MODEL.COMPLEX_ARCHITECTURE.TYPE == 'pspnet':
-                net = smp.PSPNet(cfg.MODEL.BACKBONE.TYPE,
-                               encoder_weights=None,
-                               encoder_depth=3,
-                               in_channels=cfg.MODEL.IN_CHANNELS,
-                               classes=cfg.MODEL.OUT_CHANNELS
-                               )
+    # if cfg.MODEL.BACKBONE.ENABLED:
+    #     if cfg.MODEL.COMPLEX_ARCHITECTURE.ENABLED:
+    #         if cfg.MODEL.COMPLEX_ARCHITECTURE.TYPE == 'pspnet':
+    #             net = smp.PSPNet(cfg.MODEL.BACKBONE.TYPE,
+    #                            encoder_weights=None,
+    #                            encoder_depth=3,
+    #                            in_channels=cfg.MODEL.IN_CHANNELS,
+    #                            classes=cfg.MODEL.OUT_CHANNELS
+    #                            )
+    #     else:
+    #         net = smp.Unet(cfg.MODEL.BACKBONE.TYPE,
+    #                        encoder_weights=None,
+    #                        encoder_depth=5,
+    #                        decoder_channels = [512,256,128,64,32],
+    #                        in_channels= cfg.MODEL.IN_CHANNELS,
+    #                        classes=cfg.MODEL.OUT_CHANNELS
+    #         )
+    if cfg.MODEL.SIAMESE.ENABLED:
+        use_pretrained = cfg.MODEL.SIAMESE.PRETRAINED
+        if cfg.MODEL.SIAMESE.TYPE == 'SENET152':
+            net = SeNet154_Unet_Double(use_pretrained)
+        elif cfg.MODEL.SIAMESE.TYPE == 'RESNEXT50':
+            net = SeResNext50_Unet_Double(use_pretrained)
         else:
-            net = smp.Unet(cfg.MODEL.BACKBONE.TYPE,
-                           encoder_weights=None,
-                           encoder_depth=5,
-                           decoder_channels = [512,256,128,64,32],
-                           in_channels= cfg.MODEL.IN_CHANNELS,
-                           classes=cfg.MODEL.OUT_CHANNELS
-            )
+            net = Dpn92_Unet_Double(use_pretrained)
     else:
         net = UNet(cfg)
 
@@ -463,7 +487,12 @@ if __name__ == '__main__':
         full_model_path = path.join(cfg.OUTPUT_DIR, args.resume_from)
         # Removing the module.** in front of keys
         filtered_dict = {}
-        for k, v in torch.load(full_model_path).items():
+        state_dict = torch.load(full_model_path)
+
+        # For winning model, quick hack to remove the state_dict
+        if 'state_dict' in state_dict.keys():
+            state_dict = state_dict['state_dict']
+        for k, v in state_dict.items(): # ['state_dict']
             k = '.'.join(k.split('.')[1:])
             filtered_dict[k] = v
         net.load_state_dict(filtered_dict)
@@ -487,7 +516,7 @@ if __name__ == '__main__':
                 project='urban_dl_final',
                 tags=['eval', 'dmg'],
             )
-            dmg_model_eval(net, cfg, device, run_type='TEST', max_samples=1000,  use_confusion_matrix=True, include_disaster_type_breakdown=True)
+            dmg_model_eval(net, cfg, device, run_type='TEST', max_samples=2000,  use_confusion_matrix=True, include_disaster_type_breakdown=True)
             dmg_model_eval(net, cfg, device, run_type='TRAIN', max_samples=1000, use_confusion_matrix=True, include_disaster_type_breakdown=True)
         else:
             wandb.init(

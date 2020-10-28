@@ -2,7 +2,6 @@ _BASE_: "damage_base.yaml"
 MODEL:
   LOSS_TYPE: 'ComboLoss'
   IN_CHANNELS: 7
-  USE_ATTENTION: True
 DATASETS:
   TEST: ("/Midgard/Data/pshi/datasets/xview2/xview2_validation/test/",)
   LOCALIZATION_MASK:
@@ -13,7 +12,6 @@ TRAINER:
   BATCH_SIZE: 12
   CE_CLASS_BALANCE:
     ENABLED: True
-    WEIGHTS: [0.036552, 0.0040245, 0.003355, 0.003686, 0.95238]
 DATALOADER:
   NUM_WORKER: 8
 AUGMENTATION:

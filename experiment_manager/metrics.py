@@ -109,21 +109,31 @@ class MultiClassF1():
         if self.ignore_last_class:
             # Ignore background classes
 
-            y_pred = y_pred[:, :-1]
-            y_true = y_true[:, :-1]
-            y_true_mask = y_true[:, [-1]]
+            # y_pred = y_pred[:, :-1]
+            # y_true = y_true[:, :-1]
+            y_true_mask = 1 - y_true[:, [-1]] # [ B, 1, H, W]
 
-
-        y_true = y_true.bool() # [B,  C, ...]
-        # Make y_pred one hot along dim C
+        y_true_bin = y_true.bool() # [B,  C, ...]
+        # Make y_pred from decimal to one hot along dim C
         y_pred_argmax = torch.argmax(y_pred, dim=1, keepdim=True)  # [B, C, ...]
-        y_pred = torch.zeros_like(y_pred, dtype=torch.bool).scatter_(1, y_pred_argmax,True)
+        y_pred_oh = torch.zeros_like(y_pred, dtype=torch.bool).scatter_(1, y_pred_argmax,True) # one-hot
 
-        self.TP += (y_true & y_pred).sum(dim=self._data_dims).float()
-        self.TN += ((~y_true & ~y_pred) * y_true_mask).sum(dim=self._data_dims).float()
-        self.FP += ((~y_true & y_pred) * y_true_mask).sum(dim=self._data_dims).float()
-        self.FN += (y_true & ~y_pred).sum(dim=self._data_dims).float()
+        # remove the background
+        _tp = (y_true_bin & y_pred_oh)[:,:-1]
+        _tn = ((~y_true_bin & ~y_pred_oh) * y_true_mask)[:,:-1] #n
+        _fp = ((~y_true_bin & y_pred_oh) * y_true_mask)[:,:-1] # * y_true_mask
+        _fn = ((y_true_bin & ~y_pred_oh) * y_true_mask)[:,:-1]
 
+        tp = _tp.float().sum(dim=self._data_dims)
+        tn = _tn.float().sum(dim=self._data_dims)
+        fp = _fp.float().sum(dim=self._data_dims)
+        fn = _fn.float().sum(dim=self._data_dims)
+
+        self.TP += tp
+        self.TN += tn
+        self.FP += fp
+        self.FN += fn
+        return tp, tn, fp, fn
 
     def compute_basic_metrics(self):
         '''

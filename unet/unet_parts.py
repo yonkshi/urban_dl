@@ -3,7 +3,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from torch.autograd import Function
 
 class double_conv(nn.Module):
     '''(conv => BN => ReLU) * 2'''
@@ -112,11 +112,12 @@ class down(nn.Module):
         elif pooling_layer == '2Stride':
             self.pooling_layer = nn.Conv2d(in_ch, in_ch, 2, 2)
 
-        self.mpconv = conv_block(in_ch, out_ch, activation)
+        self.mpconv = nn.Sequential(
+            self.pooling_layer,
+            conv_block(in_ch, out_ch, activation), )
 
     def forward(self, x):
-        x1 = self.pooling_layer(x)
-        out = self.mpconv(x1)
+        out = self.mpconv(x)
         return out
 
 
@@ -213,3 +214,27 @@ class outconv(nn.Module):
     def forward(self, x):
         x = self.conv(x)
         return x
+
+
+
+class RevGrad(Function):
+    @staticmethod
+    def forward(ctx, input_):
+        ctx.save_for_backward(input_)
+        output = input_
+        return output
+
+    @staticmethod
+    def backward(ctx, grad_output):  # pragma: no cover
+        grad_input = None
+        if ctx.needs_input_grad[0]:
+            grad_input = -grad_output
+        return grad_input
+
+
+class GradientReversal(torch.nn.Module):
+    def __init__(self, *args, **kwargs):
+        super().__init__(args, kwargs)
+
+    def forward(self, x):
+        return RevGrad(x)

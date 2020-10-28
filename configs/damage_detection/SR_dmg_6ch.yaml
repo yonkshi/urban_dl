@@ -1,18 +1,22 @@
-_BASE_: "base.yaml"
-THRESH: 0.52
+_BASE_: "damage_base.yaml"
 MODEL:
-  LOSS_TYPE: 'FrankensteinLoss'
-  OUT_CHANNELS: 1
-  BLOCK_TYPE: 'Triple'
+  LOSS_TYPE: 'ComboLoss'
+  IN_CHANNELS: 6
 DATASETS:
   TEST: ("/Midgard/Data/pshi/datasets/xview2/xview2_validation/test/",)
+  INCLUDE_PRE_DISASTER: True
 TRAINER:
-  BATCH_SIZE: 16
+  BATCH_SIZE: 12
+  CE_CLASS_BALANCE:
+    ENABLED: True
 DATALOADER:
-  NUM_WORKER: 16
+  NUM_WORKER: 8
 AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'importance'
-  CROP_SIZE: 256
+  CROP_SIZE: 512
   IMAGE_OVERSAMPLING_TYPE: 'simple'
+
+
+
 

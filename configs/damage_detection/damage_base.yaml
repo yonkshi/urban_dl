@@ -1,6 +1,7 @@
 SEED: 1339 # best seed so far 1339 or 43
 MODEL:
   OUT_CHANNELS: 5
+
   IN_CHANNELS: 4
   LOSS_TYPE: 'SoftDiceMulticlassLoss'
   TOPOLOGY: [64, 128, 256, 512,]
@@ -20,6 +21,11 @@ MODEL:
   BACKBONE:
     ENABLED: False
     TYPE: 'resnet34'
+    PRETRAINED: Falsess
+  SIAMESE:
+    ENABLED: False
+    TYPE: 'DPN92' # DPN92 is default, or SENET152
+    PRETRAINED: False
   COMPLEX_ARCHITECTURE:
     ENABLED: False
     TYPE: 'pspnet'
@@ -27,6 +33,9 @@ MODEL:
     TYPE: 'new-class' # 'new-class', 'no-damage', 'None'
     MASK_OUTPUT: False
     MASKED_GRADIENT: False
+  BLOCK_ACTIVATION: False
+  POOLING_TYPE: 'MaxPooling' # 'MaxPooling', 'AvgPooling', '2Stride'
+  LAST_LAYER_RESIDUAL: False # Switches last layer to a Residual connection to preserve feature information
 
 THRESH: 0.1 # Best threshold (only to be filled after running final model evaluation)
 DATASETS:
@@ -62,6 +71,7 @@ AUGMENTATION:
   IMAGE_OVERSAMPLING_TYPE: 'none' # [none, simple]
   ENABLE_VARI: False # False NDVI for detecting vegetation
   RANDOM_FLIP_ROTATE: False
+  ZERO_MEAN: False # convert [0, 255] to [-1, 1]
 
 
 

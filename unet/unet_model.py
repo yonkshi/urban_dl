@@ -2,8 +2,12 @@
 from collections import OrderedDict
 
 import torch.nn.functional as F
+import numpy as np
 
 from .unet_parts import *
+from .dpn import *
+from .senet import se_resnext50_32x4d, senet154
+import copy
 
 class UNet(nn.Module):
     def __init__(self, cfg):
@@ -25,10 +29,8 @@ class UNet(nn.Module):
 
         self._cfg = cfg
 
-
-
         first_chan = cfg.MODEL.TOPOLOGY[0]
-        self.inc = inconv(n_channels, first_chan, conv_block, self.activation)
+
         self.outc = outconv(first_chan, n_classes)
         self.multiscale_context_enabled = cfg.MODEL.MULTISCALE_CONTEXT.ENABLED
         self.multiscale_context_type = cfg.MODEL.MULTISCALE_CONTEXT.TYPE
@@ -43,21 +45,44 @@ class UNet(nn.Module):
         up_dict = OrderedDict()
 
         # Downward layers
-        for idx in range(n_layers):
-            is_not_last_layer = idx != n_layers-1
-            in_dim = down_topo[idx]
-            out_dim = down_topo[idx+1] if is_not_last_layer else down_topo[idx] # last layer
-            layer = down(in_dim, out_dim, conv_block, self.activation, self._cfg.MODEL.POOLING_TYPE)
+        if cfg.MODEL.BACKBONE.ENABLED:
 
-            print(f'down{idx+1}: in {in_dim}, out {out_dim}')
-            down_dict[f'down{idx+1}'] = layer
-            up_topo.append(out_dim)
+            pretrained = cfg.MODEL.BACKBONE.PRETRAINED
+            if cfg.MODEL.BACKBONE.TYPE == 'resnext50':
+                import torchvision.models as models
+                resnext50 = models.resnext50_32x4d(pretrained=pretrained)
+                up_topo = [64, 256, 512, 1024, 2048]
+                self.inc = nn.Sequential(
+                    nn.Conv2d(n_channels, 3, kernel_size=3), # Attaching
+
+                )
+                down_dict['layer0'] = nn.Sequential( resnext50.conv1, resnext50.bn1, )
+
+                down_dict['layer1'] = resnext50.layer1
+                down_dict['layer2'] = resnext50.layer2
+                down_dict['layer3'] = resnext50.layer3
+                down_dict['layer4'] = resnext50.layer4
+
+                down_dict['layer5'] = nn.Conv2d(2048, 2048, kernel_size=1)
+                n_layers = 5 # num of layers
+                # TODO update up_topo
+                print('hello')
+                pass
+        else:
+            self.inc = inconv(n_channels, first_chan, conv_block, self.activation)
+            for idx in range(n_layers):
+                is_not_last_layer = idx != n_layers-1
+                in_dim = down_topo[idx]
+                out_dim = down_topo[idx+1] if is_not_last_layer else down_topo[idx] # last layer
+                layer = down(in_dim, out_dim, conv_block, self.activation, self._cfg.MODEL.POOLING_TYPE)
+
+                print(f'down{idx+1}: in {in_dim}, out {out_dim}')
+                down_dict[f'down{idx+1}'] = layer
+                up_topo.append(out_dim)
+            pass
         self.down_seq = nn.ModuleDict(down_dict)
-        bottleneck_dim = out_dim
-
-        # context layer
-        if self.multiscale_context_enabled:
-            self.multiscale_context = MultiScaleContextForUNet(cfg, bottleneck_dim)
+        # TODO Pretrained Encoder: ResNeXt-50
+        # TODO Pretrained Encoder: VGG-16
 
         # Upward layers
         for idx in reversed(range(n_layers)):
@@ -86,12 +111,6 @@ class UNet(nn.Module):
             out = layer(inputs[-1])
             inputs.append(out)
 
-        #Multiscale context
-        if self.multiscale_context_enabled:
-            bottleneck_features = inputs.pop()
-            context = self.multiscale_context(bottleneck_features)
-            inputs.append(context)
-
         # Upward U:
         inputs.reverse()
         x1 = inputs.pop(0)
@@ -104,6 +123,21 @@ class UNet(nn.Module):
 
         return out
 
+class StackPretrained(nn.Module):
+    '''
+    Stacking module for stacking two pretrained networks
+    '''
+    def __init__(self, module):
+        super().__init__()
+        self.module1 = module
+        self.module2 = copy.deepcopy(module)
+
+    def forward(self, x):
+        x1, x2 = torch.chunk(x, 2, dim=1) # E.g. split 6-chan into 2x 3-chans
+        o1 = self.module1(x1)
+        o2 = self.module2(x2)
+
+        return torch.cat([o1, o2], dim=1) # merge it back together
 class MultiScaleContextForUNet(nn.Module):
     def __init__(self, cfg, bottlneck_dim):
         super().__init__()
@@ -137,3 +171,318 @@ class MultiScaleContextForUNet(nn.Module):
                 context += layer(x)
 
         return context
+
+# ===== Victor's implementation
+
+class SCSEModule(nn.Module):
+    # according to https://arxiv.org/pdf/1808.08127.pdf concat is better
+    def __init__(self, channels, reduction=16, concat=False):
+        super(SCSEModule, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc1 = nn.Conv2d(channels, channels // reduction, kernel_size=1,
+                             padding=0)
+        self.relu = nn.ReLU(inplace=True)
+        self.fc2 = nn.Conv2d(channels // reduction, channels, kernel_size=1,
+                             padding=0)
+        self.sigmoid = nn.Sigmoid()
+
+        self.spatial_se = nn.Sequential(nn.Conv2d(channels, 1, kernel_size=1,
+                                                  stride=1, padding=0, bias=False),
+                                        nn.Sigmoid())
+        self.concat = concat
+
+    def forward(self, x):
+        module_input = x
+
+        x = self.avg_pool(x)
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.fc2(x)
+        chn_se = self.sigmoid(x)
+        chn_se = chn_se * module_input
+
+        spa_se = self.spatial_se(module_input)
+        spa_se = module_input * spa_se
+        if self.concat:
+            return torch.cat([chn_se, spa_se], dim=1)
+        else:
+            return chn_se + spa_se
+
+class ConvRelu(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size=3):
+        super(ConvRelu, self).__init__()
+        self.layer = nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, padding=1),
+            nn.ReLU(inplace=True)
+        )
+    def forward(self, x):
+        return self.layer(x)
+
+class Dpn92_Unet_Double(nn.Module):
+    def __init__(self, pretrained=False, **kwargs):
+        super(Dpn92_Unet_Double, self).__init__()
+
+        encoder_filters = [64, 336, 704, 1552, 2688]
+        decoder_filters = np.asarray([64, 96, 128, 256, 512]) // 2
+
+        self.conv6 = ConvRelu(encoder_filters[-1], decoder_filters[-1])
+        self.conv6_2 = nn.Sequential(ConvRelu(decoder_filters[-1] + encoder_filters[-2], decoder_filters[-1]),
+                                     SCSEModule(decoder_filters[-1], reduction=16, concat=True))
+        self.conv7 = ConvRelu(decoder_filters[-1] * 2, decoder_filters[-2])
+        self.conv7_2 = nn.Sequential(ConvRelu(decoder_filters[-2] + encoder_filters[-3], decoder_filters[-2]),
+                                     SCSEModule(decoder_filters[-2], reduction=16, concat=True))
+        self.conv8 = ConvRelu(decoder_filters[-2] * 2, decoder_filters[-3])
+        self.conv8_2 = nn.Sequential(ConvRelu(decoder_filters[-3] + encoder_filters[-4], decoder_filters[-3]),
+                                     SCSEModule(decoder_filters[-3], reduction=16, concat=True))
+        self.conv9 = ConvRelu(decoder_filters[-3] * 2, decoder_filters[-4])
+        self.conv9_2 = nn.Sequential(ConvRelu(decoder_filters[-4] + encoder_filters[-5], decoder_filters[-4]),
+                                     SCSEModule(decoder_filters[-4], reduction=16, concat=True))
+        self.conv10 = ConvRelu(decoder_filters[-4] * 2, decoder_filters[-5])
+
+        self.res = nn.Conv2d(decoder_filters[-5] * 2, 5, 1, stride=1, padding=0)
+
+        self._initialize_weights()
+        if pretrained:
+            pretrained = 'imagenet+5k'
+        encoder = dpn92(pretrained=pretrained)
+
+        # conv1_new = nn.Conv2d(6, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+        # _w = encoder.blocks['conv1_1'].conv.state_dict()
+        # _w['weight'] = torch.cat([0.5 * _w['weight'], 0.5 * _w['weight']], 1)
+        # conv1_new.load_state_dict(_w)
+
+        self.conv1 = nn.Sequential(
+            encoder.blocks['conv1_1'].conv,  # conv
+            encoder.blocks['conv1_1'].bn,  # bn
+            encoder.blocks['conv1_1'].act,  # relu
+        )
+        self.conv2 = nn.Sequential(
+            encoder.blocks['conv1_1'].pool,  # maxpool
+            *[b for k, b in encoder.blocks.items() if k.startswith('conv2_')]
+        )
+        self.conv3 = nn.Sequential(*[b for k, b in encoder.blocks.items() if k.startswith('conv3_')])
+        self.conv4 = nn.Sequential(*[b for k, b in encoder.blocks.items() if k.startswith('conv4_')])
+        self.conv5 = nn.Sequential(*[b for k, b in encoder.blocks.items() if k.startswith('conv5_')])
+
+    def forward1(self, x):
+        batch_size, C, H, W = x.shape
+
+        enc1 = self.conv1(x)
+        enc2 = self.conv2(enc1)
+        enc3 = self.conv3(enc2)
+        enc4 = self.conv4(enc3)
+        enc5 = self.conv5(enc4)
+
+        enc1 = (torch.cat(enc1, dim=1) if isinstance(enc1, tuple) else enc1)
+        enc2 = (torch.cat(enc2, dim=1) if isinstance(enc2, tuple) else enc2)
+        enc3 = (torch.cat(enc3, dim=1) if isinstance(enc3, tuple) else enc3)
+        enc4 = (torch.cat(enc4, dim=1) if isinstance(enc4, tuple) else enc4)
+        enc5 = (torch.cat(enc5, dim=1) if isinstance(enc5, tuple) else enc5)
+
+        dec6 = self.conv6(F.interpolate(enc5, scale_factor=2))
+        dec6 = self.conv6_2(torch.cat([dec6, enc4], 1))
+
+        dec7 = self.conv7(F.interpolate(dec6, scale_factor=2))
+        dec7 = self.conv7_2(torch.cat([dec7, enc3], 1))
+
+        dec8 = self.conv8(F.interpolate(dec7, scale_factor=2))
+        dec8 = self.conv8_2(torch.cat([dec8, enc2], 1))
+
+        dec9 = self.conv9(F.interpolate(dec8, scale_factor=2))
+        dec9 = self.conv9_2(torch.cat([dec9,
+                                       enc1], 1))
+
+        dec10 = self.conv10(F.interpolate(dec9, scale_factor=2))
+
+        return dec10
+
+    def forward(self, x):
+
+        dec10_0 = self.forward1(x[:, :3, :, :])
+        dec10_1 = self.forward1(x[:, 3:, :, :])
+
+        dec10 = torch.cat([dec10_0, dec10_1], 1)
+
+        return self.res(dec10)
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d) or isinstance(m, nn.Linear):
+                m.weight.data = nn.init.kaiming_normal_(m.weight.data)
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+
+
+class SeNet154_Unet_Double(nn.Module):
+    def __init__(self, pretrained=False,  **kwargs):
+        super(SeNet154_Unet_Double, self).__init__()
+
+        encoder_filters = [128, 256, 512, 1024, 2048]
+        decoder_filters = np.asarray([48, 64, 96, 160, 320])
+
+        self.conv6 = ConvRelu(encoder_filters[-1], decoder_filters[-1])
+        self.conv6_2 = ConvRelu(decoder_filters[-1] + encoder_filters[-2], decoder_filters[-1])
+        self.conv7 = ConvRelu(decoder_filters[-1], decoder_filters[-2])
+        self.conv7_2 = ConvRelu(decoder_filters[-2] + encoder_filters[-3], decoder_filters[-2])
+        self.conv8 = ConvRelu(decoder_filters[-2], decoder_filters[-3])
+        self.conv8_2 = ConvRelu(decoder_filters[-3] + encoder_filters[-4], decoder_filters[-3])
+        self.conv9 = ConvRelu(decoder_filters[-3], decoder_filters[-4])
+        self.conv9_2 = ConvRelu(decoder_filters[-4] + encoder_filters[-5], decoder_filters[-4])
+        self.conv10 = ConvRelu(decoder_filters[-4], decoder_filters[-5])
+
+        self.res = nn.Conv2d(decoder_filters[-5] * 2, 5, 1, stride=1, padding=0)
+
+        self._initialize_weights()
+        if pretrained:
+            pretrained = 'imagenet'
+        encoder = senet154(pretrained=pretrained)
+
+        # conv1_new = nn.Conv2d(9, 64, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+        # _w = encoder.layer0.conv1.state_dict()
+        # _w['weight'] = torch.cat([0.8 * _w['weight'], 0.1 * _w['weight'], 0.1 * _w['weight']], 1)
+        # conv1_new.load_state_dict(_w)
+        self.conv1 = nn.Sequential(encoder.layer0.conv1, encoder.layer0.bn1, encoder.layer0.relu1, encoder.layer0.conv2,
+                                   encoder.layer0.bn2, encoder.layer0.relu2, encoder.layer0.conv3, encoder.layer0.bn3,
+                                   encoder.layer0.relu3)
+        self.conv2 = nn.Sequential(encoder.pool, encoder.layer1)
+        self.conv3 = encoder.layer2
+        self.conv4 = encoder.layer3
+        self.conv5 = encoder.layer4
+
+    def forward1(self, x):
+        batch_size, C, H, W = x.shape
+
+        enc1 = self.conv1(x)
+        enc2 = self.conv2(enc1)
+        enc3 = self.conv3(enc2)
+        enc4 = self.conv4(enc3)
+        enc5 = self.conv5(enc4)
+
+        dec6 = self.conv6(F.interpolate(enc5, scale_factor=2))
+        dec6 = self.conv6_2(torch.cat([dec6, enc4
+                                       ], 1))
+
+        dec7 = self.conv7(F.interpolate(dec6, scale_factor=2))
+        dec7 = self.conv7_2(torch.cat([dec7, enc3
+                                       ], 1))
+
+        dec8 = self.conv8(F.interpolate(dec7, scale_factor=2))
+        dec8 = self.conv8_2(torch.cat([dec8, enc2
+                                       ], 1))
+
+        dec9 = self.conv9(F.interpolate(dec8, scale_factor=2))
+        dec9 = self.conv9_2(torch.cat([dec9,
+                                       enc1
+                                       ], 1))
+
+        dec10 = self.conv10(F.interpolate(dec9, scale_factor=2))
+
+        return dec10
+
+    def forward(self, x):
+
+        dec10_0 = self.forward1(x[:, :3, :, :])
+        dec10_1 = self.forward1(x[:, 3:, :, :])
+
+        dec10 = torch.cat([dec10_0, dec10_1], 1)
+
+        return self.res(dec10)
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d) or isinstance(m, nn.Linear):
+                m.weight.data = nn.init.kaiming_normal_(m.weight.data)
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+
+
+class SeResNext50_Unet_Double(nn.Module):
+    def __init__(self, pretrained=False, **kwargs):
+        super(SeResNext50_Unet_Double, self).__init__()
+
+        encoder_filters = [64, 256, 512, 1024, 2048]
+        decoder_filters = np.asarray([64, 96, 128, 256, 512]) // 2
+
+        self.conv6 = ConvRelu(encoder_filters[-1], decoder_filters[-1])
+        self.conv6_2 = ConvRelu(decoder_filters[-1] + encoder_filters[-2], decoder_filters[-1])
+        self.conv7 = ConvRelu(decoder_filters[-1], decoder_filters[-2])
+        self.conv7_2 = ConvRelu(decoder_filters[-2] + encoder_filters[-3], decoder_filters[-2])
+        self.conv8 = ConvRelu(decoder_filters[-2], decoder_filters[-3])
+        self.conv8_2 = ConvRelu(decoder_filters[-3] + encoder_filters[-4], decoder_filters[-3])
+        self.conv9 = ConvRelu(decoder_filters[-3], decoder_filters[-4])
+        self.conv9_2 = ConvRelu(decoder_filters[-4] + encoder_filters[-5], decoder_filters[-4])
+        self.conv10 = ConvRelu(decoder_filters[-4], decoder_filters[-5])
+
+        self.res = nn.Conv2d(decoder_filters[-5] * 2, 5, 1, stride=1, padding=0)
+
+        self._initialize_weights()
+
+        if pretrained:
+            pretrained = 'imagenet'
+        encoder = se_resnext50_32x4d(pretrained=pretrained)
+
+        # conv1_new = nn.Conv2d(6, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+        # _w = encoder.layer0.conv1.state_dict()
+        # _w['weight'] = torch.cat([0.5 * _w['weight'], 0.5 * _w['weight']], 1)
+        # conv1_new.load_state_dict(_w)
+        self.conv1 = nn.Sequential(encoder.layer0.conv1, encoder.layer0.bn1,
+                                   encoder.layer0.relu1)  # encoder.layer0.conv1
+        self.conv2 = nn.Sequential(encoder.pool, encoder.layer1)
+        self.conv3 = encoder.layer2
+        self.conv4 = encoder.layer3
+        self.conv5 = encoder.layer4
+
+    def forward1(self, x):
+        batch_size, C, H, W = x.shape
+
+        enc1 = self.conv1(x)
+        enc2 = self.conv2(enc1)
+        enc3 = self.conv3(enc2)
+        enc4 = self.conv4(enc3)
+        enc5 = self.conv5(enc4)
+
+        dec6 = self.conv6(F.interpolate(enc5, scale_factor=2))
+        dec6 = self.conv6_2(torch.cat([dec6, enc4
+                                       ], 1))
+
+        dec7 = self.conv7(F.interpolate(dec6, scale_factor=2))
+        dec7 = self.conv7_2(torch.cat([dec7, enc3
+                                       ], 1))
+
+        dec8 = self.conv8(F.interpolate(dec7, scale_factor=2))
+        dec8 = self.conv8_2(torch.cat([dec8, enc2
+                                       ], 1))
+
+        dec9 = self.conv9(F.interpolate(dec8, scale_factor=2))
+        dec9 = self.conv9_2(torch.cat([dec9,
+                                       enc1
+                                       ], 1))
+
+        dec10 = self.conv10(F.interpolate(dec9, scale_factor=2))
+
+        return dec10
+
+    def forward(self, x):
+
+        dec10_0 = self.forward1(x[:, :3, :, :])
+        dec10_1 = self.forward1(x[:, 3:, :, :])
+
+        dec10 = torch.cat([dec10_0, dec10_1], 1)
+
+        return self.res(dec10)
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d) or isinstance(m, nn.Linear):
+                m.weight.data = nn.init.kaiming_normal_(m.weight.data)
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
