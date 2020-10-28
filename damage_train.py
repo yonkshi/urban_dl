@@ -522,13 +522,22 @@ if __name__ == '__main__':
             dmg_model_eval(net, cfg, device, run_type='TEST', max_samples=2000,  use_confusion_matrix=True, include_disaster_type_breakdown=True)
             dmg_model_eval(net, cfg, device, run_type='TRAIN', max_samples=1000, use_confusion_matrix=True, include_disaster_type_breakdown=True)
         else:
-            wandb.init(
-                name=cfg.NAME,
-                project='urban_dl_final',
-                tags=['run', 'dmg'],
-                reinit=True
-            )
-            train_net(net, cfg)
+            # Dynamically adjust the batch size to fit on GPU
+            orginal_batch_size = cfg.TRAINER.BATCH_SIZE
+            for i in range(orginal_batch_size):
+                try:
+                    wandb.init(
+                        name=cfg.NAME,
+                        project='urban_dl_final',
+                        tags=['run', 'dmg'],
+                        reinit=True
+                    )
+                    train_net(net, cfg)
+                    break
+                except RuntimeError as runerr:
+                    new_batch_size = orginal_batch_size - i
+                    print('Original batch size too large, trying batch size:' + new_batch_size, file=sys.stderr)
+                    cfg.TRAINER.BATCH_SIZE = new_batch_size
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
         print('Saved interrupt')
