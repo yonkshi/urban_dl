@@ -8,8 +8,7 @@ DATASETS:
     ENABLED: True
     TRAIN_USE_GTS_MASK: False # If false, we will use predicted localization to train
   INCLUDE_PRE_DISASTER: True
-TRAINER:
-  BATCH_SIZE: 12
+
 DATALOADER:
   NUM_WORKER: 8
 AUGMENTATION:
