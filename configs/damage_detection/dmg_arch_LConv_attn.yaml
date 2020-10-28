@@ -1,6 +1,5 @@
 _BASE_: "dmg_arch.yaml"
 MODEL:
-  LOSS_TYPE: 'ComboLoss'
   IN_CHANNELS: 7
   BLOCK_TYPE: 'Triple'
   USE_ATTENTION: True
