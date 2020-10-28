@@ -48,7 +48,7 @@ source "${HOME}/miniconda3/etc/profile.d/conda.sh"
 conda activate gpu3
 cd ../
 # Train and save the exit code of the python script
-python python damage_train.py -c ${CONFIG_NAME}
+python damage_train.py -c ${CONFIG_NAME}
 EXIT_CODE="\${?}"
 exit "\${EXIT_CODE}"
 HERE
