@@ -1,6 +1,7 @@
 import sys
 from os import path
 import timeit
+import platform
 from collections import OrderedDict
 
 import torch.nn as nn
@@ -439,6 +440,12 @@ def cross_entropy_loss(pred, y):
 
 def setup(args):
     cfg = new_config()
+    cfg.COMPUTER_CONFIG = f'configs/environment/{args.computer_name}.yaml' if args.computer_name else f'configs/environment/{platform.node()}.yaml'
+    if not os.path.exists(cfg.COMPUTER_CONFIG):
+        print(f'No environment config for {cfg.COMPUTER_CONFIG}, reverting to default!')
+        cfg.COMPUTER_CONFIG = f'configs/environment/default.yaml'
+    cfg.merge_from_file(cfg.COMPUTER_CONFIG)
+
     cfg.merge_from_file(f'configs/damage_detection/{args.config_file}.yaml')
     cfg.merge_from_list(args.opts)
     cfg.NAME = args.config_file
@@ -456,6 +463,12 @@ def setup(args):
 if __name__ == '__main__':
     args = default_argument_parser().parse_known_args()[0]
     cfg = setup(args)
+
+    # Overwrite environment config if in debug mode
+    if cfg.DEBUG:
+        cfg.DATASETS.TRAIN = cfg.DATASETS.DEBUG_TRAIN
+        cfg.DATASETS.TEST = cfg.DATASETS.DEBUG_TEST
+        cfg.DATASETS.INFERENCE = cfg.DATASETS.DEBUG_INFERENCE
 
     out_channels = cfg.MODEL.OUT_CHANNELS
     # if cfg.MODEL.BACKBONE.ENABLED:

@@ -23,6 +23,9 @@ def default_argument_parser():
                       default='', help='path of which the model will be loaded from')
     parser.add_argument("--eval-only", action="store_true", help="perform evaluation only")
     parser.add_argument("--num-gpus", type=int, default=1, help="number of gpus *per machine*")
+    parser.add_argument("--computer-name", dest='computer_name', default="", metavar="FILE",
+                        help="override computer name for computer specific configs")
+
 
     # Hacky hack
     # parser.add_argument("--eval-training", action="store_true", help="perform evaluation on training set only")

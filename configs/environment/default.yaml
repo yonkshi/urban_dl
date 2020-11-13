@@ -1,0 +1,8 @@
+OUTPUT_BASE_DIR: ('/Midgard/home/pshi/run_logs/unet/')
+DATASETS:
+  TRAIN: ("/local_storage/datasets/xview2/full_new/train/",)
+  TEST: ("/local_storage/datasets/xview2/full_new/test/",)
+  INFERENCE: ("/local_storage/datasets/xview2/full_new/real_test_set/",)
+  DEBUG_TRAIN: ("/storage/yonk/debug_new/train/",)
+  DEBUG_TEST: ("/storage/yonk/debug_new/test/",)
+  DEBUG_INFERENCE: ("/storage/yonk/debug_new/test/",)

@@ -1,4 +1,5 @@
 SEED: 1339 # best seed so far 1339 or 43
+DEBUG: False
 MODEL:
   BINARY_CLASSIFICATION: True
   OUT_CHANNELS: 2
@@ -32,12 +33,8 @@ MODEL:
 
 THRESH: 0.01 # Best threshold (only to be filled after running final model evaluation)
 DATASETS:
-  TRAIN: ("/local_storage/datasets/xview2/full_new/train/",)
-  TEST: ("/local_storage/datasets/xview2/full_new/test/",)
-  INFERENCE: ("/local_storage/datasets/xview2/full_new/real_test_set/",)
   PRE_OR_POST: 'pre' # 'pre' vs 'post' disaster images to use
   USE_CLAHE_VARI: False
-OUTPUT_BASE_DIR: ('/Midgard/home/pshi/run_logs/unet/')
 TRAINER:
   LR: 0.0001
   BATCH_SIZE: 1

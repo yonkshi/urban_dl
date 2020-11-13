@@ -9,7 +9,6 @@ import numpy as np
 import torch
 import wandb
 import torch.nn as nn
-from torch.utils.tensorboard import SummaryWriter
 from os import makedirs
 
 from torch.utils import data as torch_data

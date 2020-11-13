@@ -1,4 +1,5 @@
 _BASE_: "base.yaml"
+DEBUG: True
 MODEL:
   LOSS_TYPE: 'FrankensteinEdgeLoss'
   OUT_CHANNELS: 1
@@ -8,9 +9,6 @@ MODEL:
   TOPOLOGY: [128, 128, 256, 512,]
 OUTPUT_BASE_DIR: ('logs/')
 DATASETS:
-  TRAIN: ("/storage/yonk/debug_new/train/",)
-  TEST: ("/storage/yonk/debug_new/test/",)
-  INFERENCE: ("/storage/yonk/debug_new/test/",)
   USE_CLAHE_VARI: False
 TRAINER:
   LR: 0.001

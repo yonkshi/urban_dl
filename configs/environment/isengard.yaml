@@ -1,0 +1,8 @@
+OUTPUT_BASE_DIR: ('/home/david/trains/run_logs/unet/')
+DATASETS:
+  TRAIN: ("/storage2/david/datasets/xview2/preprocessed_merged/train/",)
+  TEST: ("/storage2/david/datasets/xview2/preprocessed_merged/test/",)
+  INFERENCE: ("/storage2/david/datasets/xview2/hold/",)
+  DEBUG_TRAIN: ("/storage2/david/datasets/xview2/preprocessed_merged/train/",)
+  DEBUG_TEST: ("/storage2/david/datasets/xview2/preprocessed_merged/test/",)
+  DEBUG_INFERENCE: ("/storage2/david/datasets/xview2/hold/",)
