@@ -1,19 +1,8 @@
-_BASE_: "damage_base.yaml"
+_BASE_: "dmg_combo_stackpre_oversample_512.yaml"
 DEBUG: True
-MODEL:
-  IN_CHANNELS: 3
-#  PRETRAINED:
-#    ENABLED: False
-#    NAME: 'debug' # Name of the pretrained model
-#    CP_FILE: 'dice_2xdown.pkl' # Checkpoint file
-#    ENCODER_ONLY: True # full, encoder
-#    INCLUDE_INPUT_LAYER: False # If true, weights from input layer will be included too (only if they have the same dims
-OUTPUT_BASE_DIR: ('logs/')
-TRAINER:
-  LR: 0.001
-  BATCH_SIZE: 2
 DATALOADER:
   NUM_WORKER: 0
-
-
+  SHUFFLE: False
+TRAINER:
+  EPOCHS: 3
 

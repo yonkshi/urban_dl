@@ -106,14 +106,12 @@ class MultiClassF1():
         self.FN = 0
 
     def add_sample(self, y_true:torch.Tensor, y_pred):
-        if self.ignore_last_class:
-            # Ignore background classes
-
-            # y_pred = y_pred[:, :-1]
-            # y_true = y_true[:, :-1]
-            y_true_mask = 1 - y_true[:, [-1]] # [ B, 1, H, W]
-
         y_true_bin = y_true.bool() # [B,  C, ...]
+        # Ignore background classes
+        if self.ignore_last_class:
+            y_true_mask = ~y_true_bin[:, [-1]] # [ B, 1, H, W]
+        else:
+            y_true_mask = torch.full_like(y_true[:, [-1]], True, dtype=bool)
         # Make y_pred from decimal to one hot along dim C
         y_pred_argmax = torch.argmax(y_pred, dim=1, keepdim=True)  # [B, C, ...]
         y_pred_oh = torch.zeros_like(y_pred, dtype=torch.bool).scatter_(1, y_pred_argmax,True) # one-hot
@@ -146,7 +144,7 @@ class MultiClassF1():
 
         return false_pos_rate, false_neg_rate
 
-    def compute_f1(self, include_bg=False):
+    def compute_f1(self, include_bg=True):
         self.TP = self.TP.clamp(10e-05)
         self.TN = self.TN.clamp(10e-05)
         self.FP = self.FP.clamp(10e-05)
@@ -154,7 +152,7 @@ class MultiClassF1():
         individual_f1 = 2 * self.TP / (2 * self.TP + self.FN + self.FP)
         if not include_bg:
             individual_f1 = individual_f1[..., :-1]
-        f1 = len(individual_f1) / (individual_f1 ** -1).sum()
+        f1 = len(individual_f1) / (individual_f1 ** -1).sum() # Are we sure this is the right avg here?
 
         f1 = f1.cpu().item()
         individual_f1 = individual_f1.cpu().numpy()
@@ -165,20 +163,22 @@ def true_pos(y_true, y_pred, dim=0):
 
 
 def false_pos(y_true, y_pred, dim=0):
-    return torch.sum(y_true * (1. - torch.round(y_pred)), dim=dim)
-
-
-def false_neg(y_true, y_pred, dim=0):
     return torch.sum((1. - y_true) * torch.round(y_pred), dim=dim)
 
+def false_neg(y_true, y_pred, dim=0):
+    return torch.sum(y_true * (1. - torch.round(y_pred)), dim=dim)
 
-def precision(y_true, y_pred, dim):
-    denom = (true_pos(y_true, y_pred, dim) + false_pos(y_true, y_pred, dim))
+def precision(y_true: torch.Tensor, y_pred: torch.Tensor, dim: int):
+    TP = true_pos(y_true, y_pred, dim)
+    FP = false_pos(y_true, y_pred, dim)
+    denom = TP + FP
     denom = torch.clamp(denom, 10e-05)
-    return true_pos(y_true, y_pred, dim) / denom
+    return TP / denom
 
-def recall(y_true, y_pred, dim):
-    denom = (true_pos(y_true, y_pred, dim) + false_neg(y_true, y_pred, dim))
+def recall(y_true: torch.Tensor, y_pred: torch.Tensor, dim: int):
+    TP = true_pos(y_true, y_pred, dim)
+    FN = false_neg(y_true, y_pred, dim)
+    denom = TP + FN
     denom = torch.clamp(denom, 10e-05)
     return true_pos(y_true, y_pred, dim) / denom
 

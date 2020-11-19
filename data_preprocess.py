@@ -7,8 +7,8 @@ import itertools
 import cv2
 import numpy as np
 
-DATASET_TYPE = 'preprocessed_merged' # small, medium, large etc
-base_path = '/storage2/david/datasets/xview/raw/tier3_train_merge'
+DATASET_TYPE = 'hold' # small, medium, large etc
+base_path = '/storage2/david/datasets/xview2/raw/hold'
 test_train_split = 10
 
 images_dir = os.path.join(base_path, 'images')
@@ -159,23 +159,32 @@ def VARI(image):
     return VARI
 
 
-output_base_path = f"/storage2/david/datasets/xview/{DATASET_TYPE}"
-print('output path base', output_base_path)
-train_path = os.path.join(output_base_path, 'train')
-test_path = os.path.join(output_base_path, 'test')
-train_mask_path = os.path.join(train_path, 'label_mask')
-test_mask_path = os.path.join(test_path, 'label_mask')
-
-os.makedirs(train_path, exist_ok=True)
-os.makedirs(test_path, exist_ok=True)
-os.makedirs(train_mask_path, exist_ok=True)
-os.makedirs(test_mask_path, exist_ok=True)
-
-train_label_file = os.path.join(train_path, 'labels.json')
-test_label_file = os.path.join(test_path, 'labels.json')
+output_base_path = f"/storage2/david/datasets/xview2/preprocessed/{DATASET_TYPE}"
 
 test_set_locations = []
 
+print('output path base', output_base_path)
+if test_set_locations:
+    train_path = os.path.join(output_base_path, 'train')
+    test_path = os.path.join(output_base_path, 'test')
+    train_mask_path = os.path.join(train_path, 'label_mask')
+    test_mask_path = os.path.join(test_path, 'label_mask')
+
+    os.makedirs(train_path, exist_ok=True)
+    os.makedirs(test_path, exist_ok=True)
+    os.makedirs(train_mask_path, exist_ok=True)
+    os.makedirs(test_mask_path, exist_ok=True)
+
+    train_label_file = os.path.join(train_path, 'labels.json')
+    test_label_file = os.path.join(test_path, 'labels.json')
+
+else:
+    mask_path = os.path.join(output_base_path, 'label_mask')
+    os.makedirs(mask_path, exist_ok=True)
+
+    label_file = os.path.join(output_base_path, 'labels.json')
+
+dataset_dicts = []
 dataset_dicts_train = []
 dataset_dicts_test = []
 
@@ -209,39 +218,55 @@ for idx, (disaster_name, image_ids) in enumerate(dataset.items()):
         if len(data_label['features']) > max_polygon_in_disaster:
             max_polygon_in_disaster = len(data_label['features'])
 
-        # Splitting test with training set
-        if disaster_name in test_set_locations:
-            # TEST SET
+        # No split
+        if not test_set_locations:
             pre_filename = record['pre']['file_name']
-            copy_to_dest(pre_filename, test_path)
-            postprocessed_and_save(test_path, pre_filename, pre_ras_img)
+            copy_to_dest(pre_filename, output_base_path)
+            postprocessed_and_save(output_base_path, pre_filename, pre_ras_img)
 
             post_filename = get_counterpart_filename(pre_filename)
-            copy_to_dest(post_filename, test_path)
-            postprocessed_and_save(test_path, post_filename, post_ras_img)
+            copy_to_dest(post_filename, output_base_path)
+            postprocessed_and_save(output_base_path, post_filename, post_ras_img)
 
-            dataset_dicts_test.append(record)
-
+            dataset_dicts.append(record)
         else:
-            # TRAIN SET
-            pre_filename = record['pre']['file_name']
-            copy_to_dest(pre_filename, train_path)
-            postprocessed_and_save(train_path, pre_filename, pre_ras_img)
+            # Splitting test with training set
+            if disaster_name in test_set_locations:
+                # TEST SET
+                pre_filename = record['pre']['file_name']
+                copy_to_dest(pre_filename, test_path)
+                postprocessed_and_save(test_path, pre_filename, pre_ras_img)
 
-            post_filename = get_counterpart_filename(pre_filename)
-            copy_to_dest(post_filename, train_path)
-            postprocessed_and_save(train_path, post_filename, post_ras_img)
+                post_filename = get_counterpart_filename(pre_filename)
+                copy_to_dest(post_filename, test_path)
+                postprocessed_and_save(test_path, post_filename, post_ras_img)
 
-            dataset_dicts_train.append(record)
+                dataset_dicts_test.append(record)
+
+            else:
+                # TRAIN SET
+                pre_filename = record['pre']['file_name']
+                copy_to_dest(pre_filename, train_path)
+                postprocessed_and_save(train_path, pre_filename, pre_ras_img)
+
+                post_filename = get_counterpart_filename(pre_filename)
+                copy_to_dest(post_filename, train_path)
+                postprocessed_and_save(train_path, post_filename, post_ras_img)
+
+                dataset_dicts_train.append(record)
         # generate debug set
 
     mean_polygon_in_disaster /= len(image_ids)
-    print(train_path)
     print(
         f'{disaster_name}({i}),\t max_poly: {max_polygon_in_disaster},\t mean_poly: {int(mean_polygon_in_disaster)}, \t large_image_count: {large_image_count}')
 
-with open(train_label_file, 'w') as outfile:
-    json.dump(dataset_dicts_train, outfile)
-with open(test_label_file, 'w') as outfile:
-    json.dump(dataset_dicts_test, outfile)
+if dataset_dicts:
+    with open(label_file, 'w') as outfile:
+        json.dump(dataset_dicts, outfile)
+if dataset_dicts_train:
+    with open(train_label_file, 'w') as outfile:
+        json.dump(dataset_dicts_train, outfile)
+if dataset_dicts_test:
+    with open(test_label_file, 'w') as outfile:
+        json.dump(dataset_dicts_test, outfile)
 print('saving to json complete!')

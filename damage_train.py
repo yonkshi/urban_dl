@@ -88,7 +88,7 @@ def train_net(net,
     dataloader = torch_data.DataLoader(dataset, **dataloader_kwargs)
 
     max_epochs = cfg.TRAINER.EPOCHS
-    global_step = 0
+    global_step = 0 if not cfg.DEBUG else 10000
     for epoch in range(max_epochs):
         start = timeit.default_timer()
         print('Starting epoch {}/{}.'.format(epoch + 1, max_epochs))
@@ -136,6 +136,14 @@ def train_net(net,
                 print(f'step {global_step},  avg loss: {np.mean(loss_set):.4f}, cuda mem: {max_mem} MB, cuda cache: {max_cache} MB, time: {time_per_n_batches:.2f}s',
                       flush=True)
 
+                class_labels = {
+                    0: "class 0",
+                    1: "class 1",
+                    2: "class 2",
+                    3: "class 3",
+                    4: "class 4",
+                }
+
                 log_data = {
                     'loss': np.mean(loss_set),
                     'ce_component_loss': ce_loss,
@@ -144,6 +152,15 @@ def train_net(net,
                     'time': time_per_n_batches,
                     'total_positive_pixels': np.mean(positive_pixels_set),
                     'step': global_step,
+                    'example_image': wandb.Image(batch['x'][0, 0:3].numpy().transpose(1, 2, 0), masks={
+                        "predictions": {
+                            "mask_data": y_pred[0].argmax(dim=0).detach().to('cpu').numpy(),
+                            "class_labels": class_labels,
+                        },
+                        "groud_truth": {
+                            "mask_data": batch['y'][0].argmax(dim=0).numpy(),
+                            "class_labels": class_labels,
+                        }})
                 }
 
                 wandb.log(log_data)
@@ -151,6 +168,9 @@ def train_net(net,
                 loss_set = []
                 positive_pixels_set = []
                 start = stop
+
+                if cfg.DEBUG:
+                    break
 
             # torch.cuda.empty_cache()
             global_step += 1
@@ -256,7 +276,7 @@ def dmg_model_eval(net, cfg, device,
     print('Computing F1 score ... ', end=' ', flush=True)
     # Max of the mean F1 score
 
-    total_f1, f1_per_class = measurer.compute_f1(include_bg=False)
+    total_f1, f1_per_class = measurer.compute_f1()
     all_fpr, all_fnr = measurer.compute_basic_metrics()
     print(total_f1, flush=True)
 
@@ -268,11 +288,11 @@ def dmg_model_eval(net, cfg, device,
 
     if include_disaster_type_breakdown:
         for disaster_type, m in diaster_type_measurers.items():
-            f1 = m.compute_f1(include_bg=False)[0]
+            f1 = m.compute_f1()[0]
             print(f'disaster_{disaster_type}_f1', f1)
             wandb.log({
                 f'disaster-{disaster_type}-f1': f1
-            })
+            }, commit=False)
     # official Xivew2 scoring
     # offical_score = XviewMetrics(allrows)
     # print(f'official_f1', offical_score.df1)
@@ -309,7 +329,7 @@ def dmg_model_eval(net, cfg, device,
         plot_confmtx(name=run_type, confusion_matrix=cm)
         log_data['confusion_matrix'] = plt
 
-    wandb.log(log_data)
+    wandb.log(log_data, commit=False)
 
 def plot_confmtx(name, confusion_matrix):
     '''
