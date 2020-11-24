@@ -176,8 +176,8 @@ def train_net(net,
             global_step += 1
 
         # Evaluation for multiclass F1 score
-        dmg_model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch)
-        dmg_model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch)
+        dmg_model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch, use_confusion_matrix=True)
+        dmg_model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch, use_confusion_matrix=True)
 
 def dmg_model_eval(net, cfg, device,
                    run_type='TEST',
@@ -201,7 +201,7 @@ def dmg_model_eval(net, cfg, device,
     def evaluate(x, y_true, y_pred, img_filenames):
 
         # TODO Only enable me if testing pretrained winner model where bg is class 0 !!
-        y_pred = y_pred[:,[1,2,3,4,0]]
+        # y_pred = y_pred[:,[1,2,3,4,0]]
 
         if cfg.MODEL.BACKGROUND.MASK_OUTPUT:
             # No background class, manually mask out background
@@ -551,6 +551,7 @@ if __name__ == '__main__':
                 name=cfg.NAME,
                 project='urban_dl_final',
                 tags=['eval', 'dmg'],
+                config=cfg,
             )
             dmg_model_eval(net, cfg, device, run_type='TEST', max_samples=2000,  use_confusion_matrix=True, include_disaster_type_breakdown=True)
             dmg_model_eval(net, cfg, device, run_type='TRAIN', max_samples=1000, use_confusion_matrix=True, include_disaster_type_breakdown=True)
@@ -563,6 +564,7 @@ if __name__ == '__main__':
                         name=cfg.NAME,
                         project='urban_dl_final',
                         tags=['run', 'dmg'],
+                        config=cfg,
                         reinit=True
                     )
                     train_net(net, cfg)

@@ -111,7 +111,7 @@ class MultiClassF1():
         if self.ignore_last_class:
             y_true_mask = ~y_true_bin[:, [-1]] # [ B, 1, H, W]
         else:
-            y_true_mask = torch.full_like(y_true[:, [-1]], True, dtype=bool)
+            y_true_mask = torch.full_like(y_true[:, [-1]], True, dtype=torch.bool)
         # Make y_pred from decimal to one hot along dim C
         y_pred_argmax = torch.argmax(y_pred, dim=1, keepdim=True)  # [B, C, ...]
         y_pred_oh = torch.zeros_like(y_pred, dtype=torch.bool).scatter_(1, y_pred_argmax,True) # one-hot
@@ -153,7 +153,7 @@ class MultiClassF1():
         if not include_bg:
             individual_f1 = individual_f1[..., :-1]
         f1 = len(individual_f1) / (individual_f1 ** -1).sum() # Are we sure this is the right avg here?
-
+        
         f1 = f1.cpu().item()
         individual_f1 = individual_f1.cpu().numpy()
         return f1, individual_f1
