@@ -11,8 +11,11 @@ from torch.utils import data as torch_data
 from torchvision import transforms, utils
 import segmentation_models_pytorch as smp
 from tabulate import tabulate
-from sklearn.metrics import confusion_matrix as confmatrix
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import ConfusionMatrixDisplay
 import wandb
+import optuna
+
 import matplotlib.pyplot as plt
 
 from unet import UNet, Dpn92_Unet_Double, SeNet154_Unet_Double, SeResNext50_Unet_Double
@@ -29,18 +32,23 @@ from eval_util.xview2_scoring import RowPairCalculator, XviewMetrics
 # import hp
 
 
-def train_net(net,
-              cfg):
+def train_net(net, cfg, device, trial: optuna.Trial=None):
 
     log_path = cfg.OUTPUT_DIR
-    summarize_config(cfg)
+    summarize_config(cfg, device)
 
-    optimizer = optim.Adam(net.parameters(),
+    optimizer = optim.AdamW(net.parameters(),
                            lr=cfg.TRAINER.LR,
-                           weight_decay=0.0005)
+                           weight_decay=cfg.TRAINER.WD,
+                           betas=(cfg.TRAINER.B1, cfg.TRAINER.B2))
     weighted_criterion = False
     if cfg.MODEL.LOSS_TYPE == 'CrossEntropyLoss':
         criterion = cross_entropy_loss
+    elif cfg.MODEL.LOSS_TYPE == 'WeightedCrossEntropyLoss':
+        criterion = weighted_ce_loss
+        weighted_criterion = cfg.TRAINER.CE_CLASS_BALANCE.ENABLED
+        weights = 1 / torch.tensor(cfg.TRAINER.CE_CLASS_BALANCE.WEIGHTS)
+        weights = weights.cuda()
     elif cfg.MODEL.LOSS_TYPE == 'SoftDiceMulticlassLoss':
         criterion = soft_dice_loss_multi_class
     elif cfg.MODEL.LOSS_TYPE == 'SoftDiceMulticlassLossDebug':
@@ -137,11 +145,11 @@ def train_net(net,
                       flush=True)
 
                 class_labels = {
-                    0: "class 0",
-                    1: "class 1",
-                    2: "class 2",
-                    3: "class 3",
-                    4: "class 4",
+                    0: "no damage",
+                    1: "minor damage",
+                    2: "major damage",
+                    3: "destroyed",
+                    4: "background",
                 }
 
                 log_data = {
@@ -152,18 +160,9 @@ def train_net(net,
                     'time': time_per_n_batches,
                     'total_positive_pixels': np.mean(positive_pixels_set),
                     'step': global_step,
-                    'example_image': wandb.Image(batch['x'][0, 0:3].numpy().transpose(1, 2, 0), masks={
-                        "predictions": {
-                            "mask_data": y_pred[0].argmax(dim=0).detach().to('cpu').numpy(),
-                            "class_labels": class_labels,
-                        },
-                        "groud_truth": {
-                            "mask_data": batch['y'][0].argmax(dim=0).numpy(),
-                            "class_labels": class_labels,
-                        }})
                 }
 
-                wandb.log(log_data)
+                wandb.log(log_data, step=global_step)
 
                 loss_set = []
                 positive_pixels_set = []
@@ -175,13 +174,35 @@ def train_net(net,
             # torch.cuda.empty_cache()
             global_step += 1
 
+        # Log an image after every epoch
+        wandb.log({'example_image': wandb.Image(batch['x'][0, 0:3].numpy().transpose(1, 2, 0), masks={
+                        "predictions": {
+                            "mask_data": y_pred[0].argmax(dim=0).detach().to('cpu').numpy(),
+                            "class_labels": class_labels,
+                        },
+                        "groud_truth": {
+                            "mask_data": batch['y'][0].argmax(dim=0).numpy(),
+                            "class_labels": class_labels,
+                        }})},
+                  step=global_step)
+
         # Evaluation for multiclass F1 score
-        dmg_model_eval(net, cfg, device, max_samples=100, step=global_step, epoch=epoch, use_confusion_matrix=True)
-        dmg_model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch, use_confusion_matrix=True)
+        val_f1 = dmg_model_eval(net, cfg, device, max_samples=None, run_type='VALIDATION', step=global_step, epoch=epoch, use_confusion_matrix=True)
+        dmg_model_eval(net, cfg, device, max_samples=1000, run_type='TRAIN', step=global_step, epoch=epoch, use_confusion_matrix=True)
+
+        # Check if we have to prune if in a trial
+        if trial:
+            trial.report(val_f1, step=global_step)
+            if trial.should_prune():
+                raise optuna.TrialPruned()
+
+    global_step += len(dataloader)
+    # Final evaluation
+    return dmg_model_eval(net, cfg, device, step=global_step, epoch=epoch, use_confusion_matrix=True)
 
 def dmg_model_eval(net, cfg, device,
-                   run_type='TEST',
-                   max_samples = 1000,
+                   run_type='VALIDATION',
+                   max_samples = None,
                    step=0, epoch=0,
                    use_confusion_matrix=False,
                    include_component_f1=False,
@@ -215,27 +236,27 @@ def dmg_model_eval(net, cfg, device,
             component_f1.append(loss_component.cpu().detach().numpy())
 
         # === Official F1 evaluation
-        # y_pred_np = y_pred.argmax(dim=1).cpu().detach().numpy() # One-hot to not-one-hot
-        # y_true_np = y_true.argmax(dim=1).cpu().detach().numpy()
-        # # loc_row is not being used, but to keep original code intact, we keep it here
-        #
-        # row = RowPairCalculator.get_row_pair(np.zeros([2]), y_pred_np, np.zeros([2]), y_true_np)
-        # allrows.append(row)
+        y_pred_np = y_pred.argmax(dim=1).cpu().detach().numpy() # One-hot to not-one-hot
+        y_true_np = y_true.argmax(dim=1).cpu().detach().numpy()
+        # loc_row is not being used, but to keep original code intact, we keep it here
+
+        row = RowPairCalculator.get_row_pair(np.zeros([2]), y_pred_np, np.zeros([2]), y_true_np)
+        allrows.append(row)
 
         # # # TODO DEBUG TP FP FN
-        # for i in range(4):
-        #     cls = i * 3
-        #     print(f'TP {i}:', row[1][cls+0], int(tp[i].item()))
-        #     print(f'FN {i}:', row[1][cls + 1], int(fn[i].item()))
-        #     print(f'FP {i}:', row[1][cls + 2], int(fp[i].item()))
-        #     print('')
+        for i in range(4):
+            cls = i * 3
+            print(f'TP {i}:', row[1][cls+0], int(tp[i].item()))
+            print(f'FN {i}:', row[1][cls + 1], int(fn[i].item()))
+            print(f'FP {i}:', row[1][cls + 2], int(fp[i].item()))
+            print('')
 
         # === Confusion Matrix stuff
         if use_confusion_matrix:
             y_true_flat = y_true.argmax(dim=1).cpu().detach().numpy()
             y_pred_flat = torch.softmax(y_pred, dim=1).argmax(dim=1).cpu().detach().numpy()
             labels = [0, 1, 2, 3, 4] # 5 classes
-            _mat = confmatrix(y_true_flat.flatten(), y_pred_flat.flatten(), labels = labels)
+            _mat = confusion_matrix(y_true_flat.flatten(), y_pred_flat.flatten(), labels=labels)
             confusion_matrix_with_bg.append(_mat)
 
         #=== Breakdown by image class
@@ -251,11 +272,11 @@ def dmg_model_eval(net, cfg, device,
 
                 # Compute Confusion Matrix
                 if use_confusion_matrix:
-                    _mat = confmatrix(y_true_flat[i].flatten(), y_pred_flat[i].flatten(), labels=labels)
+                    _mat = confusion_matrix(y_true_flat[i].flatten(), y_pred_flat[i].flatten(), labels=labels)
                     confusion_matrices_by_disaster_type[disaster_type] += _mat
 
     use_gts_mask = run_type == 'TRAIN' and cfg.DATASETS.LOCALIZATION_MASK.TRAIN_USE_GTS_MASK
-    dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
+    dset_source = cfg.DATASETS.VALIDATION[0] if run_type == 'VALIDATION' else cfg.DATASETS.TRAIN[0]
 
     # TODO some transforms shouldn't exist in evaluation
     trfm = build_transforms(cfg, use_gts_mask = use_gts_mask)
@@ -280,11 +301,11 @@ def dmg_model_eval(net, cfg, device,
     all_fpr, all_fnr = measurer.compute_basic_metrics()
     print(total_f1, flush=True)
 
-    set_name = 'test_set' if run_type == 'TEST' else 'training_set'
+    set_name = 'validation_set' if run_type == 'VALIDATION' else 'training_set'
     log_data = {f'{set_name} total F1': total_f1,
-               'step': step,
-               'epoch': epoch,
-               }
+                'step': step,
+                'epoch': epoch,
+                }
 
     if include_disaster_type_breakdown:
         for disaster_type, m in diaster_type_measurers.items():
@@ -294,18 +315,19 @@ def dmg_model_eval(net, cfg, device,
                 f'disaster-{disaster_type}-f1': f1
             }, commit=False)
     # official Xivew2 scoring
-    # offical_score = XviewMetrics(allrows)
-    # print(f'official_f1', offical_score.df1)
-    # wandb.log({
-    #     f'official-f1': offical_score.df1
-    # })
+    offical_score = XviewMetrics(allrows)
+    print(f'official_f1', offical_score.df1)
+    wandb.log({
+        f'official-f1': offical_score.df1
+    }, commit=False)
 
 
 
+    confmx_dir = f'{cfg.OUTPUT_DIR}/confusion_matrices/'
     if include_disaster_type_breakdown and use_confusion_matrix:
         for disaster_type, cm in confusion_matrices_by_disaster_type.items():
             name = f'disaster {disaster_type}'
-            plot_confmtx(name, cm)
+            plot_confmtx(name, cm, confmx_dir)
             log_data[name] = plt
 
     if include_component_f1:
@@ -326,43 +348,45 @@ def dmg_model_eval(net, cfg, device,
     # Plot confusion matrix
     if use_confusion_matrix:
         cm = np.sum(confusion_matrix_with_bg, axis=0)
-        plot_confmtx(name=run_type, confusion_matrix=cm)
-        log_data['confusion_matrix'] = plt
+        plot_confmtx(name=run_type, cm=cm, directory=confmx_dir)
+        log_data[f'confusion_matrix_{run_type}'] = plt
 
     wandb.log(log_data, commit=False)
+    return total_f1
 
-def plot_confmtx(name, confusion_matrix):
+def plot_confmtx(name, cm, directory):
     '''
     Plots and saves the confusion matrix into the run directory
     :param name:
-    :param confusion_matrix:
+    :param cm:
     :return:
     '''
-    # print('confusion_matrix ', confusion_matrix)
-    normalized_cm = confusion_matrix / confusion_matrix.sum(axis=-1, keepdims=True)
-    # print('confusion_matrix normalized', normalized_cm)
-    # normalized_cm = confusion_matrix_with_bg / confusion_matrix_with_bg.sum(axis=0, keepdims=True)
-    labels = ['no-damage', 'minor-damage', 'major-damage', 'destroyed', 'background', ]
+    normalized_cm = cm / cm.sum(axis=-1, keepdims=True)
+    labels = ['no-damage', 'minor', 'major', 'destroyed', 'background', ]
 
     fig, ax = plt.subplots()
 
     ax.matshow(normalized_cm, cmap='Blues')
 
     for (i, j), z in np.ndenumerate(normalized_cm):
-        true_value = confusion_matrix[i, j]
+        true_value = cm[i, j]
         ax.text(j, i, '{:0.3f}\n{}'.format(z, true_value), ha='center', va='center',
                 bbox=dict(boxstyle='round', facecolor='white', edgecolor='0.3'))
     ax.autoscale(False)
-    # ax.set_yticks(np.arange(5))
-    #
     ax.set_yticklabels([''] + labels)
     ax.set_xticklabels([''] + labels)
-    plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="left",
              rotation_mode="anchor")
-    fig.tight_layout()
+    # fig.tight_layout()
     plt.title(f'{name} confusion matrix')
 
-    directory = f'{cfg.OUTPUT_DIR}/confusion_matrices/'
+    # display_labels = ['no-damage', 'minor', 'major', 'destroyed', 'background', ]
+    # disp = ConfusionMatrixDisplay(confusion_matrix=cm,
+    #                               display_labels=display_labels)
+    #
+    # disp = disp.plot(include_values=True,
+    #                  cmap=plt.cm.Blues, ax=None, xticks_rotation=45)
+
     if not os.path.exists(directory):
         os.makedirs(directory)
 
@@ -424,6 +448,10 @@ def combo_loss(p, y, class_weights=None):
     if class_weights is not None: return loss, (ce, dice)
     return loss
 
+def weighted_ce_loss(p, y, class_weights=None):
+    y_ = y.argmax(dim=1).long()
+    loss = F.cross_entropy(p, y_, weight=class_weights)
+    return loss
 
 def image_sampling_weight(dataset_metadata):
     print('performing oversampling...', end='', flush=True)
@@ -439,13 +467,13 @@ def gpu_stats():
     max_memory_cached = torch.cuda.max_memory_cached() /1e6
     return int(max_memory_allocated), int(max_memory_cached)
 
-def summarize_config(cfg):
+def summarize_config(cfg, device):
     run_config = {}
     run_config['CONFIG_NAME'] = cfg.NAME
     run_config['device'] = device
     run_config['log_path'] = cfg.OUTPUT_DIR
     run_config['training_set'] = cfg.DATASETS.TRAIN
-    run_config['test set'] = cfg.DATASETS.TEST
+    run_config['validation_set'] = cfg.DATASETS.VALIDATION
     run_config['epochs'] = cfg.TRAINER.EPOCHS
     run_config['learning rate'] = cfg.TRAINER.LR
     run_config['batch size'] = cfg.TRAINER.BATCH_SIZE
@@ -480,17 +508,14 @@ def setup(args):
         cfg.DATASETS.TRAIN = (args.data_dir,)
     return cfg
 
-if __name__ == '__main__':
-    args = default_argument_parser().parse_known_args()[0]
-    cfg = setup(args)
-
+def damage_train(trial: optuna.Trial=None, cfg=None):
     # Overwrite environment config if in debug mode
     if cfg.DEBUG:
         cfg.DATASETS.TRAIN = cfg.DATASETS.DEBUG_TRAIN
+        cfg.DATASETS.VALIDATION = cfg.DATASETS.DEBUG_VALIDATION
         cfg.DATASETS.TEST = cfg.DATASETS.DEBUG_TEST
-        cfg.DATASETS.INFERENCE = cfg.DATASETS.DEBUG_INFERENCE
 
-    out_channels = cfg.MODEL.OUT_CHANNELS
+    # out_channels = cfg.MODEL.OUT_CHANNELS
     # if cfg.MODEL.BACKBONE.ENABLED:
     #     if cfg.MODEL.COMPLEX_ARCHITECTURE.ENABLED:
     #         if cfg.MODEL.COMPLEX_ARCHITECTURE.TYPE == 'pspnet':
@@ -528,7 +553,7 @@ if __name__ == '__main__':
         # For winning model, quick hack to remove the state_dict
         if 'state_dict' in state_dict.keys():
             state_dict = state_dict['state_dict']
-        for k, v in state_dict.items(): # ['state_dict']
+        for k, v in state_dict.items():  # ['state_dict']
             k = '.'.join(k.split('.')[1:])
             filtered_dict[k] = v
         net.load_state_dict(filtered_dict)
@@ -539,6 +564,7 @@ if __name__ == '__main__':
 
     print('=== Runnning on device: p', device)
 
+    objective = 0.0
 
     torch.manual_seed(cfg.SEED)
     np.random.seed(cfg.SEED)
@@ -553,8 +579,10 @@ if __name__ == '__main__':
                 tags=['eval', 'dmg'],
                 config=cfg,
             )
-            dmg_model_eval(net, cfg, device, run_type='TEST', max_samples=2000,  use_confusion_matrix=True, include_disaster_type_breakdown=True)
-            dmg_model_eval(net, cfg, device, run_type='TRAIN', max_samples=1000, use_confusion_matrix=True, include_disaster_type_breakdown=True)
+            dmg_model_eval(net, cfg, device, run_type='VALIDATION', max_samples=None, use_confusion_matrix=True,
+                           include_disaster_type_breakdown=True)
+            dmg_model_eval(net, cfg, device, run_type='TRAIN', max_samples=1000, use_confusion_matrix=True,
+                           include_disaster_type_breakdown=True)
         else:
             # Dynamically adjust the batch size to fit on GPU
             orginal_batch_size = cfg.TRAINER.BATCH_SIZE
@@ -567,7 +595,7 @@ if __name__ == '__main__':
                         config=cfg,
                         reinit=True
                     )
-                    train_net(net, cfg)
+                    objective = train_net(net, cfg, device, trial)
                     break
                 except RuntimeError as runerr:
                     # Check if runtime error is CUDA error
@@ -575,7 +603,8 @@ if __name__ == '__main__':
                         raise runerr
                     new_batch_size = orginal_batch_size - i * 2
                     print("Run Time Error:" + str(runerr), file=sys.stderr)
-                    print('!!!! ---> Original batch size too large, trying batch size:' + str(new_batch_size), file=sys.stderr)
+                    print('!!!! ---> Original batch size too large, trying batch size:' + str(new_batch_size),
+                          file=sys.stderr)
                     cfg.TRAINER.BATCH_SIZE = new_batch_size
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
@@ -584,5 +613,12 @@ if __name__ == '__main__':
             sys.exit(0)
         except SystemExit:
             os._exit(0)
+    # Return an objective measurement so this can be used in a hyperparam optimizer
+    return objective
+
+if __name__ == '__main__':
+    args = default_argument_parser().parse_known_args()[0]
+    cfg = setup(args)
+    damage_train(None, cfg)
 
 

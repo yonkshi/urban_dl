@@ -2,7 +2,6 @@ import torch
 from sklearn.metrics import roc_auc_score, roc_curve
 import sys
 
-
 def progress(count, total, status=''):
     bar_len = 60
     filled_len = int(round(bar_len * count / float(total)))
@@ -90,6 +89,7 @@ class MultiClassF1():
     def __init__(self, ignore_last_class = False):
 
         # FIXME Does not operate properly
+        # Or does it
 
         '''
         Takes in rasterized and batched images
@@ -118,9 +118,9 @@ class MultiClassF1():
 
         # remove the background
         _tp = (y_true_bin & y_pred_oh)[:,:-1]
-        _tn = ((~y_true_bin & ~y_pred_oh) * y_true_mask)[:,:-1] #n
-        _fp = ((~y_true_bin & y_pred_oh) * y_true_mask)[:,:-1] # * y_true_mask
-        _fn = ((y_true_bin & ~y_pred_oh) * y_true_mask)[:,:-1]
+        _tn = ((~y_true_bin & ~y_pred_oh) & y_true_mask)[:,:-1]
+        _fp = ((~y_true_bin & y_pred_oh) & y_true_mask)[:,:-1]
+        _fn = ((y_true_bin & ~y_pred_oh) & y_true_mask)[:,:-1]
 
         tp = _tp.float().sum(dim=self._data_dims)
         tn = _tn.float().sum(dim=self._data_dims)
@@ -150,10 +150,10 @@ class MultiClassF1():
         self.FP = self.FP.clamp(10e-05)
         self.FN = self.FN.clamp(10e-05)
         individual_f1 = 2 * self.TP / (2 * self.TP + self.FN + self.FP)
-        if not include_bg:
-            individual_f1 = individual_f1[..., :-1]
+        # if not include_bg:
+        #     individual_f1 = individual_f1[..., :-1]
         f1 = len(individual_f1) / (individual_f1 ** -1).sum() # Are we sure this is the right avg here?
-        
+
         f1 = f1.cpu().item()
         individual_f1 = individual_f1.cpu().numpy()
         return f1, individual_f1

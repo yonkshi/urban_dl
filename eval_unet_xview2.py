@@ -378,17 +378,15 @@ def inference_loop(net, cfg, device,
                     callback = None,
                     batch_size = 1,
                     run_type = 'TEST',
-                    max_samples = 999999999,
+                    max_samples = None,
                     dataset = None,
                     callback_include_x = False,
-
               ):
 
     net.to(device)
     net.eval()
 
     # reset the generators
-
     dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
     if dataset is None:
         trfm = []
@@ -408,7 +406,7 @@ def inference_loop(net, cfg, device,
                                        )
 
     dlen = len(dataset)
-    dataset_length = np.minimum(len(dataset), max_samples)
+    dataset_length = np.minimum(len(dataset), max_samples) if max_samples else len(dataset)
     with torch.no_grad():
         for step, batch in enumerate(dataloader):
             imgs = batch['x'].to(device)
