@@ -6,6 +6,7 @@ from os.path import join, isfile
 from argparse import ArgumentParser
 
 import numpy as np
+import timeit
 import torch
 import wandb
 import torch.nn as nn
@@ -382,7 +383,7 @@ def inference_loop(net, cfg, device,
                     dataset = None,
                     callback_include_x = False,
               ):
-
+    start_time = timeit.default_timer()
     net.to(device)
     net.eval()
 
@@ -409,14 +410,14 @@ def inference_loop(net, cfg, device,
     dataset_length = np.minimum(len(dataset), max_samples) if max_samples else len(dataset)
     with torch.no_grad():
         for step, batch in enumerate(dataloader):
+            if step >= dataset_length:
+                break
+
             imgs = batch['x'].to(device)
             y_label = batch['y'].to(device)
             sample_name = batch['img_name']
 
             y_pred = net(imgs)
-
-            if step % 100 == 0 or step == dataset_length-1:
-                print(f'Processed {step+1}/{dataset_length}')
 
             if y_pred.shape[1] > 1: # multi-class
                 # In Two class Cross entropy mode, positive classes are in Channel #2
@@ -430,9 +431,8 @@ def inference_loop(net, cfg, device,
                 else:
                     callback(y_label, y_pred, sample_name)
 
-
-            if (max_samples is not None) and step >= max_samples:
-                break
+            if step + 1 % 100 == 0 or step == dataset_length-1:
+                print(f'Processed {step+1}/{dataset_length}')
 
 def setup(args):
     cfg = new_config()

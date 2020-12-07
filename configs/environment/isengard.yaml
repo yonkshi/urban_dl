@@ -8,4 +8,4 @@ DATASETS:
   DEBUG_VALIDATION: ("/storage2/yonk/full_new/test/",)
   DEBUG_TEST: ("/storage2/yonk/full_new/real_test_set/",)
 OPTUNA:
-  DB_PATH: ('sqlite:////home/david/trains/urban_dl/logs/optuna.db')
+  DB_PATH: 'sqlite:////home/david/trains/urban_dl/logs/optuna.db'

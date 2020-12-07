@@ -7,4 +7,4 @@ DATASETS:
   DEBUG_VALIDATION: ("/storage/yonk/debug_new/test/",)
   DEBUG_TEST: ("/storage/yonk/debug_new/test/",)
 OPTUNA:
-  DB_PATH: ('sqlite:///example.db')
+  DB_PATH: 'sqlite:////Midgard/home/pshi/run_logs/optuna.db'

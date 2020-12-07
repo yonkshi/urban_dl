@@ -187,8 +187,8 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
                   step=global_step)
 
         # Evaluation for multiclass F1 score
-        val_f1 = dmg_model_eval(net, cfg, device, max_samples=None, run_type='VALIDATION', step=global_step, epoch=epoch, use_confusion_matrix=True)
-        dmg_model_eval(net, cfg, device, max_samples=1000, run_type='TRAIN', step=global_step, epoch=epoch, use_confusion_matrix=True)
+        val_f1 = dmg_model_eval(net, cfg, device, max_samples=100, run_type='VALIDATION', step=global_step, epoch=epoch, use_confusion_matrix=False)
+        dmg_model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch, use_confusion_matrix=False)
 
         # Check if we have to prune if in a trial
         if trial:
@@ -198,7 +198,7 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
 
     global_step += len(dataloader)
     # Final evaluation
-    return dmg_model_eval(net, cfg, device, step=global_step, epoch=epoch, use_confusion_matrix=True)
+    return dmg_model_eval(net, cfg, device, max_samples=None, step=global_step, epoch=epoch, use_confusion_matrix=True)
 
 def dmg_model_eval(net, cfg, device,
                    run_type='VALIDATION',
@@ -221,7 +221,7 @@ def dmg_model_eval(net, cfg, device,
     allrows = []
     def evaluate(x, y_true, y_pred, img_filenames):
 
-        # TODO Only enable me if testing pretrained winner model where bg is class 0 !!
+        # Only enable me if testing pretrained winner model where bg is class 0 !!
         # y_pred = y_pred[:,[1,2,3,4,0]]
 
         if cfg.MODEL.BACKGROUND.MASK_OUTPUT:
@@ -243,13 +243,13 @@ def dmg_model_eval(net, cfg, device,
         row = RowPairCalculator.get_row_pair(np.zeros([2]), y_pred_np, np.zeros([2]), y_true_np)
         allrows.append(row)
 
-        # # # TODO DEBUG TP FP FN
-        for i in range(4):
-            cls = i * 3
-            print(f'TP {i}:', row[1][cls+0], int(tp[i].item()))
-            print(f'FN {i}:', row[1][cls + 1], int(fn[i].item()))
-            print(f'FP {i}:', row[1][cls + 2], int(fp[i].item()))
-            print('')
+        # # #  DEBUGGED TP FP FN
+        # for i in range(4):
+        #     cls = i * 3
+        #     print(f'TP {i}:', row[1][cls+0], int(tp[i].item()))
+        #     print(f'FN {i}:', row[1][cls + 1], int(fn[i].item()))
+        #     print(f'FP {i}:', row[1][cls + 2], int(fp[i].item()))
+        #     print('')
 
         # === Confusion Matrix stuff
         if use_confusion_matrix:
@@ -352,6 +352,7 @@ def dmg_model_eval(net, cfg, device,
         log_data[f'confusion_matrix_{run_type}'] = plt
 
     wandb.log(log_data, commit=False)
+
     return total_f1
 
 def plot_confmtx(name, cm, directory):
@@ -497,6 +498,8 @@ def setup(args):
     cfg.merge_from_file(f'configs/damage_detection/{args.config_file}.yaml')
     cfg.merge_from_list(args.opts)
     cfg.NAME = args.config_file
+    cfg.resume_from = args.resume_from
+    cfg.eval_only = args.eval_only
 
     if args.log_dir: # Override Output dir
         cfg.OUTPUT_DIR = path.join(args.log_dir, args.config_file)
@@ -544,8 +547,8 @@ def damage_train(trial: optuna.Trial=None, cfg=None):
     else:
         net = UNet(cfg)
 
-    if args.resume_from:
-        full_model_path = path.join(cfg.OUTPUT_DIR, args.resume_from)
+    if cfg.resume_from:
+        full_model_path = path.join(cfg.OUTPUT_DIR, cfg.resume_from)
         # Removing the module.** in front of keys
         filtered_dict = {}
         state_dict = torch.load(full_model_path)
@@ -572,7 +575,7 @@ def damage_train(trial: optuna.Trial=None, cfg=None):
     torch.backends.cudnn.benchmark = False
     try:
 
-        if args.eval_only:
+        if cfg.eval_only:
             wandb.init(
                 name=cfg.NAME,
                 project='urban_dl_final',

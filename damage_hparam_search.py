@@ -15,7 +15,6 @@ def objective(trial, cfg):
 def main():
     args = experiment_manager.args.default_argument_parser().parse_known_args()[0]
     cfg = damage_train.setup(args)
-    damage_train.damage_train(None, cfg)
 
     study = optuna.create_study(sampler=optuna.samplers.TPESampler(multivariate=True),
                                 pruner=optuna.pruners.HyperbandPruner(
