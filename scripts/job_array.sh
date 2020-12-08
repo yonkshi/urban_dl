@@ -19,12 +19,9 @@
 # all variables and commands work as expected, you can also uncomment
 # `break 1000` below to break the for loops after the first iteration
 
-SOURCE_PATH="${HOME}/rpl-workshop"
-RUNS_PATH="${HOME}/rpl-workshop/runs"
-DATA_PATH="/local_storage/datasets/CUB_20"
 
-for learning_rate in .001 .01; do
-for weight_decay in .001 .00001; do
+#for learning_rate in .001 .01; do
+#for weight_decay in .001 .00001; do
 #!/usr/bin/env bash
 
 # Submit a job array without a physical .sbatch file using config files a HERE document.
@@ -78,4 +75,6 @@ conda activate gpu3
 cd ..
 # Train and save the exit code of the python script
 python3 damage_hparam_search.py -c ${CONFIG_NAME}
+EXIT_CODE="\${?}"
+exit "\${EXIT_CODE}"
 HERE
