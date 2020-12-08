@@ -47,8 +47,7 @@ RUNS_PATH="/Midgard/home/pshi/slurm_logs/urban_dl"
 RUN_CONFIG_PREFIX="array.$(date +'%F_%T.%N')"
 CONFIG_NAME=$1
 SLURM_MAX_TASKS=10
-SLURM_ARRAY_JOB_ID=50
-
+SLURM_ARRAY_TASK_IDD=50
 sbatch << HERE
 #!/usr/bin/env bash
 #SBATCH --output="${RUNS_PATH}/%x_%A_%a.out"
@@ -60,7 +59,7 @@ sbatch << HERE
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=24GB
 #SBATCH --job-name=${CONFIG_NAME}
-#SBATCH --array=1-${SLURM_ARRAY_TASK_ID}%${SLURM_MAX_TASKS}
+#SBATCH --array=1-${SLURM_ARRAY_TASK_IDD}%${SLURM_MAX_TASKS}
 
 # Check job environment
 echo "JOB: \${SLURM_ARRAY_JOB_ID}"
