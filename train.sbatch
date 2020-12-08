@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #SBATCH --mem  10GB
 #SBATCH --gres gpu:1
-#SBATCH --cpus-per-task 4
+#SBATCH --cpus-per-task 4bele
 #SBATCH --constrain "khazadum|rivendell|belegost|shire"
 #SBATCH --mail-type ALL
 #SBATCH --mail-user pyshi@kth.se
