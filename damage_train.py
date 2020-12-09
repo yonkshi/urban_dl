@@ -579,6 +579,7 @@ def damage_train(trial: optuna.Trial=None, cfg=None):
             wandb.init(
                 name=cfg.NAME,
                 project='urban_dl_final',
+                entity='eoai4globalchange',
                 tags=['eval', 'dmg'],
                 config=cfg,
             )
