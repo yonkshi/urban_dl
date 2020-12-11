@@ -187,8 +187,8 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
                   step=global_step)
 
         # Evaluation for multiclass F1 score
-        val_f1 = dmg_model_eval(net, cfg, device, max_samples=100, run_type='VALIDATION', step=global_step, epoch=epoch, use_confusion_matrix=False)
-        dmg_model_eval(net, cfg, device, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch, use_confusion_matrix=False)
+        val_f1 = dmg_model_eval(net, cfg, device, global_step, max_samples=100, run_type='VALIDATION', step=global_step, epoch=epoch, use_confusion_matrix=False)
+        dmg_model_eval(net, cfg, device, global_step, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch, use_confusion_matrix=False)
 
         # Check if we have to prune if in a trial
         if trial:
@@ -196,11 +196,15 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
             if trial.should_prune():
                 raise optuna.TrialPruned()
 
-    global_step += len(dataloader)
-    # Final evaluation
-    return dmg_model_eval(net, cfg, device, max_samples=None, step=global_step, epoch=epoch, use_confusion_matrix=True)
+        if cfg.DEBUG:
+            return val_f1
+            trial.report(val_f1, step=global_step)
+            raise optuna.TrialPruned()
 
-def dmg_model_eval(net, cfg, device,
+    # Final evaluation
+    return dmg_model_eval(net, cfg, device, global_step, max_samples=None, step=global_step, epoch=epoch, use_confusion_matrix=True)
+
+def dmg_model_eval(net, cfg, device, global_step,
                    run_type='VALIDATION',
                    max_samples = None,
                    step=0, epoch=0,
@@ -313,13 +317,13 @@ def dmg_model_eval(net, cfg, device,
             print(f'disaster_{disaster_type}_f1', f1)
             wandb.log({
                 f'disaster-{disaster_type}-f1': f1
-            }, commit=False)
+            }, step=global_step)
     # official Xivew2 scoring
     offical_score = XviewMetrics(allrows)
     print(f'official_f1', offical_score.df1)
     wandb.log({
         f'official-f1': offical_score.df1
-    }, commit=False)
+    }, step=global_step)
 
 
 
@@ -351,7 +355,7 @@ def dmg_model_eval(net, cfg, device,
         plot_confmtx(name=run_type, cm=cm, directory=confmx_dir)
         log_data[f'confusion_matrix_{run_type}'] = plt
 
-    wandb.log(log_data, commit=False)
+    wandb.log(log_data, step=global_step)
 
     return total_f1
 
@@ -591,10 +595,18 @@ def damage_train(trial: optuna.Trial=None, cfg=None):
             orginal_batch_size = cfg.TRAINER.BATCH_SIZE
             for i in range(orginal_batch_size):
                 try:
+                    name_list = [cfg.JOB_ID, cfg.TRIAL_NUM, str(cfg.OPTUNA.TRIAL_NUM)]
+                    tags = ['run', 'dmg', cfg.NAME, 'optuna']
+                    project = 'urban_dl_final'
+                    if cfg.DEBUG:
+                        name_list.insert(0, 'debug')
+                        tags.append('debug')
+                        project += '_debug'
+
                     wandb.init(
-                        name=cfg.NAME,
-                        project='urban_dl_final',
-                        tags=['run', 'dmg'],
+                        name='_'.join(name_list),
+                        project=project,
+                        tags=tags,
                         config=cfg,
                         reinit=True
                     )
@@ -623,5 +635,3 @@ if __name__ == '__main__':
     args = default_argument_parser().parse_known_args()[0]
     cfg = setup(args)
     damage_train(None, cfg)
-
-

@@ -14,11 +14,29 @@ def objective(trial, cfg):
     cfg.MODEL.BACKBONE.TYPE = trial.suggest_categorical('backbone', ['resnet34'])
     cfg.MODEL.BACKBONE.PRETRAINED = trial.suggest_categorical('pretrain', [False])
     cfg.AUGMENTATION.CROP_TYPE = trial.suggest_categorical('crop_type', ['importance'])
+
+    cfg.OPTUNA.TRIAL_NUM = trial.number
+
     return damage_train.damage_train(trial, cfg)
 
-def main():
-    args = experiment_manager.args.default_argument_parser().parse_known_args()[0]
+def hyperparameter_search_argument_parser():
+    parser = experiment_manager.args.default_argument_parser()
+    parser.add_argument('--job-id', dest='job_id', type=str,
+                        default='', help='Job ID (encompassing multiple trials) for naming runs')
+    parser.add_argument('--trial-number', dest='trial_num', type=str,
+                        default='', help='Number of the current trial for naming runs')
+    return parser
+
+def setup(args):
     cfg = damage_train.setup(args)
+    cfg.JOB_ID = args.job_id
+    cfg.TRIAL_NUM = args.trial_num
+    return cfg
+
+def main():
+    parser = hyperparameter_search_argument_parser()
+    args = parser.parse_known_args()[0]
+    cfg = setup(args)
 
     study = optuna.create_study(sampler=optuna.samplers.TPESampler(multivariate=True),
                                 pruner=optuna.pruners.HyperbandPruner(
@@ -34,10 +52,11 @@ def main():
     configured_objective = partial(objective, cfg=cfg)
     study.optimize(configured_objective, n_trials=1)
 
-    trials = study.get_trials()
-
-    print(f'Finished trial: {trials[-1]}')
-    print(f'Best performing trial so far: {study.best_trial}')
+    print(f'Finished trial: {study.trials[-1]}')
+    try:
+        print(f'Best performing trial so far: {study.best_trial}')
+    except ValueError:
+        pass
 
 if __name__ == '__main__':
     main()
