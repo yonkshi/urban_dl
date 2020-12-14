@@ -74,7 +74,7 @@ source "${HOME}/miniconda3/etc/profile.d/conda.sh"
 conda activate gpu3
 cd ..
 # Train and save the exit code of the python script
-python3 damage_hparam_search.py -c ${CONFIG_NAME}
+python3 damage_hparam_search.py -c ${CONFIG_NAME} --job-id ${SLURM_ARRAY_JOB_ID} --trial-number ${SLURM_ARRAY_TASK_ID}
 EXIT_CODE="\${?}"
 exit "\${EXIT_CODE}"
 HERE
