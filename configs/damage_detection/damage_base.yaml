@@ -46,6 +46,7 @@ DATASETS:
     TRAIN_USE_GTS_MASK: False # If false, we will use predicted localization to train
   INCLUDE_PRE_DISASTER: False # If true, a Pre Disaster will be stacked
   USE_CLAHE_VARI: False
+  LABEL_FORMAT: 'one-hot' # Either 'one-hot' or 'ordinal', OUT_CHANNELS should be classes-1 and input should be normalized if ordinal
 TRAINER:
   LR: 0.0001
   WD: 0.0005
@@ -70,8 +71,8 @@ AUGMENTATION:
   CROP_SIZE: 1024
   IMAGE_OVERSAMPLING_TYPE: 'none' # [none, simple]
   ENABLE_VARI: False # False NDVI for detecting vegetation
-  RANDOM_FLIP_ROTATE: False
-  ZERO_MEAN: False # convert [0, 255] to [-1, 1]
+  RANDOM_FLIP_ROTATE: True
+  ZERO_MEAN: True # convert [0, 255] to [-1, 1]
 
 OPTUNA:
   MIN_RESOURCE: 5000
