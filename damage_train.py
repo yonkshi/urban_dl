@@ -77,6 +77,7 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
                                                  pre_or_post='post',
                                                  include_image_weight=True,
                                                  background_class=bg_class,
+                                                 label_format=cfg.DATALOADER.LABEL_FORMAT,
                                                  transform=trfm)
 
     dataloader_kwargs = {

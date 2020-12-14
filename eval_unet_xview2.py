@@ -422,6 +422,14 @@ def inference_loop(net, cfg, device,
             if y_pred.shape[1] > 1: # multi-class
                 # In Two class Cross entropy mode, positive classes are in Channel #2
                 y_pred = torch.softmax(y_pred, dim=1)
+            elif cfg.DATASETS.LABEL_FORMAT == 'ordinal':
+                y_pred = torch.sigmoid(y_pred) > 0.5
+                y_pred_sum = torch.sum(y_pred, dim=1, keepdim=True)
+                y_pred_argmax = torch.argmin(y_pred, dim=1, keepdim=True)  # [B, C, ...]
+                y_pred_argmax += y_pred_sum == y_pred.shape[1]
+                new_shape = y_pred.shape
+                new_shape[1] += 1
+                y_pred = torch.zeros(new_shape, dtype=torch.bool).scatter_(1, y_pred_argmax, True)  # one-hot
             else:
                 y_pred = torch.sigmoid(y_pred)
 

@@ -133,10 +133,12 @@ class Xview2Detectron2DamageLevelDataset(Xview2Detectron2Dataset):
     def __init__(self, file_path,
                  pre_or_post,
                  background_class = 'new-channel',
+                 label_format = 'one_hot',
                  *args, **kwargs
                  ):
         super().__init__(file_path, pre_or_post, *args, **kwargs)
         self.background_class = background_class
+        self.label_format = label_format
 
     def _extract_label(self, annotations_set, sample_name):
         # TODO This data can be preprocessed
@@ -176,6 +178,12 @@ class Xview2Detectron2DamageLevelDataset(Xview2Detectron2Dataset):
             masks[..., 0] = 1 - positive_px
         else:
             masks = masks
+
+        if self.label_format == 'ordinal':
+            for i in range(masks.shape[-1]):
+                masks[..., :i] += masks[..., i]
+            masks = masks[..., 1:]
+            masks.clip(0, 1)
 
         return masks
 
