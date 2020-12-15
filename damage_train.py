@@ -62,6 +62,8 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
         weighted_criterion = cfg.TRAINER.CE_CLASS_BALANCE.ENABLED
         weights = 1 / torch.tensor(cfg.TRAINER.CE_CLASS_BALANCE.WEIGHTS)
         weights = weights.cuda()
+    elif cfg.MODEL.LOSS_TYPE == 'MeanSquareError':
+        criterion = torch.nn.MSELoss()
 
 
     if cfg.MODEL.PRETRAINED.ENABLED:
@@ -77,7 +79,7 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
                                                  pre_or_post='post',
                                                  include_image_weight=True,
                                                  background_class=bg_class,
-                                                 label_format=cfg.DATALOADER.LABEL_FORMAT,
+                                                 label_format=cfg.DATASETS.LABEL_FORMAT,
                                                  transform=trfm)
 
     dataloader_kwargs = {
@@ -289,7 +291,8 @@ def dmg_model_eval(net, cfg, device, global_step,
     dataset = Xview2Detectron2DamageLevelDataset(dset_source,
                                                  pre_or_post='post',
                                                  transform=trfm,
-                                                 background_class=bg_class,)
+                                                 background_class=bg_class,
+                                                 label_format=cfg.DATASETS.LABEL_FORMAT,)
     inference_loop(net, cfg, device, evaluate,
                    batch_size=cfg.TRAINER.INFERENCE_BATCH_SIZE,
                    run_type='TRAIN',
@@ -597,7 +600,10 @@ def damage_train(trial: optuna.Trial=None, cfg=None):
             orginal_batch_size = cfg.TRAINER.BATCH_SIZE
             for i in range(orginal_batch_size):
                 try:
-                    name_list = [cfg.JOB_ID, cfg.TRIAL_NUM, str(cfg.OPTUNA.TRIAL_NUM)]
+                    if trial:
+                        name_list = ['job', cfg.JOB_ID, 'trial', cfg.TRIAL_NUM, 'id', str(cfg.OPTUNA.TRIAL_NUM)]
+                    else:
+                        name_list = [cfg.NAME]
                     tags = ['run', 'dmg', cfg.NAME, 'optuna']
                     project = 'urban_dl_final'
                     if cfg.DEBUG:

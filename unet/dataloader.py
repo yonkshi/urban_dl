@@ -48,7 +48,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
 
         sample_name = data_sample['file_name']
         input =self._process_input(sample_name)
-        label = self._extract_label(data_sample['annotations'], sample_name)
+        label, class_weights = self._extract_label(data_sample['annotations'], sample_name)
         # label = label[None, ...] # C x H x W
         if self.include_edge_mask:
             # Edge mask is attached to the
@@ -70,10 +70,15 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
             ret['index'] = index
         if self.include_image_weight:
             # Used for oversampling stats
-            if hasattr(data_sample, 'image_weight'):
-                ret['image_weight'] = data_sample['image_weight']
-            else:
-                ret['image_weight'] = label.sum()
+            # if hasattr(data_sample, 'image_weight'):
+            #     ret['image_weight'] = data_sample['image_weight']
+            # else:
+
+            # Weight for uniform skewing to labels
+            ret['image_weight'] = class_weights.sum()
+            # Weights for skewing towards particular damage types
+            for i, key in enumerate(["no_damage", "minor_damage", "major_damage", "destroyed",]):
+                    ret['image_weight_'+key] = class_weights[i]
 
         return ret
 
@@ -162,12 +167,13 @@ class Xview2Detectron2DamageLevelDataset(Xview2Detectron2Dataset):
             building_polygon_xy = np.array(anno['segmentation'][0], dtype=np.int32).reshape(-1, 2)
             buildings_polygons[damage_level].append(building_polygon_xy)
 
-        masks = []
+        mask_list = []
         for class_idx, building_poly in enumerate(buildings_polygons):
             mask = np.zeros((1024, 1024,), dtype=np.uint8)
             cv2.fillPoly(mask, building_poly, 1)
-            masks.append(mask)
-        masks = np.dstack(masks).astype(np.float32)
+            mask_list.append(mask)
+        masks = np.dstack(mask_list).astype(np.float32)
+        class_weights = masks.sum(axis=(0,1))
         if self.background_class == 'new-class':
             positive_px = masks.sum(axis=-1, keepdims=True)
             bg = 1 - positive_px
@@ -180,10 +186,10 @@ class Xview2Detectron2DamageLevelDataset(Xview2Detectron2Dataset):
             masks = masks
 
         if self.label_format == 'ordinal':
-            for i in range(masks.shape[-1]):
-                masks[..., :i] += masks[..., i]
+            for i in range(masks.shape[-1] - 1):
+                masks[..., :i+1] += masks[..., i:i+1]
             masks = masks[..., 1:]
             masks.clip(0, 1)
 
-        return masks
+        return masks, class_weights
 
