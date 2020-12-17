@@ -420,18 +420,13 @@ def inference_loop(net, cfg, device,
             y_pred = net(imgs)
 
             if cfg.DATASETS.LABEL_FORMAT == 'ordinal':
-                y_pred = torch.sigmoid(y_pred) > 0.5
-                y_pred_sum = torch.sum(y_pred, dim=1, keepdim=True)
-                y_pred_argmax = torch.argmin(y_pred, dim=1, keepdim=True)  # [B, C, ...]
-                y_pred_argmax += y_pred_sum == y_pred.shape[1]
-                new_shape = y_pred.shape
-                new_shape[1] += 1
-                y_pred = torch.zeros(new_shape, dtype=torch.bool).scatter_(1, y_pred_argmax, True)  # one-hot
-            elif y_pred.shape[1] > 1:  # multi-class
-                    # In Two class Cross entropy mode, positive classes are in Channel #2
-                    y_pred = torch.softmax(y_pred, dim=1)
-            else:
-                y_pred = torch.sigmoid(y_pred)
+                y_pred = ordinal_to_one_hot(y_pred)
+            elif cfg.DATASETS.LABEL_FORMAT == 'one-hot':
+                if y_pred.shape[1] > 1:  # multi-class
+                        # In Two class Cross entropy mode, positive classes are in Channel #2
+                        y_pred = torch.softmax(y_pred, dim=1)
+                else:
+                    y_pred = torch.sigmoid(y_pred)
 
             if callback:
                 if callback_include_x:
@@ -441,6 +436,19 @@ def inference_loop(net, cfg, device,
 
             if step + 1 % 100 == 0 or step == dataset_length-1:
                 print(f'Processed {step+1}/{dataset_length}')
+
+
+def ordinal_to_one_hot(y_pred):
+    y_pred = (torch.sigmoid(y_pred) > 0.5).float()
+    y_pred_sum = torch.sum(y_pred, dim=1, keepdim=True)
+    y_pred_argmin = torch.argmin(y_pred, dim=1, keepdim=True)  # [B, C, ...]
+    y_pred_argmin += y_pred_sum > 0
+    y_pred_argmin += (y_pred_sum == y_pred.shape[1]) * (y_pred.shape[1] - 1)
+    new_shape = list(y_pred.shape)
+    new_shape[1] += 1
+    y_pred_one_hot = torch.zeros(torch.Size(new_shape), dtype=torch.float, device=y_pred.device).scatter_(1, y_pred_argmin,1)  # one-hot
+    return y_pred_one_hot
+
 
 def setup(args):
     cfg = new_config()

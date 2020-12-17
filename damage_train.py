@@ -18,6 +18,7 @@ import optuna
 
 import matplotlib.pyplot as plt
 
+import eval_unet_xview2
 from unet import UNet, Dpn92_Unet_Double, SeNet154_Unet_Double, SeResNext50_Unet_Double
 from unet.dataloader import Xview2Detectron2DamageLevelDataset
 from unet.augmentations import *
@@ -177,14 +178,24 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
             # torch.cuda.empty_cache()
             global_step += 1
 
+
+        if cfg.DATASETS.LABEL_FORMAT == 'ordinal':
+            mask_data = eval_unet_xview2.ordinal_to_one_hot(y_pred)
+            mask_data_gt = eval_unet_xview2.ordinal_to_one_hot(batch['y'])
+        else:
+            mask_data = y_pred
+            mask_data_gt = batch['y']
+        mask_data = mask_data[0].argmax(dim=0).detach().to('cpu').numpy()
+        mask_data_gt = mask_data_gt[0].argmax(dim=0).numpy()
+
         # Log an image after every epoch
         wandb.log({'example_image': wandb.Image(batch['x'][0, 0:3].numpy().transpose(1, 2, 0), masks={
                         "predictions": {
-                            "mask_data": y_pred[0].argmax(dim=0).detach().to('cpu').numpy(),
+                            "mask_data": mask_data,
                             "class_labels": class_labels,
                         },
                         "groud_truth": {
-                            "mask_data": batch['y'][0].argmax(dim=0).numpy(),
+                            "mask_data": mask_data_gt,
                             "class_labels": class_labels,
                         }})},
                   step=global_step)
@@ -292,7 +303,7 @@ def dmg_model_eval(net, cfg, device, global_step,
                                                  pre_or_post='post',
                                                  transform=trfm,
                                                  background_class=bg_class,
-                                                 label_format=cfg.DATASETS.LABEL_FORMAT,)
+                                                 label_format='one-hot',)
     inference_loop(net, cfg, device, evaluate,
                    batch_size=cfg.TRAINER.INFERENCE_BATCH_SIZE,
                    run_type='TRAIN',

@@ -186,10 +186,9 @@ class Xview2Detectron2DamageLevelDataset(Xview2Detectron2Dataset):
             masks = masks
 
         if self.label_format == 'ordinal':
-            for i in range(masks.shape[-1] - 1):
-                masks[..., :i+1] += masks[..., i:i+1]
+            for i in range(masks.shape[-1] - 1, 0, -1):
+                masks[..., i-1] += masks[..., i]
             masks = masks[..., 1:]
-            masks.clip(0, 1)
 
         return masks, class_weights
 
