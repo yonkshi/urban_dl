@@ -16,8 +16,6 @@ def progress(count, total, status=''):
 class MultiThresholdMetric():
     def __init__(self, threshold):
 
-        # FIXME Does not operate properly
-
         '''
         Takes in rasterized and batched images
         :param y_true: [B, H, W]

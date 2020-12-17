@@ -421,6 +421,7 @@ def inference_loop(net, cfg, device,
 
             if cfg.DATASETS.LABEL_FORMAT == 'ordinal':
                 y_pred = ordinal_to_one_hot(y_pred)
+                y_label = ordinal_to_one_hot(y_label)
             elif cfg.DATASETS.LABEL_FORMAT == 'one-hot':
                 if y_pred.shape[1] > 1:  # multi-class
                         # In Two class Cross entropy mode, positive classes are in Channel #2
@@ -442,8 +443,7 @@ def ordinal_to_one_hot(y_pred):
     y_pred = (torch.sigmoid(y_pred) > 0.5).float()
     y_pred_sum = torch.sum(y_pred, dim=1, keepdim=True)
     y_pred_argmin = torch.argmin(y_pred, dim=1, keepdim=True)  # [B, C, ...]
-    y_pred_argmin += y_pred_sum > 0
-    y_pred_argmin += (y_pred_sum == y_pred.shape[1]) * (y_pred.shape[1] - 1)
+    y_pred_argmin += (y_pred_sum == y_pred.shape[1]) * (y_pred.shape[1])
     new_shape = list(y_pred.shape)
     new_shape[1] += 1
     y_pred_one_hot = torch.zeros(torch.Size(new_shape), dtype=torch.float, device=y_pred.device).scatter_(1, y_pred_argmin,1)  # one-hot

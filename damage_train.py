@@ -39,9 +39,9 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
     summarize_config(cfg, device)
 
     optimizer = optim.AdamW(net.parameters(),
-                           lr=cfg.TRAINER.LR,
-                           weight_decay=cfg.TRAINER.WD,
-                           betas=(cfg.TRAINER.B1, cfg.TRAINER.B2))
+                            lr=cfg.TRAINER.LR,
+                            weight_decay=cfg.TRAINER.WD,
+                            betas=(cfg.TRAINER.B1, cfg.TRAINER.B2))
     weighted_criterion = False
     if cfg.MODEL.LOSS_TYPE == 'CrossEntropyLoss':
         criterion = cross_entropy_loss
@@ -64,7 +64,7 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
         weights = 1 / torch.tensor(cfg.TRAINER.CE_CLASS_BALANCE.WEIGHTS)
         weights = weights.cuda()
     elif cfg.MODEL.LOSS_TYPE == 'MeanSquareError':
-        criterion = torch.nn.MSELoss()
+        criterion = mean_square_error
 
 
     if cfg.MODEL.PRETRAINED.ENABLED:
@@ -99,10 +99,18 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
 
     dataloader = torch_data.DataLoader(dataset, **dataloader_kwargs)
 
+    class_labels = {
+        0: "no damage",
+        1: "minor damage",
+        2: "major damage",
+        3: "destroyed",
+        4: "background",
+    }
+
     max_epochs = cfg.TRAINER.EPOCHS
     global_step = 0 if not cfg.DEBUG else 10000
+    start = timeit.default_timer()
     for epoch in range(max_epochs):
-        start = timeit.default_timer()
         print('Starting epoch {}/{}.'.format(epoch + 1, max_epochs))
         epoch_loss = 0
 
@@ -148,14 +156,6 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
                 print(f'step {global_step},  avg loss: {np.mean(loss_set):.4f}, cuda mem: {max_mem} MB, cuda cache: {max_cache} MB, time: {time_per_n_batches:.2f}s',
                       flush=True)
 
-                class_labels = {
-                    0: "no damage",
-                    1: "minor damage",
-                    2: "major damage",
-                    3: "destroyed",
-                    4: "background",
-                }
-
                 log_data = {
                     'loss': np.mean(loss_set),
                     'ce_component_loss': ce_loss,
@@ -190,14 +190,14 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
 
         # Log an image after every epoch
         wandb.log({'example_image': wandb.Image(batch['x'][0, 0:3].numpy().transpose(1, 2, 0), masks={
-                        "predictions": {
-                            "mask_data": mask_data,
-                            "class_labels": class_labels,
-                        },
-                        "groud_truth": {
-                            "mask_data": mask_data_gt,
-                            "class_labels": class_labels,
-                        }})},
+            "predictions": {
+                "mask_data": mask_data,
+                "class_labels": class_labels,
+            },
+            "groud_truth": {
+                "mask_data": mask_data_gt,
+                "class_labels": class_labels,
+            }})},
                   step=global_step)
 
         # Evaluation for multiclass F1 score
@@ -214,6 +214,10 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
             return val_f1
             trial.report(val_f1, step=global_step)
             raise optuna.TrialPruned()
+
+    check_point_name = f'cp_{global_step}.pkl'
+    save_path = os.path.join(log_path, check_point_name)
+    torch.save(net.state_dict(), save_path)
 
     # Final evaluation
     return dmg_model_eval(net, cfg, device, global_step, max_samples=None, step=global_step, epoch=epoch, use_confusion_matrix=True)
@@ -303,7 +307,7 @@ def dmg_model_eval(net, cfg, device, global_step,
                                                  pre_or_post='post',
                                                  transform=trfm,
                                                  background_class=bg_class,
-                                                 label_format='one-hot',)
+                                                 label_format=cfg.DATASETS.LABEL_FORMAT,)
     inference_loop(net, cfg, device, evaluate,
                    batch_size=cfg.TRAINER.INFERENCE_BATCH_SIZE,
                    run_type='TRAIN',
@@ -506,6 +510,10 @@ def cross_entropy_loss(pred, y):
     y = y.argmax(dim=1).long()
     return F.cross_entropy(pred, y)
 
+def mean_square_error(p, y):
+    p = torch.sigmoid(p)
+    return F.mse_loss(p, y)
+
 def setup(args):
     cfg = new_config()
     cfg.COMPUTER_CONFIG = f'configs/environment/{args.computer_name}.yaml' if args.computer_name else f'configs/environment/{platform.node()}.yaml'
@@ -561,8 +569,10 @@ def damage_train(trial: optuna.Trial=None, cfg=None):
             net = SeNet154_Unet_Double(use_pretrained)
         elif cfg.MODEL.SIAMESE.TYPE == 'RESNEXT50':
             net = SeResNext50_Unet_Double(use_pretrained)
-        else:
+        elif cfg.MODEL.SIAMESE.TYPE == 'DPN92':
             net = Dpn92_Unet_Double(use_pretrained)
+        else:
+            raise ValueError('Unknown simaese basenet')
     else:
         net = UNet(cfg)
 
@@ -611,11 +621,12 @@ def damage_train(trial: optuna.Trial=None, cfg=None):
             orginal_batch_size = cfg.TRAINER.BATCH_SIZE
             for i in range(orginal_batch_size):
                 try:
+                    tags = ['run', 'dmg', cfg.NAME]
                     if trial:
                         name_list = ['job', cfg.JOB_ID, 'trial', cfg.TRIAL_NUM, 'id', str(cfg.OPTUNA.TRIAL_NUM)]
+                        tags += ['optuna']
                     else:
                         name_list = [cfg.NAME]
-                    tags = ['run', 'dmg', cfg.NAME, 'optuna']
                     project = 'urban_dl_final'
                     if cfg.DEBUG:
                         name_list.insert(0, 'debug')
