@@ -14,7 +14,7 @@ def main():
     for i, sample in enumerate(dataset):
         if i % 100 == 0:
             print(f'Step {i}/{len(dataset)}')
-        dataset.dataset_metadata[i]['post']['image_weight_per_class'] = list(sample['image_weight_per_class'])
+        dataset.dataset_metadata[i]['post']['image_weight_per_class'] = list(sample['image_weight_per_class'].astype(float))
 
     ds_path = os.path.join(dataset_path, 'labels_new.json')
     with open(ds_path, 'w') as f:
