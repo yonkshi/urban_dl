@@ -42,14 +42,16 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
                             lr=cfg.TRAINER.LR,
                             weight_decay=cfg.TRAINER.WD,
                             betas=(cfg.TRAINER.B1, cfg.TRAINER.B2))
-    weighted_criterion = False
+
+    weighted_criterion = cfg.TRAINER.CE_CLASS_BALANCE.ENABLED
+    if weighted_criterion: # Also works with combo loss
+        weights = 1 / torch.tensor(cfg.TRAINER.CE_CLASS_BALANCE.WEIGHTS)
+        weights = weights.cuda()
+
     if cfg.MODEL.LOSS_TYPE == 'CrossEntropyLoss':
         criterion = cross_entropy_loss
     elif cfg.MODEL.LOSS_TYPE == 'WeightedCrossEntropyLoss':
         criterion = weighted_ce_loss
-        weighted_criterion = cfg.TRAINER.CE_CLASS_BALANCE.ENABLED
-        weights = 1 / torch.tensor(cfg.TRAINER.CE_CLASS_BALANCE.WEIGHTS)
-        weights = weights.cuda()
     elif cfg.MODEL.LOSS_TYPE == 'SoftDiceMulticlassLoss':
         criterion = soft_dice_loss_multi_class
     elif cfg.MODEL.LOSS_TYPE == 'SoftDiceMulticlassLossDebug':
@@ -60,11 +62,10 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
         criterion = jaccard_like_loss_multi_class
     elif cfg.MODEL.LOSS_TYPE == 'ComboLoss':
         criterion = combo_loss
-        weighted_criterion = cfg.TRAINER.CE_CLASS_BALANCE.ENABLED
-        weights = 1 / torch.tensor(cfg.TRAINER.CE_CLASS_BALANCE.WEIGHTS)
-        weights = weights.cuda()
     elif cfg.MODEL.LOSS_TYPE == 'MeanSquareError':
         criterion = mean_square_error
+    else:
+        raise ValueError(f'Unknown cfg.MODEL.LOSS_TYPE: {cfg.MODEL.LOSS_TYPE}')
 
 
     if cfg.MODEL.PRETRAINED.ENABLED:
@@ -88,6 +89,7 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
         'num_workers': cfg.DATALOADER.NUM_WORKER,
         'shuffle':cfg.DATALOADER.SHUFFLE,
         'drop_last': True,
+        'pin_memory': True,
     }
 
     # sampler
@@ -96,6 +98,13 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
         sampler = torch_data.WeightedRandomSampler(weights=image_p, num_samples=len(image_p))
         dataloader_kwargs['sampler'] = sampler
         dataloader_kwargs['shuffle'] = False
+    elif cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE == 'per_class':
+        image_p = class_uniform_image_sampling_weight(dataset.dataset_metadata)
+        sampler = torch_data.WeightedRandomSampler(weights=image_p, num_samples=len(image_p))
+        dataloader_kwargs['sampler'] = sampler
+        dataloader_kwargs['shuffle'] = False
+    else:
+        raise ValueError(f'Unknown cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE: {cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE}')
 
     dataloader = torch_data.DataLoader(dataset, **dataloader_kwargs)
 
@@ -454,7 +463,7 @@ def build_transforms(cfg, for_training=False, use_gts_mask = False):
     if cfg.AUGMENTATION.CROP_TYPE == 'uniform' and for_training:
         trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
     elif cfg.AUGMENTATION.CROP_TYPE == 'importance' and for_training:
-        trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
+        trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE, label_type=cfg.DATASETS.LABEL_FORMAT))
     if cfg.AUGMENTATION.RANDOM_FLIP_ROTATE and for_training:
         trfm.append(RandomFlipRotate())
     trfm.append(Npy2Torch())
@@ -482,9 +491,17 @@ def image_sampling_weight(dataset_metadata):
     EMPTY_IMAGE_BASELINE = 1000
     image_p = np.array([image_desc['post']['image_weight'] for image_desc in dataset_metadata]) + EMPTY_IMAGE_BASELINE
     print('done', flush=True)
-    # normalize to [0., 1.]
-    image_p = image_p
     return image_p
+
+def class_uniform_image_sampling_weight(dataset_metadata):
+    print('performing oversampling...', end='', flush=True)
+    weights = []
+    for image_desc in dataset_metadata:
+        weights.append(image_desc['post']['image_weight_per_class'])
+    weights = np.array(weights)
+    class_uniform_weights = np.sum(weights / weights.sum(axis=0, keepdims=True), axis=1)
+    print('done', flush=True)
+    return class_uniform_weights
 
 def gpu_stats():
     max_memory_allocated = torch.cuda.max_memory_allocated() / 1e6 # bytes to MB

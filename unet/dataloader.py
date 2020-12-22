@@ -77,8 +77,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
             # Weight for uniform skewing to labels
             ret['image_weight'] = class_weights.sum()
             # Weights for skewing towards particular damage types
-            for i, key in enumerate(["no_damage", "minor_damage", "major_damage", "destroyed",]):
-                    ret['image_weight_'+key] = class_weights[i]
+            ret['image_weight_per_class'] = class_weights
 
         return ret
 

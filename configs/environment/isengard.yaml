@@ -1,11 +1,11 @@
 _BASE_: "default.yaml"
 OUTPUT_BASE_DIR: ('/home/david/trains/run_logs/unet/')
 DATASETS:
-  TRAIN: ("/storage2/yonk/full_new/train/",)
-  VALIDATION: ("/storage2/yonk/full_new/test/",)
-  TEST: ("/storage2/yonk/full_new/real_test_set/",)
-  DEBUG_TRAIN: ("/storage2/yonk/full_new/train/",)
-  DEBUG_VALIDATION: ("/storage2/yonk/full_new/test/",)
-  DEBUG_TEST: ("/storage2/yonk/full_new/real_test_set/",)
+  TRAIN: ("/storage2/david/datasets/full_new/train/",)
+  VALIDATION: ("/storage2/david/datasets/full_new/test/",)
+  TEST: ("/storage2/david/datasets/full_new/real_test_set/",)
+  DEBUG_TRAIN: ("/storage2/david/datasets/full_new/train/",)
+  DEBUG_VALIDATION: ("/storage2/david/datasets/full_new/test/",)
+  DEBUG_TEST: ("/storage2/david/datasets/full_new/real_test_set/",)
 OPTUNA:
   DB_PATH: 'sqlite:////home/david/trains/urban_dl/logs/optuna.db'

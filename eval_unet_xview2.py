@@ -404,6 +404,7 @@ def inference_loop(net, cfg, device,
                                        num_workers=cfg.DATALOADER.NUM_WORKER,
                                        shuffle = cfg.DATALOADER.SHUFFLE,
                                        drop_last=True,
+                                       pin_memory=True,
                                        )
 
     dlen = len(dataset)

@@ -84,6 +84,9 @@ class UniformCrop():
         return input, label, image_path
 
 class ImportanceRandomCrop(UniformCrop):
+    def __init__(self, crop_size, label_type):
+        super().__init__(crop_size)
+        self.label_type = label_type
     def __call__(self, args):
         input, label, image_path = args
 
@@ -94,7 +97,9 @@ class ImportanceRandomCrop(UniformCrop):
         # TODO Multi class vs edge mask
         weights = []
         for input, label in random_crops:
-            if label.shape[2] >= 4:
+            if self.label_type == 'ordinal':
+                weights.append(label[...,-1].sum())
+            elif label.shape[2] >= 4:
                 # Damage detection, multi class, excluding backround
                 weights.append(label[...,:-1].sum())
             elif label.shape[2] > 1:
