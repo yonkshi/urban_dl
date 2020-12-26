@@ -1,5 +1,6 @@
 import optuna
 
+import os
 from functools import partial
 
 import damage_train
@@ -15,7 +16,7 @@ def objective(trial, cfg):
     cfg.MODEL.BACKBONE.PRETRAINED = trial.suggest_categorical('pretrain', [False])
     cfg.AUGMENTATION.CROP_TYPE = trial.suggest_categorical('crop_type', ['importance'])
 
-    cfg.OPTUNA.TRIAL_NUM = trial.number
+    cfg.OPTUNA.TRIAL_ID = trial.number
 
     return damage_train.damage_train(trial, cfg)
 
@@ -31,6 +32,16 @@ def setup(args):
     cfg = damage_train.setup(args)
     cfg.JOB_ID = args.job_id
     cfg.TRIAL_NUM = args.trial_num
+    name_list = ['job', cfg.JOB_ID, 'trial', cfg.TRIAL_NUM]
+    cfg.NAME = '_'.join(name_list)
+    cfg.TAGS += ['optuna']
+    cfg.PROJECT = 'urban_dl_ablation'
+
+    if args.log_dir: # Override Output dir
+        cfg.OUTPUT_DIR = os.path.join(args.log_dir, cfg.NAME)
+    else:
+        cfg.OUTPUT_DIR = os.path.join(cfg.OUTPUT_BASE_DIR, cfg.NAME)
+    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     return cfg
 
 def main():
@@ -44,7 +55,7 @@ def main():
                                     max_resource=cfg.OPTUNA.MAX_RESOURCE,
                                     reduction_factor=cfg.OPTUNA.REDUCTION_FACTOR
                                 ),
-                                study_name=cfg.NAME,
+                                study_name=cfg.CONFIG,
                                 storage=cfg.OPTUNA.DB_PATH,
                                 direction='maximize',
                                 load_if_exists=True)

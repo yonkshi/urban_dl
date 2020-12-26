@@ -1,4 +1,4 @@
-OUTPUT_BASE_DIR: ('/Midgard/home/pshi/run_logs/unet/')
+OUTPUT_BASE_DIR: ('/Midgard/home/pshi/run_logs/urban_dl/')
 DATASETS:
   TRAIN: ("/local_storage/datasets/xview2/full_new/train/",)
   VALIDATION: ("/local_storage/datasets/xview2/full_new/test/",)

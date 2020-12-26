@@ -387,17 +387,17 @@ def inference_loop(net, cfg, device,
     net.to(device)
     net.eval()
 
-    # reset the generators
-    dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
-    if dataset is None:
-        trfm = []
-        if cfg.AUGMENTATION.RESIZE: trfm.append( Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
-        trfm.append(BGR2RGB())
-        if cfg.DATASETS.USE_CLAHE_VARI: trfm.append(VARI())
-        trfm.append(Npy2Torch())
-        trfm = transforms.Compose(trfm)
-
-        dataset = Xview2Detectron2Dataset(dset_source, pre_or_post=cfg.DATASETS.PRE_OR_POST, transform=trfm)
+    # # reset the generators
+    # if dataset is None:
+    #     dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
+    #     trfm = []
+    #     if cfg.AUGMENTATION.RESIZE: trfm.append( Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
+    #     trfm.append(BGR2RGB())
+    #     if cfg.DATASETS.USE_CLAHE_VARI: trfm.append(VARI())
+    #     trfm.append(Npy2Torch())
+    #     trfm = transforms.Compose(trfm)
+    #
+    #     dataset = Xview2Detectron2Dataset(dset_source, pre_or_post=cfg.DATASETS.PRE_OR_POST, transform=trfm)
 
     dataloader = torch_data.DataLoader(dataset,
                                        batch_size=batch_size,

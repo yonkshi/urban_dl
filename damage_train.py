@@ -22,6 +22,7 @@ import eval_unet_xview2
 from unet import UNet, Dpn92_Unet_Double, SeNet154_Unet_Double, SeResNext50_Unet_Double
 from unet.dataloader import Xview2Detectron2DamageLevelDataset
 from unet.augmentations import *
+from unet import schedulers
 
 from experiment_manager.args import default_argument_parser
 from experiment_manager.metrics import MultiClassF1
@@ -37,11 +38,14 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
 
     log_path = cfg.OUTPUT_DIR
     summarize_config(cfg, device)
+    with open(path.join(cfg.OUTPUT_DIR, cfg.CONFIG + '.yaml'), 'w') as f:
+        f.write(cfg.dump())
 
     optimizer = optim.AdamW(net.parameters(),
                             lr=cfg.TRAINER.LR,
                             weight_decay=cfg.TRAINER.WD,
                             betas=(cfg.TRAINER.B1, cfg.TRAINER.B2))
+    scheduler = schedulers.scheduler_from_cfg(cfg, optimizer)
 
     weighted_criterion = cfg.TRAINER.CE_CLASS_BALANCE.ENABLED
     if weighted_criterion: # Also works with combo loss
@@ -118,6 +122,7 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
 
     max_epochs = cfg.TRAINER.EPOCHS
     global_step = 0 if not cfg.DEBUG else 10000
+    log_step = 0
     start = timeit.default_timer()
     for epoch in range(max_epochs):
         print('Starting epoch {}/{}.'.format(epoch + 1, max_epochs))
@@ -150,13 +155,8 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
             # loss_component_set.append(loss_component.cpu().detach().numpy())
             positive_pixels_set.extend(image_weight.cpu().numpy())
 
-            if global_step % 10000 == 0 and global_step > 0:
-                check_point_name = f'cp_{global_step}.pkl'
-                save_path = os.path.join(log_path, check_point_name)
-                torch.save(net.state_dict(), save_path)
-
-            if global_step % 100 == 0 and global_step > 0:
-                # time per 100 steps
+            if global_step - log_step >= 100:
+                log_step = global_step
                 stop = timeit.default_timer()
                 time_per_n_batches= stop - start
 
@@ -173,6 +173,7 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
                     'time': time_per_n_batches,
                     'total_positive_pixels': np.mean(positive_pixels_set),
                     'step': global_step,
+                    'lr': scheduler.get_last_lr(),
                 }
 
                 wandb.log(log_data, step=global_step)
@@ -185,8 +186,13 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
                     break
 
             # torch.cuda.empty_cache()
-            global_step += 1
+            global_step += cfg.TRAINER.BATCH_SIZE
+            scheduler.step(global_step)
 
+        if epoch % 10 == 0:
+            check_point_name = f'cp_{global_step}.pkl'
+            save_path = os.path.join(log_path, check_point_name)
+            torch.save(net.state_dict(), save_path)
 
         if cfg.DATASETS.LABEL_FORMAT == 'ordinal':
             mask_data = eval_unet_xview2.ordinal_to_one_hot(y_pred)
@@ -224,7 +230,7 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
             trial.report(val_f1, step=global_step)
             raise optuna.TrialPruned()
 
-    check_point_name = f'cp_{global_step}.pkl'
+    check_point_name = f'cp_{global_step}_final.pkl'
     save_path = os.path.join(log_path, check_point_name)
     torch.save(net.state_dict(), save_path)
 
@@ -307,9 +313,13 @@ def dmg_model_eval(net, cfg, device, global_step,
                     confusion_matrices_by_disaster_type[disaster_type] += _mat
 
     use_gts_mask = run_type == 'TRAIN' and cfg.DATASETS.LOCALIZATION_MASK.TRAIN_USE_GTS_MASK
-    dset_source = cfg.DATASETS.VALIDATION[0] if run_type == 'VALIDATION' else cfg.DATASETS.TRAIN[0]
+    if run_type == 'TRAIN':
+        dset_source = cfg.DATASETS.TRAIN[0]
+    elif run_type == 'VALIDATION':
+        dset_source = cfg.DATASETS.VALIDATION[0]
+    elif run_type == 'TEST':
+        dset_source = cfg.DATASETS.TEST[0]
 
-    # TODO some transforms shouldn't exist in evaluation
     trfm = build_transforms(cfg, use_gts_mask = use_gts_mask)
     bg_class = 'new-class' if cfg.MODEL.BACKGROUND.TYPE == 'new-class' else None
     dataset = Xview2Detectron2DamageLevelDataset(dset_source,
@@ -318,8 +328,7 @@ def dmg_model_eval(net, cfg, device, global_step,
                                                  background_class=bg_class,
                                                  label_format=cfg.DATASETS.LABEL_FORMAT,)
     inference_loop(net, cfg, device, evaluate,
-                   batch_size=cfg.TRAINER.INFERENCE_BATCH_SIZE,
-                   run_type='TRAIN',
+                   batch_size=cfg.TRAINER.BATCH_SIZE,
                    max_samples = max_samples,
                    dataset = dataset,
                    callback_include_x=True)
@@ -510,7 +519,8 @@ def gpu_stats():
 
 def summarize_config(cfg, device):
     run_config = {}
-    run_config['CONFIG_NAME'] = cfg.NAME
+    run_config['config_file'] = cfg.CONFIG
+    run_config['run_name'] = cfg.NAME
     run_config['device'] = device
     run_config['log_path'] = cfg.OUTPUT_DIR
     run_config['training_set'] = cfg.DATASETS.TRAIN
@@ -541,14 +551,17 @@ def setup(args):
 
     cfg.merge_from_file(f'configs/damage_detection/{args.config_file}.yaml')
     cfg.merge_from_list(args.opts)
+    cfg.CONFIG = args.config_file
     cfg.NAME = args.config_file
     cfg.resume_from = args.resume_from
     cfg.eval_only = args.eval_only
+    cfg.TAGS = [cfg.CONFIG]
+    cfg.PROJECT = 'urban_dl_final'
 
     if args.log_dir: # Override Output dir
-        cfg.OUTPUT_DIR = path.join(args.log_dir, args.config_file)
+        cfg.OUTPUT_DIR = path.join(args.log_dir, cfg.NAME)
     else:
-        cfg.OUTPUT_DIR = path.join(cfg.OUTPUT_BASE_DIR, args.config_file)
+        cfg.OUTPUT_DIR = path.join(cfg.OUTPUT_BASE_DIR, cfg.NAME)
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
 
     if args.data_dir:
@@ -624,11 +637,13 @@ def damage_train(trial: optuna.Trial=None, cfg=None):
         if cfg.eval_only:
             wandb.init(
                 name=cfg.NAME,
-                project='urban_dl_final',
+                project=cfg.PROJECT,
                 entity='eoai4globalchange',
-                tags=['eval', 'dmg'],
+                tags=cfg.TAGS + ['eval', 'dmg'],
                 config=cfg,
             )
+            dmg_model_eval(net, cfg, device, run_type='TEST', max_samples=None, use_confusion_matrix=True,
+                           include_disaster_type_breakdown=True)
             dmg_model_eval(net, cfg, device, run_type='VALIDATION', max_samples=None, use_confusion_matrix=True,
                            include_disaster_type_breakdown=True)
             dmg_model_eval(net, cfg, device, run_type='TRAIN', max_samples=1000, use_confusion_matrix=True,
@@ -638,23 +653,15 @@ def damage_train(trial: optuna.Trial=None, cfg=None):
             orginal_batch_size = cfg.TRAINER.BATCH_SIZE
             for i in range(orginal_batch_size):
                 try:
-                    tags = ['run', 'dmg', cfg.NAME]
-                    if trial:
-                        name_list = ['job', cfg.JOB_ID, 'trial', cfg.TRIAL_NUM, 'id', str(cfg.OPTUNA.TRIAL_NUM)]
-                        tags += ['optuna']
-                    else:
-                        name_list = [cfg.NAME]
-                    project = 'urban_dl_final'
                     if cfg.DEBUG:
-                        name_list.insert(0, 'debug')
-                        tags.append('debug')
-                        project += '_debug'
+                        cfg.NAME += '_debug'
+                        cfg.PROJECT += '_debug'
 
                     wandb.init(
-                        name='_'.join(name_list),
-                        project=project,
+                        name=cfg.NAME,
+                        project=cfg.PROJECT,
                         entity='eoai4globalchange',
-                        tags=tags,
+                        tags=cfg.TAGS + ['train', 'dmg'],
                         config=cfg,
                         reinit=True
                     )

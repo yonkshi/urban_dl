@@ -1,5 +1,5 @@
 _BASE_: "default.yaml"
-OUTPUT_BASE_DIR: ('/home/david/trains/run_logs/unet/')
+OUTPUT_BASE_DIR: ('/home/david/trains/run_logs/urban_dl/')
 DATASETS:
   TRAIN: ("/storage2/david/datasets/full_new/train/",)
   VALIDATION: ("/storage2/david/datasets/full_new/test/",)
