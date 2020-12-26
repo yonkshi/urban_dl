@@ -14,9 +14,10 @@ def objective(trial, cfg):
     cfg.TRAINER.CE_CLASS_BALANCE.ENABLED = trial.suggest_categorical('ce_class_balance', [True])
     cfg.MODEL.LOSS_TYPE = trial.suggest_categorical('loss_type', ['ComboLoss'])
     cfg.MODEL.BACKBONE.TYPE = trial.suggest_categorical('backbone', ['resnet34'])
-    cfg.MODEL.SIAMESE.PRETRAINED = cfg.MODEL.BACKBONE.PRETRAINED = trial.suggest_categorical('pretrain', [True])
+    cfg.MODEL.BACKBONE.PRETRAINED = trial.suggest_categorical('pretrain', [True])
+    cfg.MODEL.SIAMESE.PRETRAINED = cfg.MODEL.BACKBONE.PRETRAINED
     cfg.AUGMENTATION.CROP_TYPE = trial.suggest_categorical('crop_type', ['importance'])
-    cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE = trial.suggest_categorical('oversampling_type', ['per_class']),
+    cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE = trial.suggest_categorical('oversampling_type', ['per_class'])
     cfg.MODEL.SIAMESE.ENABLED = trial.suggest_categorical('siamese', [True])
     cfg.DATASETS.LOCALIZATION_MASK.ENABLED = trial.suggest_categorical('localization_mask', [False])
     cfg.OPTUNA.TRIAL_ID = trial.number
