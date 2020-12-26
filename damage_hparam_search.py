@@ -11,11 +11,14 @@ def objective(trial, cfg):
     cfg.TRAINER.WD = trial.suggest_loguniform('weight_decay', 1e-5, 1e-2)
     cfg.TRAINER.B1 = 1.0 - trial.suggest_loguniform('one_minus_b1', 1e-4, 1.0)
     cfg.TRAINER.B2 = 1.0 - trial.suggest_loguniform('one_minus_b2', 1e-4, 1.0)
+    cfg.TRAINER.CE_CLASS_BALANCE.ENABLED = trial.suggest_categorical('ce_class_balance', [True])
     cfg.MODEL.LOSS_TYPE = trial.suggest_categorical('loss_type', ['ComboLoss'])
     cfg.MODEL.BACKBONE.TYPE = trial.suggest_categorical('backbone', ['resnet34'])
-    cfg.MODEL.BACKBONE.PRETRAINED = trial.suggest_categorical('pretrain', [False])
+    cfg.MODEL.SIAMESE.PRETRAINED = cfg.MODEL.BACKBONE.PRETRAINED = trial.suggest_categorical('pretrain', [True])
     cfg.AUGMENTATION.CROP_TYPE = trial.suggest_categorical('crop_type', ['importance'])
-
+    cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE = trial.suggest_categorical('oversampling_type', ['per_class']),
+    cfg.MODEL.SIAMESE.ENABLED = trial.suggest_categorical('siamese', [True])
+    cfg.DATASETS.LOCALIZATION_MASK.ENABLED = trial.suggest_categorical('localization_mask', [False])
     cfg.OPTUNA.TRIAL_ID = trial.number
 
     return damage_train.damage_train(trial, cfg)
