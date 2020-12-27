@@ -28,14 +28,14 @@ def hyperparameter_search_argument_parser():
     parser = experiment_manager.args.default_argument_parser()
     parser.add_argument('--job-id', dest='job_id', type=str,
                         default='', help='Job ID (encompassing multiple trials) for naming runs')
-    parser.add_argument('--trial-number', dest='trial_num', type=str,
+    parser.add_argument('--trial-number', dest='trial_number', type=str,
                         default='', help='Number of the current trial for naming runs')
     return parser
 
 def setup(args):
     cfg = damage_train.setup(args)
     cfg.JOB_ID = args.job_id
-    cfg.TRIAL_NUM = args.trial_num
+    cfg.TRIAL_NUM = args.trial_number
     name_list = ['job', cfg.JOB_ID, 'trial', cfg.TRIAL_NUM]
     cfg.NAME = '_'.join(name_list)
     cfg.TAGS += ['optuna']

@@ -635,7 +635,6 @@ def damage_train(trial: optuna.Trial=None, cfg=None):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     try:
-
         if cfg.eval_only:
             wandb.init(
                 name=cfg.NAME,
@@ -653,29 +652,27 @@ def damage_train(trial: optuna.Trial=None, cfg=None):
         else:
             # Dynamically adjust the batch size to fit on GPU
             orginal_batch_size = cfg.TRAINER.BATCH_SIZE
-            try:
+            while(cfg.TRAINER.BATCH_SIZE):
+                try:
 
-                wandb.init(
-                    name=cfg.NAME,
-                    project=cfg.PROJECT,
-                    entity='eoai4globalchange',
-                    tags=cfg.TAGS + ['train', 'dmg'],
-                    config=cfg,
-                    reinit=True
-                )
-                objective = train_net(net, cfg, device, trial)
-                break
-            except RuntimeError as runerr:
-                # Check if runtime error is CUDA error
-                if 'CUDA out of memory' not in str(runerr):
-                    raise runerr
-                new_batch_size = orginal_batch_size - i * 2
-                print("Run Time Error:" + str(runerr), file=sys.stderr)
-                print('!!!! ---> Original batch size too large, trying batch size:' + str(new_batch_size),
-                      file=sys.stderr)
-                cfg.TRAINER.BATCH_SIZE = new_batch_size
-            for i in range(orginal_batch_size):
-                pass
+                    wandb.init(
+                        name=cfg.NAME,
+                        project=cfg.PROJECT,
+                        entity='eoai4globalchange',
+                        tags=cfg.TAGS + ['train', 'dmg'],
+                        config=cfg,
+                        reinit=True
+                    )
+                    objective = train_net(net, cfg, device, trial)
+                    break
+                except RuntimeError as runerr:
+                    # Check if runtime error is CUDA error
+                    if 'CUDA out of memory' not in str(runerr):
+                        raise runerr
+                    cfg.TRAINER.BATCH_SIZE = cfg.TRAINER.BATCH_SIZE - 2
+                    print("Run Time Error:" + str(runerr), file=sys.stderr)
+                    print(f'!!!! ---> Original batch size ({orginal_batch_size}) too large, trying batch size: {cfg.TRAINER.BATCH_SIZE}',
+                          file=sys.stderr)
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
         print('Saved interrupt')
