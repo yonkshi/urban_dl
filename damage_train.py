@@ -574,6 +574,8 @@ def damage_train(trial: optuna.Trial=None, cfg=None):
         cfg.DATASETS.TRAIN = cfg.DATASETS.DEBUG_TRAIN
         cfg.DATASETS.VALIDATION = cfg.DATASETS.DEBUG_VALIDATION
         cfg.DATASETS.TEST = cfg.DATASETS.DEBUG_TEST
+        cfg.NAME += '_debug'
+        cfg.PROJECT += '_debug'
 
     # out_channels = cfg.MODEL.OUT_CHANNELS
     # if cfg.MODEL.BACKBONE.ENABLED:
@@ -651,31 +653,29 @@ def damage_train(trial: optuna.Trial=None, cfg=None):
         else:
             # Dynamically adjust the batch size to fit on GPU
             orginal_batch_size = cfg.TRAINER.BATCH_SIZE
-            for i in range(orginal_batch_size):
-                try:
-                    if cfg.DEBUG:
-                        cfg.NAME += '_debug'
-                        cfg.PROJECT += '_debug'
+            try:
 
-                    wandb.init(
-                        name=cfg.NAME,
-                        project=cfg.PROJECT,
-                        entity='eoai4globalchange',
-                        tags=cfg.TAGS + ['train', 'dmg'],
-                        config=cfg,
-                        reinit=True
-                    )
-                    objective = train_net(net, cfg, device, trial)
-                    break
-                except RuntimeError as runerr:
-                    # Check if runtime error is CUDA error
-                    if 'CUDA out of memory' not in str(runerr):
-                        raise runerr
-                    new_batch_size = orginal_batch_size - i * 2
-                    print("Run Time Error:" + str(runerr), file=sys.stderr)
-                    print('!!!! ---> Original batch size too large, trying batch size:' + str(new_batch_size),
-                          file=sys.stderr)
-                    cfg.TRAINER.BATCH_SIZE = new_batch_size
+                wandb.init(
+                    name=cfg.NAME,
+                    project=cfg.PROJECT,
+                    entity='eoai4globalchange',
+                    tags=cfg.TAGS + ['train', 'dmg'],
+                    config=cfg,
+                    reinit=True
+                )
+                objective = train_net(net, cfg, device, trial)
+                break
+            except RuntimeError as runerr:
+                # Check if runtime error is CUDA error
+                if 'CUDA out of memory' not in str(runerr):
+                    raise runerr
+                new_batch_size = orginal_batch_size - i * 2
+                print("Run Time Error:" + str(runerr), file=sys.stderr)
+                print('!!!! ---> Original batch size too large, trying batch size:' + str(new_batch_size),
+                      file=sys.stderr)
+                cfg.TRAINER.BATCH_SIZE = new_batch_size
+            for i in range(orginal_batch_size):
+                pass
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
         print('Saved interrupt')
