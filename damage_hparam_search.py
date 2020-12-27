@@ -1,6 +1,7 @@
 import optuna
 
 import os
+import time
 from functools import partial
 
 import damage_train
@@ -52,6 +53,10 @@ def main():
     parser = hyperparameter_search_argument_parser()
     args = parser.parse_known_args()[0]
     cfg = setup(args)
+
+    # Delay startup for other trials to have give the database some time to initialize
+    if int(cfg.TRIAL_NUM) != 1:
+        time.sleep(60)
 
     study = optuna.create_study(sampler=optuna.samplers.TPESampler(multivariate=True),
                                 pruner=optuna.pruners.HyperbandPruner(
