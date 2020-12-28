@@ -1,12 +1,12 @@
-_BASE_: "dmg_combo_stackpre_oversample_512.yaml"
+_BASE_: "dmg_siamese_combostack_os_per_class_ce_balance_pretrained.yaml"
 DEBUG: True
 DATALOADER:
   NUM_WORKER: 0
   SHUFFLE: False
 TRAINER:
   EPOCHS: 1
-DATASETS:
-  LABEL_FORMAT: 'ordinal'
+#DATASETS:
+#  LABEL_FORMAT: 'ordinal'
 MODEL:
   OUT_CHANNELS: 4
 AUGMENTATION:

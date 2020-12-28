@@ -55,7 +55,7 @@ def main():
     cfg = setup(args)
 
     # Delay startup for other trials to have give the database some time to initialize
-    if int(cfg.TRIAL_NUM) != 1:
+    if cfg.TRIAL_NUM and int(cfg.TRIAL_NUM) != 1:
         time.sleep(60)
 
     study = optuna.create_study(sampler=optuna.samplers.TPESampler(multivariate=True),
