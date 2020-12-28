@@ -173,7 +173,7 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
                     'time': time_per_n_batches,
                     'total_positive_pixels': np.mean(positive_pixels_set),
                     'step': global_step,
-                    'lr': scheduler.get_last_lr(),
+                    'lr': scheduler.get_last_lr()[0],
                 }
 
                 wandb.log(log_data, step=global_step)
