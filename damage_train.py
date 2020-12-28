@@ -173,7 +173,7 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
                     'time': time_per_n_batches,
                     'total_positive_pixels': np.mean(positive_pixels_set),
                     'step': global_step,
-                    'lr': scheduler.get_last_lr()[0],
+                    'lr': optimizer.param_groups[0]['lr'],
                 }
 
                 wandb.log(log_data, step=global_step)
@@ -521,6 +521,7 @@ def summarize_config(cfg, device):
     run_config = {}
     run_config['config_file'] = cfg.CONFIG
     run_config['run_name'] = cfg.NAME
+    run_config['torch_version'] = torch.__version__
     run_config['device'] = device
     run_config['log_path'] = cfg.OUTPUT_DIR
     run_config['training_set'] = cfg.DATASETS.TRAIN
