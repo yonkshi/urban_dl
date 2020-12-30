@@ -599,11 +599,11 @@ def damage_train(trial: optuna.Trial=None, cfg=None):
     if cfg.MODEL.SIAMESE.ENABLED:
         use_pretrained = cfg.MODEL.SIAMESE.PRETRAINED
         if cfg.MODEL.SIAMESE.TYPE == 'SENET152':
-            net = SeNet154_Unet_Double(use_pretrained)
+            net = SeNet154_Unet_Double(use_pretrained, cfg)
         elif cfg.MODEL.SIAMESE.TYPE == 'RESNEXT50':
-            net = SeResNext50_Unet_Double(use_pretrained)
+            net = SeResNext50_Unet_Double(use_pretrained, cfg)
         elif cfg.MODEL.SIAMESE.TYPE == 'DPN92':
-            net = Dpn92_Unet_Double(use_pretrained)
+            net = Dpn92_Unet_Double(use_pretrained, cfg)
         else:
             raise ValueError('Unknown simaese basenet')
     else:

@@ -1,6 +1,10 @@
 # full assembly of the sub-parts to form the complete net
 from collections import OrderedDict
 
+import math
+
+import torch
+import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
@@ -219,11 +223,18 @@ class ConvRelu(nn.Module):
         return self.layer(x)
 
 class Dpn92_Unet_Double(nn.Module):
-    def __init__(self, pretrained=False, **kwargs):
+    def __init__(self, pretrained=False, cfg=None, **kwargs):
         super(Dpn92_Unet_Double, self).__init__()
 
         encoder_filters = [64, 336, 704, 1552, 2688]
         decoder_filters = np.asarray([64, 96, 128, 256, 512]) // 2
+
+        if cfg.DATASETS.LOCALIZATION_MASK.ENABLED:
+            self.inc = nn.Sequential(
+                nn.Conv2d(math.floor(cfg.MODEL.IN_CHANNELS/2) + 1, 3, kernel_size=3, padding=1),  # Attaching
+            )
+        else:
+            self.inc = None
 
         self.conv6 = ConvRelu(encoder_filters[-1], decoder_filters[-1])
         self.conv6_2 = nn.Sequential(ConvRelu(decoder_filters[-1] + encoder_filters[-2], decoder_filters[-1]),
@@ -298,8 +309,15 @@ class Dpn92_Unet_Double(nn.Module):
 
     def forward(self, x):
 
-        dec10_0 = self.forward1(x[:, :3, :, :])
-        dec10_1 = self.forward1(x[:, 3:, :, :])
+        if self.inc:
+            x1 = self.inc(torch.cat([x[:, :3, :, :], x[:, 6:7, :, :]], dim=1))
+            x2 = self.inc(x[:, 3:, :, :])
+        else:
+            x1 = x[:, :3, :, :]
+            x2 = x[:, 3:, :, :]
+
+        dec10_0 = self.forward1(x1)
+        dec10_1 = self.forward1(x2)
 
         dec10 = torch.cat([dec10_0, dec10_1], 1)
 
@@ -403,11 +421,18 @@ class SeNet154_Unet_Double(nn.Module):
 
 
 class SeResNext50_Unet_Double(nn.Module):
-    def __init__(self, pretrained=False, **kwargs):
+    def __init__(self, pretrained=False, cfg=None, **kwargs):
         super(SeResNext50_Unet_Double, self).__init__()
 
         encoder_filters = [64, 256, 512, 1024, 2048]
         decoder_filters = np.asarray([64, 96, 128, 256, 512]) // 2
+
+        if cfg.DATASETS.LOCALIZATION_MASK.ENABLED:
+            self.inc = nn.Sequential(
+                nn.Conv2d(math.floor(cfg.MODEL.IN_CHANNELS/2) + 1, 3, kernel_size=3, padding=1),  # Attaching
+            )
+        else:
+            self.inc = None
 
         self.conv6 = ConvRelu(encoder_filters[-1], decoder_filters[-1])
         self.conv6_2 = ConvRelu(decoder_filters[-1] + encoder_filters[-2], decoder_filters[-1])
@@ -470,8 +495,15 @@ class SeResNext50_Unet_Double(nn.Module):
 
     def forward(self, x):
 
-        dec10_0 = self.forward1(x[:, :3, :, :])
-        dec10_1 = self.forward1(x[:, 3:, :, :])
+        if self.inc:
+            x1 = self.inc(torch.cat([x[:, :3, :, :], x[:, 6:7, :, :]], dim=1))
+            x2 = self.inc(x[:, 3:, :, :])
+        else:
+            x1 = x[:, :3, :, :]
+            x2 = x[:, 3:, :, :]
+
+        dec10_0 = self.forward1(x1)
+        dec10_1 = self.forward1(x2)
 
         dec10 = torch.cat([dec10_0, dec10_1], 1)
 

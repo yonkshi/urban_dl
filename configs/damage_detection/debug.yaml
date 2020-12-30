@@ -1,4 +1,4 @@
-_BASE_: "dmg_siamese_combostack_os_per_class_ce_balance_pretrained.yaml"
+_BASE_: "abl_siam_resnet_pretrain_loc_combo_ce_importance_perclass.yaml"
 DEBUG: True
 DATALOADER:
   NUM_WORKER: 0
