@@ -653,16 +653,18 @@ def damage_train(trial: optuna.Trial=None, cfg=None):
         else:
             # Dynamically adjust the batch size to fit on GPU
             orginal_batch_size = cfg.TRAINER.BATCH_SIZE
+            id = wandb.util.generate_id()
             while(cfg.TRAINER.BATCH_SIZE):
                 try:
-
                     wandb.init(
+                        id=id,
                         name=cfg.NAME,
                         project=cfg.PROJECT,
                         entity='eoai4globalchange',
                         tags=cfg.TAGS + ['train', 'dmg'],
                         config=cfg,
-                        reinit=True
+                        reinit=True,
+                        resume='allow'
                     )
                     objective = train_net(net, cfg, device, trial)
                     break
