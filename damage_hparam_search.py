@@ -31,6 +31,8 @@ def hyperparameter_search_argument_parser():
                         default='', help='Job ID (encompassing multiple trials) for naming runs')
     parser.add_argument('--trial-number', dest='trial_number', type=str,
                         default='', help='Number of the current trial for naming runs')
+    parser.add_argument('--wandb-project', dest='wandb_project', type=str,
+                        default='urban_dl_ablation', help='Wandb project')
     return parser
 
 def setup(args):
@@ -40,7 +42,7 @@ def setup(args):
     name_list = ['job', cfg.JOB_ID, 'trial', cfg.TRIAL_NUM]
     cfg.NAME = '_'.join(name_list)
     cfg.TAGS += ['optuna']
-    cfg.PROJECT = 'urban_dl_ablation'
+    cfg.PROJECT = args.wandb_project
 
     if args.log_dir: # Override Output dir
         cfg.OUTPUT_DIR = os.path.join(args.log_dir, cfg.NAME)

@@ -514,7 +514,7 @@ def class_uniform_image_sampling_weight(dataset_metadata):
 
 def gpu_stats():
     max_memory_allocated = torch.cuda.max_memory_allocated() / 1e6 # bytes to MB
-    max_memory_cached = torch.cuda.max_memory_cached() /1e6
+    max_memory_cached = torch.cuda.max_memory_reserved() /1e6
     return int(max_memory_allocated), int(max_memory_cached)
 
 def summarize_config(cfg, device):
