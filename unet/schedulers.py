@@ -5,7 +5,7 @@ class DummyScheduler:
         self.lr = lr
     def get_lr(self):
         return self.lr
-    def step(self):
+    def step(self, epoch=None):
         pass
 
 def scheduler_from_cfg(cfg, optimizer):
