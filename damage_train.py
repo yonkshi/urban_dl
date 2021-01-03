@@ -16,6 +16,8 @@ from sklearn.metrics import ConfusionMatrixDisplay
 import wandb
 import optuna
 
+print(smp)
+
 import matplotlib.pyplot as plt
 
 import eval_unet_xview2
