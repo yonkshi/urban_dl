@@ -523,6 +523,7 @@ def summarize_config(cfg, device):
     run_config = {}
     run_config['config_file'] = cfg.CONFIG
     run_config['run_name'] = cfg.NAME
+    run_config['compute_node'] = cfg.COMPUTER_CONFIG
     run_config['torch_version'] = torch.__version__
     run_config['device'] = device
     run_config['log_path'] = cfg.OUTPUT_DIR
