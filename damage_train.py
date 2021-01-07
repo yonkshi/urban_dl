@@ -125,6 +125,7 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
     max_epochs = cfg.TRAINER.EPOCHS
     global_step = 0 if not cfg.DEBUG else 10000
     log_step = 0
+    val_moving_avg = 0.0
     start = timeit.default_timer()
     for epoch in range(max_epochs):
         print('Starting epoch {}/{}.'.format(epoch + 1, max_epochs))
@@ -218,26 +219,30 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
                   step=global_step)
 
         # Evaluation for multiclass F1 score
+        print('Validation set:')
         val_f1 = dmg_model_eval(net, cfg, device, global_step, max_samples=100, run_type='VALIDATION', step=global_step, epoch=epoch, use_confusion_matrix=False)
+        val_moving_avg = val_f1 * 0.3 +  val_moving_avg * 0.7
+        print('Training set:')
         dmg_model_eval(net, cfg, device, global_step, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch, use_confusion_matrix=False)
+
 
         # Check if we have to prune if in a trial
         if trial:
-            trial.report(val_f1, step=global_step)
+            trial.report(val_moving_avg, step=global_step)
             if trial.should_prune():
                 raise optuna.TrialPruned()
 
         if cfg.DEBUG:
             return val_f1
-            trial.report(val_f1, step=global_step)
-            raise optuna.TrialPruned()
 
     check_point_name = f'cp_{global_step}_final.pkl'
     save_path = os.path.join(log_path, check_point_name)
     torch.save(net.state_dict(), save_path)
 
     # Final evaluation
-    return dmg_model_eval(net, cfg, device, global_step, max_samples=None, step=global_step, epoch=epoch, use_confusion_matrix=True)
+    dmg_model_eval(net, cfg, device, global_step, max_samples=None, run_type='TEST', step=global_step, epoch=epoch,
+                   use_confusion_matrix=True, include_disaster_type_breakdown=True)
+    return dmg_model_eval(net, cfg, device, global_step, max_samples=None, step=global_step, epoch=epoch, use_confusion_matrix=True, include_disaster_type_breakdown=True)
 
 def dmg_model_eval(net, cfg, device, global_step,
                    run_type='VALIDATION',
@@ -252,7 +257,7 @@ def dmg_model_eval(net, cfg, device, global_step,
     :return:
     '''
     measurer = MultiClassF1(ignore_last_class=cfg.MODEL.BACKGROUND.TYPE=='new-class')
-    diaster_type_measurers = {}
+    disaster_type_measurers = {}
 
     confusion_matrix_with_bg = []
     confusion_matrices_by_disaster_type = {}
@@ -304,10 +309,10 @@ def dmg_model_eval(net, cfg, device, global_step,
             for i, img_filename in enumerate(img_filenames):
                 # Compute F1
                 disaster_type = img_filename.split('_')[0]
-                if disaster_type not in diaster_type_measurers:
-                    diaster_type_measurers[disaster_type] = MultiClassF1(ignore_last_class=cfg.MODEL.BACKGROUND.TYPE == 'new-class')
+                if disaster_type not in disaster_type_measurers:
+                    disaster_type_measurers[disaster_type] = MultiClassF1(ignore_last_class=cfg.MODEL.BACKGROUND.TYPE == 'new-class')
                     confusion_matrices_by_disaster_type[disaster_type] = 0
-                diaster_type_measurers[disaster_type].add_sample(y_true[[i]], y_pred[[i]])
+                disaster_type_measurers[disaster_type].add_sample(y_true[[i]], y_pred[[i]])
 
                 # Compute Confusion Matrix
                 if use_confusion_matrix:
@@ -317,10 +322,13 @@ def dmg_model_eval(net, cfg, device, global_step,
     use_gts_mask = run_type == 'TRAIN' and cfg.DATASETS.LOCALIZATION_MASK.TRAIN_USE_GTS_MASK
     if run_type == 'TRAIN':
         dset_source = cfg.DATASETS.TRAIN[0]
+        set_name = 'training_set'
     elif run_type == 'VALIDATION':
         dset_source = cfg.DATASETS.VALIDATION[0]
+        set_name = 'validation_set'
     elif run_type == 'TEST':
         dset_source = cfg.DATASETS.TEST[0]
+        set_name = 'test_set'
 
     trfm = build_transforms(cfg, use_gts_mask = use_gts_mask)
     bg_class = 'new-class' if cfg.MODEL.BACKGROUND.TYPE == 'new-class' else None
@@ -344,14 +352,13 @@ def dmg_model_eval(net, cfg, device, global_step,
     all_fpr, all_fnr = measurer.compute_basic_metrics()
     print(total_f1, flush=True)
 
-    set_name = 'validation_set' if run_type == 'VALIDATION' else 'training_set'
     log_data = {f'{set_name} total F1': total_f1,
                 'step': step,
                 'epoch': epoch,
                 }
 
     if include_disaster_type_breakdown:
-        for disaster_type, m in diaster_type_measurers.items():
+        for disaster_type, m in disaster_type_measurers.items():
             f1 = m.compute_f1()[0]
             print(f'disaster_{disaster_type}_f1', f1)
             wandb.log({
