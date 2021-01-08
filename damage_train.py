@@ -9,14 +9,11 @@ import torch.nn.functional as F
 from torch import optim
 from torch.utils import data as torch_data
 from torchvision import transforms, utils
-import segmentation_models_pytorch as smp
 from tabulate import tabulate
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import ConfusionMatrixDisplay
 import wandb
 import optuna
-
-print(smp)
 
 import matplotlib.pyplot as plt
 
