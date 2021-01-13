@@ -237,7 +237,7 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
     torch.save(net.state_dict(), save_path)
 
     # Final evaluation
-    dmg_model_eval(net, cfg, device, global_step, max_samples=None, run_type='TEST', step=global_step, epoch=epoch,
+    # dmg_model_eval(net, cfg, device, global_step, max_samples=None, run_type='TEST', step=global_step, epoch=epoch,
                    use_confusion_matrix=True, include_disaster_type_breakdown=True)
     return dmg_model_eval(net, cfg, device, global_step, max_samples=None, step=global_step, epoch=epoch, use_confusion_matrix=True, include_disaster_type_breakdown=True)
 
