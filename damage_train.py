@@ -563,6 +563,7 @@ def setup(args):
     cfg.NAME = args.config_file
     cfg.resume_from = args.resume_from
     cfg.eval_only = args.eval_only
+    cfg.DEBUG = cfg.DEBUG or args.debug
     cfg.TAGS = [cfg.CONFIG]
     cfg.PROJECT = 'urban_dl_final'
 
@@ -605,6 +606,8 @@ def damage_train(trial: optuna.Trial=None, cfg=None):
     #         )
     if cfg.MODEL.SIAMESE.ENABLED:
         use_pretrained = cfg.MODEL.SIAMESE.PRETRAINED
+        if not use_pretrained:  # Uber ugly hotfix for getting False from the config
+            use_pretrained = None
         if cfg.MODEL.SIAMESE.TYPE == 'SENET152':
             net = SeNet154_Unet_Double(use_pretrained, cfg)
         elif cfg.MODEL.SIAMESE.TYPE == 'RESNEXT50':

@@ -25,6 +25,7 @@ def default_argument_parser():
     parser.add_argument("--num-gpus", type=int, default=1, help="number of gpus *per machine*")
     parser.add_argument("--computer-name", dest='computer_name', default="", metavar="FILE",
                         help="override computer name for computer specific configs")
+    parser.add_argument("--debug", dest='debug', default=False, action='store_true')
 
 
     # Hacky hack
