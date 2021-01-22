@@ -10,9 +10,6 @@ MODEL:
   EDGE_WEIGHTED_LOSS:
     TYPE: 'edge_loss_weight_mask_32' # Which preprocessed edge weight to use: e.g. edge_loss_weight_mask_32
     SCALE: 200
-    WARMUP_ENABLED: True
-    WARMUP_START: 20000
-    WARMUP_END: 30000
 DATASETS:
   TEST: ("/Midgard/Data/pshi/datasets/xview2/holdout_set/test/",)
   TRAIN: ("/Midgard/Data/pshi/datasets/xview2/holdout_set/train/",)
