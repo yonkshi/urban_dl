@@ -113,7 +113,7 @@ class down(nn.Module):
             self.pooling_layer = nn.Conv2d(in_ch, in_ch, 2, 2)
 
         self.mpconv = nn.Sequential(
-            self.pooling_layer,
+            # self.pooling_layer,
             conv_block(in_ch, out_ch, activation), )
 
     def forward(self, x):
