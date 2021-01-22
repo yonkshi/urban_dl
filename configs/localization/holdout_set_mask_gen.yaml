@@ -1,0 +1,23 @@
+## BASED ON   -- fo3_2stride_edge32_x200_scheduled_warmup.yaml --- ###
+_BASE_: "unet_dice.yaml"
+THRESH: 0.52
+MODEL:
+  LOSS_TYPE: 'FrankensteinEdgeLoss'
+  OUT_CHANNELS: 1
+  BLOCK_TYPE: 'Triple'
+  POOLING_TYPE: '2Stride'
+  EDGE_WEIGHTED_LOSS:
+    TYPE: 'edge_loss_weight_mask_32' # Which preprocessed edge weight to use: e.g. edge_loss_weight_mask_32
+    SCALE: 200
+    WARMUP_ENABLED: True
+    WARMUP_START: 20000
+    WARMUP_END: 30000
+DATASETS:
+  TEST: ("/Midgard/Data/pshi/datasets/xview2/holdout_set/test/",)
+  TRAIN: ("/Midgard/Data/pshi/datasets/xview2/holdout_set/train/",)
+AUGMENTATION:
+  # Random cropping of the images
+  CROP_TYPE: 'importance'
+  CROP_SIZE: 256
+  IMAGE_OVERSAMPLING_TYPE: 'simple'
+
