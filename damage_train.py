@@ -106,6 +106,8 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
         sampler = torch_data.WeightedRandomSampler(weights=image_p, num_samples=len(image_p))
         dataloader_kwargs['sampler'] = sampler
         dataloader_kwargs['shuffle'] = False
+    elif cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE == 'none':
+        dataloader_kwargs['shuffle'] = False
     else:
         raise ValueError(f'Unknown cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE: {cfg.AUGMENTATION.IMAGE_OVERSAMPLING_TYPE}')
 

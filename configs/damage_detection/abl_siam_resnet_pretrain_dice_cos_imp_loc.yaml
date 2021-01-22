@@ -1,0 +1,40 @@
+_BASE_: "damage_base.yaml"
+MODEL:
+  LOSS_TYPE: 'SoftDiceMulticlassLoss'
+  IN_CHANNELS: 6
+  PRETRAINED:
+    ENABLED: False
+    NAME: '' # Name of the pretrained model
+    CP_FILE: '' # Checkpoint file
+    ENCODER_ONLY: False # full, encoder
+    INCLUDE_INPUT_LAYER: False # If true, weights from input layer will be included too (only if they have the same dims
+  BACKBONE:
+    ENABLED: False
+    TYPE: 'resnet34'
+    PRETRAINED: False
+  SIAMESE:
+    ENABLED: True
+    TYPE: 'RESNEXT50'
+    PRETRAINED: True
+DATASETS:
+  LOCALIZATION_MASK:
+    ENABLED: True
+    TRAIN_USE_GTS_MASK: False # If false, we will use predicted localization to train
+  INCLUDE_PRE_DISASTER: True
+TRAINER:
+  BATCH_SIZE: 8
+  LR_SCHEDULE: 'cosine_anneal'
+  CE_CLASS_BALANCE:
+    ENABLED: False
+    WEIGHTS: [0.036552, 0.0040245, 0.003355, 0.003686, 0.95238]
+DATALOADER:
+  NUM_WORKER: 8
+AUGMENTATION:
+  # Random cropping of the images
+  CROP_TYPE: 'importance'
+  CROP_SIZE: 512
+  IMAGE_OVERSAMPLING_TYPE: 'none'
+
+
+
+
