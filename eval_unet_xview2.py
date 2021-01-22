@@ -453,7 +453,7 @@ def ordinal_to_one_hot(y_pred):
 
 def setup(args):
     cfg = new_config()
-    cfg.merge_from_file(f'configs/{args.config_file}.yaml')
+    cfg.merge_from_file(f'configs/localization/{args.config_file}.yaml')
     cfg.merge_from_list(args.opts)
     cfg.NAME = args.config_file
     cfg.CP_FILE = args.resume_from
