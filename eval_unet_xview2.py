@@ -453,7 +453,7 @@ def ordinal_to_one_hot(y_pred):
 
 def setup(args):
     cfg = new_config()
-    cfg.merge_from_file(f'configs/{args.config_file}.yaml')
+    cfg.merge_from_file(f'configs/localization/{args.config_file}.yaml')
     cfg.merge_from_list(args.opts)
     cfg.NAME = args.config_file
     cfg.CP_FILE = args.resume_from
@@ -510,7 +510,14 @@ if __name__ == '__main__':
     print('ready to run 2')
     if args.resume_from: # TODO Remove this
         full_model_path = os.path.join(cfg.OUTPUT_DIR, args.resume_from)
-        net.load_state_dict(torch.load(full_model_path))
+        state_dict =  torch.load(full_model_path)
+        # TODO REMOVE ME
+        print('STATE DICTS ===== ')
+        for key in state_dict.keys():
+            print(key)
+        print("END STATE DICT")
+        # TODO UNREMOVE ME
+        net.load_state_dict(state_dict)
         print('Model loaded from {}'.format(full_model_path))
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
