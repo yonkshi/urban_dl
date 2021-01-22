@@ -23,6 +23,9 @@ MODEL:
   EDGE_WEIGHTED_LOSS:
     TYPE: 'edge_loss_weight_mask' # Which preprocessed edge weight to use: e.g. edge_loss_weight_mask_32
     SCALE: 1
+    WARMUP_ENABLED: False
+    WARMUP_START: 0
+    WARMUP_END: 1
 
 
 THRESH: 0.01 # Best threshold (only to be filled after running final model evaluation)
