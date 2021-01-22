@@ -1,6 +1,7 @@
 ## BASED ON   -- fo3_2stride_edge32_x200_scheduled_warmup.yaml --- ###
 _BASE_: "unet_dice.yaml"
 THRESH: 0.52
+OUTPUT_BASE_DIR: ('/Midgard/home/pshi/run_logs/')
 MODEL:
   LOSS_TYPE: 'FrankensteinEdgeLoss'
   OUT_CHANNELS: 1
