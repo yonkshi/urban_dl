@@ -1,4 +1,4 @@
-## BASED ON   -- fo3_2stride_edge32_x200_scheduled_warmup.yaml --- ###
+## BASED ON   -- fo3_2stride_edge32_x200.yaml --- ###
 _BASE_: "unet_dice.yaml"
 THRESH: 0.52
 OUTPUT_BASE_DIR: ('/Midgard/home/pshi/run_logs/unet/')

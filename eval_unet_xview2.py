@@ -496,7 +496,16 @@ if __name__ == '__main__':
     print('ready to run 2')
     if args.resume_from: # TODO Remove this
         full_model_path = os.path.join(cfg.OUTPUT_DIR, args.resume_from)
-        net.load_state_dict(torch.load(full_model_path))
+        state_dicts = torch.load(full_model_path)
+        # TODO DELETE ME ASAP
+        print('network params=====')
+        for name, param in net.named_parameters():
+            print(name)
+        print('Loadded dict params ==== ')
+        for key in state_dicts.keys():
+            print(key)
+
+        net.load_state_dict(state_dicts)
         print('Model loaded from {}'.format(full_model_path))
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
