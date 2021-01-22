@@ -1,9 +1,13 @@
-_BASE_: "unet_dice.yaml"
+_BASE_: "base.yaml"
 THRESH: 0.52
 MODEL:
   LOSS_TYPE: 'FrankensteinLoss'
   OUT_CHANNELS: 1
   BLOCK_TYPE: 'Triple'
+TRAINER:
+  BATCH_SIZE: 16
+DATALOADER:
+  NUM_WORKER: 16
 AUGMENTATION:
   # Random cropping of the images
   CROP_TYPE: 'importance'
