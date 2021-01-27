@@ -1,6 +1,6 @@
 _BASE_: "damage_base.yaml"
 MODEL:
-  LOSS_TYPE: 'WeightedComboLoss'
+  LOSS_TYPE: 'ComboLoss'
   IN_CHANNELS: 6
   PRETRAINED:
     ENABLED: False
