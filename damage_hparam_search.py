@@ -10,8 +10,8 @@ import experiment_manager.args
 def objective(trial, cfg):
     cfg.TRAINER.LR = trial.suggest_loguniform('learning_rate', 1e-6, 1e-3)
     cfg.TRAINER.WD = trial.suggest_loguniform('weight_decay', 1e-5, 1e-2)
-    cfg.TRAINER.B1 = 1.0 - trial.suggest_loguniform('one_minus_b1', 1e-4, 1.0)
-    cfg.TRAINER.B2 = 1.0 - trial.suggest_loguniform('one_minus_b2', 1e-4, 1.0)
+    # cfg.TRAINER.B1 = 1.0 - trial.suggest_loguniform('one_minus_b1', 1e-4, 1.0)
+    # cfg.TRAINER.B2 = 1.0 - trial.suggest_loguniform('one_minus_b2', 1e-4, 1.0)
     # cfg.TRAINER.CE_CLASS_BALANCE.ENABLED = trial.suggest_categorical('ce_class_balance', [True])
     # cfg.MODEL.LOSS_TYPE = trial.suggest_categorical('loss_type', ['ComboLoss'])
     # cfg.MODEL.BACKBONE.TYPE = trial.suggest_categorical('backbone', ['resnet34'])

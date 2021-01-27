@@ -47,7 +47,7 @@ RUNS_PATH="/Midgard/home/pshi/slurm_logs/urban_dl"
 RUN_CONFIG_PREFIX="array.$(date +'%F_%T.%N')"
 CONFIG_NAME=$1
 SLURM_MAX_TASKS=20
-SLURM_ARRAY_TASK_IDD=50
+SLURM_ARRAY_TASK_IDD=60
 sbatch << HERE
 #!/usr/bin/env bash
 #SBATCH --output="${RUNS_PATH}/%x_%A_%a.out"
