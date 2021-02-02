@@ -96,15 +96,12 @@ class RowPairCalculator:
             ph (PathHandler): used to load the required prediction and target images
         """
 
-        # TODO Yonk: LocPred, DmgPred, LocTruth, DmgTruth
         lp, dp, lt, dt = loc_pred, dmg_pred, loc_gts, dmg_gts
 
         lp_b, lt_b, dt_b = map(cls.extract_buildings, (lp, lt, dt))  # convert all damage scores 1-4 to 1
 
-        # dp = dp * lp_b  # only give credit to damages where buildings are predicted
-        # dp, dt = dp[dt_b == 1], dt[dt_b == 1]  # only score damage where there exist buildings in target damage
-        dt = dt[dt_b == 1]
-        dp = dp[dt_b == 1]
+        dp = dp * lp_b  # only give credit to damages where buildings are predicted
+        dp, dt = dp[dt_b == 1], dt[dt_b == 1]  # only score damage where there exist buildings in target damage
 
         lrow = cls.compute_tp_fn_fp(lp_b, lt_b, 1)
         drow = []

@@ -8,7 +8,6 @@ import json
 from unet.utils import *
 
 
-
 class Xview2Detectron2Dataset(torch.utils.data.Dataset):
     '''
     Dataset for Detectron2 style labelled Dataset
@@ -16,12 +15,13 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
     def __init__(self, file_path,
                  pre_or_post,
                  include_index=False,
-                 include_image_weight = False,
-                 transform = None,
-                 include_edge_mask= False,
-                 edge_mask_type = '',
-                 use_clahe = False
-
+                 include_image_weight=False,
+                 transform=None,
+                 include_edge_mask=False,
+                 edge_mask_type='',
+                 use_clahe=False,
+                 use_gts_mask=False,
+                 include_loc_mask=True
                  ):
         super().__init__()
 
@@ -41,13 +41,15 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
         self.include_edge_mask = include_edge_mask
         self.edge_mask_type = edge_mask_type
         self.use_clahe = use_clahe
-
+        self.use_gts_mask = use_gts_mask
+        self.include_loc_mask = include_loc_mask
 
     def __getitem__(self, index):
         data_sample = self.dataset_metadata[index][self.pre_or_post]
 
         sample_name = data_sample['file_name']
-        input =self._process_input(sample_name)
+        image_path = os.path.join(self.dataset_path, sample_name)
+        input = self._process_input(sample_name)
         label, class_weights = self._extract_label(data_sample['annotations'], sample_name)
         # label = label[None, ...] # C x H x W
         if self.include_edge_mask:
@@ -55,15 +57,11 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
             edge_mask = self._load_edge_mask(sample_name)
             label = np.concatenate([edge_mask, label], axis=-1)
 
-        if self.transform:
-            image_path = os.path.join(self.dataset_path, sample_name)
-            input, label, _ = self.transform([input, label, image_path])
-
-
         ret = {
             'x': input,
             'y': label,
-            'img_name':sample_name,
+            'img_name': sample_name,
+            'img_path': image_path
         }
 
         if self.include_index:
@@ -78,6 +76,13 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
             ret['image_weight'] = class_weights.sum()
             # Weights for skewing towards particular damage types
             ret['image_weight_per_class'] = class_weights
+
+        if self.include_loc_mask:
+            ret['loc_mask_gt'], ret['loc_mask_pred'] = self._load_loc_masks(image_path)
+        else:
+            ret['loc_mask_gt'], ret['loc_mask_pred'] = None
+
+        ret = self.transform(ret)
 
         return ret
 
@@ -125,19 +130,48 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
             edge_mask = np.ones((1024, 1024, 1)) / 20
             return edge_mask.astype(np.float32)
 
-        edge_mask = np.load(edge_mask_path)['arr_0'] # arr_0 is the default name for array, kind of stupid
+        edge_mask = np.load(edge_mask_path)['arr_0']  # arr_0 is the default name for array, kind of stupid
         edge_mask = edge_mask[..., None, ]
         return edge_mask
 
+    def _load_loc_masks(self, image_path):
+        image_name = os.path.basename(image_path)
+
+        # Load pre-disaster counter part
+        img_name_split = image_name.split('_')
+        img_name_split[-2] = 'pre'
+        image_name = '_'.join(img_name_split)
+
+        dir_name = os.path.dirname(image_path)
+        # Load preprocessed mask if exist
+
+        mask_path = os.path.join(dir_name, 'label_mask', image_name)
+        if os.path.exists(mask_path):
+            loc_mask_gt = imread_cached(mask_path).astype(np.float32)[..., 0:1]
+        else:
+            loc_mask_gt = None
+
+        if self.use_gts_mask:
+            loc_mask_pred = loc_mask_gt
+        else:
+            mask_path = os.path.join(dir_name, 'loc_predicted', image_name)
+            if os.path.exists(mask_path):
+                loc_mask_pred = imread_cached(mask_path).astype(np.float32)[..., 0:1]
+            else:
+                loc_mask_pred = None
+
+        return loc_mask_gt, loc_mask_pred
+
     def __len__(self):
         return self.length
+
 
 class Xview2Detectron2DamageLevelDataset(Xview2Detectron2Dataset):
 
     def __init__(self, file_path,
                  pre_or_post,
-                 background_class = 'new-channel',
-                 label_format = 'one_hot',
+                 background_class='new-channel',
+                 label_format='one_hot',
                  *args, **kwargs
                  ):
         super().__init__(file_path, pre_or_post, *args, **kwargs)

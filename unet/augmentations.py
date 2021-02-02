@@ -8,147 +8,134 @@ import torch
 from scipy import ndimage
 from unet.utils.utils import *
 
-class Resize():
+
+class Resize:
 
     def __init__(self, scale, resize_label=True):
         self.scale = scale
         self.resize_label = resize_label
 
     def __call__(self, args):
-        input, label, image_path = args
-
-        input = cv2.resize(input, None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_AREA)
+        args['x'] = cv2.resize(args['x'], None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_AREA)
         if self.resize_label:
-            label = cv2.resize(label, None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_AREA)
+            args['y'] = cv2.resize(args['y'], None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_AREA)
 
-        return input, label, image_path
+        return args
 
-class VARI():
+
+class VARI:
     def __call__(self, args):
-        input, label, image_path = args
-        image_name = os.path.basename(image_path)
-        dir_name = os.path.dirname(image_path)
-        vari_path = os.path.join(dir_name, 'clahe_vari' ,image_name)
+        image_name = os.path.basename(args['img_path'])
+        dir_name = os.path.dirname(args['img_path'])
+        vari_path = os.path.join(dir_name, 'clahe_vari', image_name)
         if os.path.exists(vari_path):
             mask = imread_cached(vari_path).astype(np.float32)[...,[0]]
-            input_t = np.concatenate([input, mask], axis=-1)
-            return input_t, label, image_path
-        assert input.shape[1] == input.shape[2] and torch.is_tensor(input), 'invalid tensor, did you forget to put VARI after Np2Torch?'
-        # Input is in BGR
-        R = input[0]
-        G = input[1]
-        B = input[2]
+            args['x'] = np.concatenate([args['x'], mask], axis=-1)
+            return args
+        assert args['x'].shape[1] == args['x'].shape[2], 'Invalid tensor'
+        assert torch.is_tensor(args['x']), 'Not a tensor, put VARI after NumpyToTorch'
+        # args['x'] is in BGR
+        R = args['x'][0]
+        G = args['x'][1]
+        B = args['x'][2]
         eps = 1e-6
         VARI = (G-R) / 2 * (eps + G+R-B) + 0.5 # Linearly transformed to be [0, 1]
         VARI = VARI.unsqueeze(0)
-        input_t = torch.cat([input, VARI])
-        return input_t, label, image_path
+        args['x'] = torch.cat([args['x'], VARI])
+        return args
 
-class Npy2Torch():
-    def __call__(self, args):
-        input, label, image_path = args
-        input_t = TF.to_tensor(input)
-        label = TF.to_tensor(label)
-        return input_t, label, image_path
-class BGR2RGB():
-    def __call__(self, args):
-        input, label, image_path = args
-        input = bgr2rgb(input)
-        return input, label, image_path
 
-class ZeroMeanUnitImage():
+class Npy2Torch:
     def __call__(self, args):
-        input, label, image_path = args
-        input /= 128
-        input -= 1
-        return input, label, image_path
+        args['x'] = TF.to_tensor(args['x'])
+        args['y'] = TF.to_tensor(args['y'])
+        args['loc_mask_pred'] = TF.to_tensor(args['loc_mask_pred'])
+        args['loc_mask_gt'] = TF.to_tensor(args['loc_mask_gt'])
+        return args
 
-class UniformCrop():
+
+class BGR2RGB:
+    def __call__(self, args):
+        args['x'] = bgr2rgb(args['x'])
+        return args
+
+
+class ZeroMeanUnitImage:
+    def __call__(self, args):
+        args['x'] /= 128
+        args['x'] -= 1
+        return args
+
+
+class UniformCrop:
     '''
     Performs uniform cropping on numpy images (cv2 images)
     '''
     def __init__(self, crop_size):
         self.crop_size = crop_size
-    def random_crop(self, input, label):
-        image_size = input.shape[-2]
+
+    def random_crop(self, image, label):
+        image_size = image.shape[-2]
         crop_limit = image_size - self.crop_size
         x, y = np.random.randint(0, crop_limit, size=2)
 
-        input = input[y:y+self.crop_size, x:x+self.crop_size, :]
-        label = label[y:y+self.crop_size, x:x+self.crop_size]
+        input = image[y:y+self.crop_size, x:x+self.crop_size, ...]
+        label = label[y:y+self.crop_size, x:x+self.crop_size, ...]
         return input, label
 
     def __call__(self, args):
-        input, label, image_path = args
-        input, label = self.random_crop(input, label)
-        return input, label, image_path
+        args['x'], args['y'] = self.random_crop(args['x'], args['y'])
+        return args
+
 
 class ImportanceRandomCrop(UniformCrop):
     def __init__(self, crop_size, label_type):
         super().__init__(crop_size)
         self.label_type = label_type
-    def __call__(self, args):
-        input, label, image_path = args
 
-        SAMPLE_SIZE = 5 # an arbitrary number that I came up with
+    def __call__(self, args):
+        SAMPLE_SIZE = 5  # an arbitrary number that I came up with
         BALANCING_FACTOR = 200
 
-        random_crops = [self.random_crop(input, label) for i in range(SAMPLE_SIZE)]
+        random_crops = [self.random_crop(args['x'], args['y']) for i in range(SAMPLE_SIZE)]
         # TODO Multi class vs edge mask
         weights = []
-        for input, label in random_crops:
+        for args['x'], args['y'] in random_crops:
             if self.label_type == 'ordinal':
-                weights.append(label[...,-1].sum())
-            elif label.shape[2] >= 4:
+                weights.append(args['y'][...,-1].sum())
+            elif args['y'].shape[2] >= 4:
                 # Damage detection, multi class, excluding backround
-                weights.append(label[...,:-1].sum())
-            elif label.shape[2] > 1:
+                weights.append(args['y'][...,:-1].sum())
+            elif args['y'].shape[2] > 1:
                 # Edge Mask, excluding edge masks
-                weights.append(label[...,0].sum())
+                weights.append(args['y'][...,0].sum())
             else:
-                weights.append(label.sum())
-        crop_weights = np.array([label.sum() for input, label in random_crops]) + BALANCING_FACTOR
+                weights.append(args['y'].sum())
+        crop_weights = np.array([args['y'].sum() for args['x'], args['y'] in random_crops]) + BALANCING_FACTOR
         crop_weights = crop_weights / crop_weights.sum()
 
         sample_idx = np.random.choice(SAMPLE_SIZE, p=crop_weights)
-        input, label = random_crops[sample_idx]
+        args['x'], args['y'] = random_crops[sample_idx]
 
-        return input, label, image_path
+        return args
 
-class IncludeLocalizationMask():
+
+class IncludeLocalizationMask:
     def __init__(self, use_gts_mask=False):
         self.use_gts_mask = use_gts_mask
 
     def __call__(self, args):
-        input, label, image_path = args
-        image_name = os.path.basename(image_path)
+        args['x'] = np.concatenate([args['x'], args['loc_mask_pred']], axis=-1)
+        return args
 
-        # Load predisaster counter part
-        img_name_split = image_name.split('_')
-        img_name_split[-2] = 'pre'
-        image_name = '_'.join(img_name_split)
 
-        dir_name = os.path.dirname(image_path)
-        # Load preprocessed mask if exist
-        subdir = 'label_mask' if self.use_gts_mask else 'loc_predicted'
-        mask_path = os.path.join(dir_name, subdir, image_name)
-
-        assert os.path.exists(mask_path), 'Mask data is not generated, please double check \n' + mask_path
-
-        mask = imread_cached(mask_path).astype(np.float32)
-        mask = mask[...,0][...,None] # [H, W, 3] -> [H, W, 1]
-
-        input = np.concatenate([input, mask], axis=-1)
-
-        return input, label, image_path
-class StackPreDisasterImage():
+class StackPreDisasterImage:
     def __init__(self, pre_or_post='pre'):
         self.pre_or_post = pre_or_post
 
     def __call__(self, args):
-        input, label, image_path = args
-        image_name = os.path.basename(image_path)
-        dir_name = os.path.dirname(image_path)
+        image_name = os.path.basename(args['img_path'])
+        dir_name = os.path.dirname(args['img_path'])
 
         # Load counter part
         img_name_split = image_name.split('_')
@@ -161,29 +148,30 @@ class StackPreDisasterImage():
 
         # RGB -> BGR and stack
         # cp_image = bgr2rgb(cp_image)
-        input = np.concatenate([input, cp_image], axis=-1)
-        return input, label, image_path
+        args['x'] = np.concatenate([args['x'], cp_image], axis=-1)
+        return args
 
-class RandomFlipRotate():
+
+class RandomFlipRotate:
     def __call__(self, args):
-        input, label, image_path = args
         _hflip = np.random.choice([True, False])
         _vflip = np.random.choice([True, False])
         _rot = np.random.randint(0, 360)
 
         if _hflip:
-            input = np.flip(input, axis=0)
-            label = np.flip(label, axis=0)
+            args['x'] = np.flip(args['x'], axis=0)
+            args['y'] = np.flip(args['y'], axis=0)
 
         if _vflip:
-            input = np.flip(input, axis=1)
-            label = np.flip(label, axis=1)
+            args['x'] = np.flip(args['x'], axis=1)
+            args['y'] = np.flip(args['y'], axis=1)
 
-        # input = ndimage.rotate(input, _rot, reshape=False).copy()
-        # label = ndimage.rotate(label, _rot, reshape=False).copy()
-        input = input.copy()
-        label = label.copy()
-        return input, label, image_path
+        # args['x'] = ndimage.rotate(args['x'], _rot, reshape=False).copy()
+        # args['y'] = ndimage.rotate(args['y'], _rot, reshape=False).copy()
+        args['x'] = args['x'].copy()
+        args['y'] = args['y'].copy()
+        return args
+
 
 def bgr2rgb(img):
     return img[..., [2,1,0]]

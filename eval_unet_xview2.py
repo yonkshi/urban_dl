@@ -364,6 +364,7 @@ def model_eval(net, cfg, device, run_type='TEST', max_samples = 1000, step=0, ep
                'epoch': epoch,
                })
 
+
 def downsample_dataset_for_eval(y_true, y_pred):
     # Full dataset is too big to compute for the CPU, so we down sample it
     num_samples = y_pred.shape[0]
@@ -374,6 +375,7 @@ def downsample_dataset_for_eval(y_true, y_pred):
         y_true = y_true[down_idx]
 
     return y_true, y_pred
+
 
 def inference_loop(net, cfg, device,
                     callback = None,
@@ -386,18 +388,6 @@ def inference_loop(net, cfg, device,
     start_time = timeit.default_timer()
     net.to(device)
     net.eval()
-
-    # # reset the generators
-    # if dataset is None:
-    #     dset_source = cfg.DATASETS.TEST[0] if run_type == 'TEST' else cfg.DATASETS.TRAIN[0]
-    #     trfm = []
-    #     if cfg.AUGMENTATION.RESIZE: trfm.append( Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
-    #     trfm.append(BGR2RGB())
-    #     if cfg.DATASETS.USE_CLAHE_VARI: trfm.append(VARI())
-    #     trfm.append(Npy2Torch())
-    #     trfm = transforms.Compose(trfm)
-    #
-    #     dataset = Xview2Detectron2Dataset(dset_source, pre_or_post=cfg.DATASETS.PRE_OR_POST, transform=trfm)
 
     dataloader = torch_data.DataLoader(dataset,
                                        batch_size=batch_size,
@@ -416,7 +406,6 @@ def inference_loop(net, cfg, device,
 
             imgs = batch['x'].to(device)
             y_label = batch['y'].to(device)
-            sample_name = batch['img_name']
 
             y_pred = net(imgs)
 
@@ -432,9 +421,9 @@ def inference_loop(net, cfg, device,
 
             if callback:
                 if callback_include_x:
-                    callback(imgs, y_label, y_pred, sample_name)
+                    callback(imgs, y_label, y_pred, batch)
                 else:
-                    callback(y_label, y_pred, sample_name)
+                    callback(y_label, y_pred, batch)
 
             if step + 1 % 100 == 0 or step == dataset_length-1:
                 print(f'Processed {step+1}/{dataset_length}')

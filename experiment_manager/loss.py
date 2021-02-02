@@ -74,6 +74,7 @@ def jaccard_like_loss(input:torch.Tensor, target:torch.Tensor):
     denom = (iflat**2 + tflat**2).sum() - (iflat * tflat).sum() + eps
 
     return 1 - ((2. * intersection) / denom)
+
 def jaccard_like_balanced_loss(input:torch.Tensor, target:torch.Tensor):
     input_sigmoid = torch.sigmoid(input)
     eps = 1e-6

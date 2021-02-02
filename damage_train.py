@@ -23,10 +23,10 @@ from unet.dataloader import Xview2Detectron2DamageLevelDataset
 from unet.augmentations import *
 from unet import schedulers
 
+import experiment_manager.loss
 from experiment_manager.args import default_argument_parser
 from experiment_manager.metrics import MultiClassF1
 from experiment_manager.config import new_config
-from experiment_manager.loss import *
 from eval_unet_xview2 import inference_loop
 from eval_util.xview2_scoring import RowPairCalculator, XviewMetrics
 
@@ -56,14 +56,17 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
     elif cfg.MODEL.LOSS_TYPE == 'WeightedCrossEntropyLoss':
         criterion = weighted_ce_loss
     elif cfg.MODEL.LOSS_TYPE == 'SoftDiceMulticlassLoss':
-        criterion = soft_dice_loss_multi_class
+        # Wrapping these to match the signature with component loss reporting
+        criterion = loss_component_wrapper(experiment_manager.loss.soft_dice_loss_multi_class)
     elif cfg.MODEL.LOSS_TYPE == 'SoftDiceMulticlassLossDebug':
-        criterion = soft_dice_loss_multi_class_debug
+        criterion = loss_component_wrapper(experiment_manager.loss.soft_dice_loss_multi_class_debug)
     elif cfg.MODEL.LOSS_TYPE == 'GeneralizedDiceLoss':
-        criterion = generalized_soft_dice_loss_multi_class
+        criterion = loss_component_wrapper(experiment_manager.loss.generalized_soft_dice_loss_multi_class)
     elif cfg.MODEL.LOSS_TYPE == 'JaccardLikeLoss':
-        criterion = jaccard_like_loss_multi_class
+        criterion = loss_component_wrapper(experiment_manager.loss.jaccard_like_loss_multi_class)
     elif cfg.MODEL.LOSS_TYPE == 'ComboLoss':
+        criterion = combo_loss
+    elif cfg.MODEL.LOSS_TYPE == 'HyperComboLoss':
         criterion = combo_loss
     elif cfg.MODEL.LOSS_TYPE == 'MeanSquareError':
         criterion = mean_square_error
@@ -142,12 +145,10 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
             optimizer.zero_grad()
 
             y_pred = net(x)
-            ce_loss = 0
-            dice_loss = 0
             if weighted_criterion:
-                loss, (ce_loss, dice_loss) = criterion(y_pred, y_gts, weights)
+                loss, loss_components = criterion(y_pred, y_gts, weights)
             else:
-                loss = criterion(y_pred, y_gts)
+                loss, loss_components = criterion(y_pred, y_gts)
             epoch_loss += loss.item()
 
             loss.backward()
@@ -169,14 +170,13 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
 
                 log_data = {
                     'loss': np.mean(loss_set),
-                    'ce_component_loss': ce_loss,
-                    'dice_component_loss': dice_loss,
                     'gpu_memory': max_mem,
                     'time': time_per_n_batches,
                     'total_positive_pixels': np.mean(positive_pixels_set),
                     'step': global_step,
                     'lr': optimizer.param_groups[0]['lr'],
                 }
+                log_data.update(loss_components)
 
                 wandb.log(log_data, step=global_step)
 
@@ -243,6 +243,7 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
     #                use_confusion_matrix=True, include_disaster_type_breakdown=True)
     return dmg_model_eval(net, cfg, device, global_step, max_samples=None, step=global_step, epoch=epoch, use_confusion_matrix=True, include_disaster_type_breakdown=True)
 
+
 def dmg_model_eval(net, cfg, device, global_step,
                    run_type='VALIDATION',
                    max_samples = None,
@@ -262,7 +263,9 @@ def dmg_model_eval(net, cfg, device, global_step,
     confusion_matrices_by_disaster_type = {}
     component_f1 = []
     allrows = []
-    def evaluate(x, y_true, y_pred, img_filenames):
+
+    def evaluate(x, y_true, y_pred, batch):
+        img_filenames = batch['img_name']
 
         # Only enable me if testing pretrained winner model where bg is class 0 !!
         # y_pred = y_pred[:,[1,2,3,4,0]]
@@ -275,24 +278,18 @@ def dmg_model_eval(net, cfg, device, global_step,
 
         # === Component F1 score
         if include_component_f1:
-            loss, loss_component = soft_dice_loss_multi_class_debug(y_pred, y_true)
+            loss, loss_component = experiment_manager.loss.soft_dice_loss_multi_class_debug(y_pred, y_true)
             component_f1.append(loss_component.cpu().detach().numpy())
 
         # === Official F1 evaluation
         y_pred_np = y_pred.argmax(dim=1).cpu().detach().numpy() # One-hot to not-one-hot
         y_true_np = y_true.argmax(dim=1).cpu().detach().numpy()
+        l_pred_np = batch['loc_mask_pred'].cpu().detach().numpy().squeeze()
+        l_true_np = batch['loc_mask_gt'].cpu().detach().numpy().squeeze()
         # loc_row is not being used, but to keep original code intact, we keep it here
 
-        row = RowPairCalculator.get_row_pair(np.zeros([2]), y_pred_np, np.zeros([2]), y_true_np)
+        row = RowPairCalculator.get_row_pair(l_pred_np, y_pred_np, l_true_np, y_true_np)
         allrows.append(row)
-
-        # # #  DEBUGGED TP FP FN
-        # for i in range(4):
-        #     cls = i * 3
-        #     print(f'TP {i}:', row[1][cls+0], int(tp[i].item()))
-        #     print(f'FN {i}:', row[1][cls + 1], int(fn[i].item()))
-        #     print(f'FP {i}:', row[1][cls + 2], int(fp[i].item()))
-        #     print('')
 
         # === Confusion Matrix stuff
         if use_confusion_matrix:
@@ -302,7 +299,7 @@ def dmg_model_eval(net, cfg, device, global_step,
             _mat = confusion_matrix(y_true_flat.flatten(), y_pred_flat.flatten(), labels=labels)
             confusion_matrix_with_bg.append(_mat)
 
-        #=== Breakdown by image class
+        # === Breakdown by image class ===
         # Disaster type
         if include_disaster_type_breakdown:
             for i, img_filename in enumerate(img_filenames):
@@ -328,8 +325,10 @@ def dmg_model_eval(net, cfg, device, global_step,
     elif run_type == 'TEST':
         dset_source = cfg.DATASETS.TEST[0]
         set_name = 'test_set'
+    else:
+        raise ValueError('Unknown eval run_type')
 
-    trfm = build_transforms(cfg, use_gts_mask = use_gts_mask)
+    trfm = build_transforms(cfg, use_gts_mask=use_gts_mask)
     bg_class = 'new-class' if cfg.MODEL.BACKGROUND.TYPE == 'new-class' else None
     dataset = Xview2Detectron2DamageLevelDataset(dset_source,
                                                  pre_or_post='post',
@@ -338,12 +337,11 @@ def dmg_model_eval(net, cfg, device, global_step,
                                                  label_format=cfg.DATASETS.LABEL_FORMAT,)
     inference_loop(net, cfg, device, evaluate,
                    batch_size=cfg.TRAINER.BATCH_SIZE,
-                   max_samples = max_samples,
-                   dataset = dataset,
+                   max_samples=max_samples,
+                   dataset=dataset,
                    callback_include_x=True)
 
     # Summary gathering ===
-
     print('Computing F1 score ... ', end=' ', flush=True)
     # Max of the mean F1 score
 
@@ -363,14 +361,13 @@ def dmg_model_eval(net, cfg, device, global_step,
             wandb.log({
                 f'disaster-{disaster_type}-f1': f1
             }, step=global_step)
+
     # official Xivew2 scoring
-    offical_score = XviewMetrics(allrows)
-    print(f'official_f1', offical_score.df1)
+    official_score = XviewMetrics(allrows)
+    print(f'official_{set_name}_f1', official_score.df1)
     wandb.log({
-        f'official-f1': offical_score.df1
+        f'official-{set_name}-f1': official_score.df1
     }, step=global_step)
-
-
 
     confmx_dir = f'{cfg.OUTPUT_DIR}/confusion_matrices/'
     if include_disaster_type_breakdown and use_confusion_matrix:
@@ -392,7 +389,6 @@ def dmg_model_eval(net, cfg, device, global_step,
     for fpr, fnr, dmg in zip(all_fpr, all_fnr, damage_levels):
         log_data[f'{set_name} {dmg} false negative rate'] = fnr
         log_data[f'{set_name} {dmg} false positive rate'] = fpr
-
 
     # Plot confusion matrix
     if use_confusion_matrix:
@@ -489,19 +485,73 @@ def build_transforms(cfg, for_training=False, use_gts_mask = False):
     trfm = transforms.Compose(trfm)
     return trfm
 
+
 def combo_loss(p, y, class_weights=None):
     y_ = y.argmax(dim=1).long()
     ce = F.cross_entropy(p, y_, weight=class_weights)
-    dice = soft_dice_loss_multi_class(p, y)
-    loss =  ce + dice
+    dice = experiment_manager.loss.soft_dice_loss_multi_class(p, y)
+    loss = ce + dice
     # only return component loss if using weighted ce
-    if class_weights is not None: return loss, (ce, dice)
+    loss_components = {'loss_component_ce': ce,
+                    'loss_component_dice': dice}
+    return loss, loss_components
+
+
+def soft_dice_loss_per_class(input:torch.Tensor, y:torch.Tensor):
+    p = torch.softmax(input, dim=1)
+    eps = 1e-6
+    sum_dims = (0, 2, 3)  # Batch, height, width
+
+    intersection = (y * p).sum(dim=sum_dims)
+    denom = (y.sum(dim=sum_dims) + p.sum(dim=sum_dims)).clamp(eps)
+    loss = 1 - (2. * intersection / denom)
     return loss
+
+
+def focal_loss(p, y):
+    p = torch.sigmoid(p)
+    eps = 1e-6
+    gamma = 2
+    outputs = torch.clamp(p, eps, 1. - eps)
+    targets = torch.clamp(y, eps, 1. - eps)
+    pt = (1 - targets) * (1 - outputs) + targets * outputs
+    return (-(1. - pt) ** gamma * torch.log(pt)).mean(dims=(0, 2, 3))
+
+
+def hypercombo_loss(p, y, class_weights):
+    y_ = y.argmax(dim=1).long()
+    ce = F.cross_entropy(p, y_)
+    dices = soft_dice_loss_per_class(p, y)
+    focals = focal_loss(p, y)
+    loss = ce + dice
+    # only return component loss if using weighted ce
+    loss_components = {'loss_component_ce': ce,
+                    'loss_component_dice': dice,
+                    'loss_component_focal': focal}
+
+    return loss, loss_components
+
 
 def weighted_ce_loss(p, y, class_weights=None):
     y_ = y.argmax(dim=1).long()
     loss = F.cross_entropy(p, y_, weight=class_weights)
-    return loss
+    return loss, {}
+
+
+def cross_entropy_loss(pred, y):
+    y = y.argmax(dim=1).long()
+    return F.cross_entropy(pred, y), {}
+
+
+def mean_square_error(p, y):
+    p = torch.sigmoid(p)
+    return F.mse_loss(p, y), {}
+
+
+def loss_component_wrapper(loss):
+    def wrapped_func(p, y):
+        return loss(p, y), {}
+    return wrapped_func
 
 def image_sampling_weight(dataset_metadata):
     print('performing oversampling...', end='', flush=True)
@@ -542,14 +592,6 @@ def summarize_config(cfg, device):
              ' ': run_config.values(),
              }
     print(tabulate(table, headers='keys', tablefmt="fancy_grid", ))
-
-def cross_entropy_loss(pred, y):
-    y = y.argmax(dim=1).long()
-    return F.cross_entropy(pred, y)
-
-def mean_square_error(p, y):
-    p = torch.sigmoid(p)
-    return F.mse_loss(p, y)
 
 def setup(args):
     cfg = new_config()

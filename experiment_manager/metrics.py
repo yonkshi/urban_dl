@@ -69,10 +69,10 @@ class MultiThresholdMetric():
         return self._recall
 
     def compute_basic_metrics(self):
-        '''
+        """
         Computes False Negative Rate and False Positive rate
         :return:
-        '''
+        """
 
         false_pos_rate = self.FP/(self.FP + self.TN)
         false_neg_rate = self.FN / (self.FN + self.TP)
@@ -84,41 +84,39 @@ class MultiThresholdMetric():
         return 2 * self.precision * self.recall / denom
 
 class MultiClassF1():
-    def __init__(self, ignore_last_class = False):
-
-        # FIXME Does not operate properly
-        # Or does it
-
-        '''
-        Takes in rasterized and batched images
-        :param y_true: [B, H, W]
-        :param y_pred: [B, C, H, W]
-        :param threshold: [Thresh]
-        '''
-
-        self._data_dims = (0, 2, 3) # For a B/W image, it should be [Thresh, B, C, H, W],
+    def __init__(self, ignore_last_class=False):
+        self._data_dims = (0, 2, 3)  # For a B/W image, it should be [Thresh, B, C, H, W], <-- what is this comment O.o
         self.ignore_last_class = ignore_last_class
         self.TP = 0
         self.TN = 0
         self.FP = 0
         self.FN = 0
 
-    def add_sample(self, y_true:torch.Tensor, y_pred):
-        y_true_bin = y_true.bool() # [B,  C, ...]
+    def add_sample(self, y_true: torch.Tensor, y_pred: torch.Tensor, y_loc: torch.Tensor = None):
+        """
+        Takes in rasterized and batched images
+        :param y_true: [B, H, W]
+        :param y_pred: [B, C, H, W]
+        """
+
+        y_true_bin = y_true.bool()  # [B,  C, ...]
         # Ignore background classes
         if self.ignore_last_class:
-            y_true_mask = ~y_true_bin[:, [-1]] # [ B, 1, H, W]
+            y_true_mask = ~y_true_bin[:, [-1]]  # [ B, 1, H, W]
         else:
             y_true_mask = torch.full_like(y_true[:, [-1]], True, dtype=torch.bool)
+
+        if y_loc:
+            y_true_mask = y_true_mask & y_loc.bool()
         # Make y_pred from decimal to one hot along dim C
         y_pred_argmax = torch.argmax(y_pred, dim=1, keepdim=True)  # [B, C, ...]
-        y_pred_oh = torch.zeros_like(y_pred, dtype=torch.bool).scatter_(1, y_pred_argmax,True) # one-hot
+        y_pred_oh = torch.zeros_like(y_pred, dtype=torch.bool).scatter_(1, y_pred_argmax, True)  # one-hot
 
         # remove the background
-        _tp = (y_true_bin & y_pred_oh)[:,:-1]
-        _tn = ((~y_true_bin & ~y_pred_oh) & y_true_mask)[:,:-1]
-        _fp = ((~y_true_bin & y_pred_oh) & y_true_mask)[:,:-1]
-        _fn = ((y_true_bin & ~y_pred_oh) & y_true_mask)[:,:-1]
+        _tp = (y_true_bin & y_pred_oh)[:, :-1]
+        _tn = ((~y_true_bin & ~y_pred_oh) & y_true_mask)[:, :-1]
+        _fp = ((~y_true_bin & y_pred_oh) & y_true_mask)[:, :-1]
+        _fn = ((y_true_bin & ~y_pred_oh) & y_true_mask)[:, :-1]
 
         tp = _tp.float().sum(dim=self._data_dims)
         tn = _tn.float().sum(dim=self._data_dims)
@@ -150,7 +148,7 @@ class MultiClassF1():
         individual_f1 = 2 * self.TP / (2 * self.TP + self.FN + self.FP)
         # if not include_bg:
         #     individual_f1 = individual_f1[..., :-1]
-        f1 = len(individual_f1) / (individual_f1 ** -1).sum() # Are we sure this is the right avg here?
+        f1 = len(individual_f1) / ((individual_f1 + 1e-6) ** -1).sum()  # Are we sure this is the right avg here?
 
         f1 = f1.cpu().item()
         individual_f1 = individual_f1.cpu().numpy()

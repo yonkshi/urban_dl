@@ -25,6 +25,7 @@ def objective(trial, cfg):
 
     return damage_train.damage_train(trial, cfg)
 
+
 def hyperparameter_search_argument_parser():
     parser = experiment_manager.args.default_argument_parser()
     parser.add_argument('--job-id', dest='job_id', type=str,
@@ -34,6 +35,7 @@ def hyperparameter_search_argument_parser():
     parser.add_argument('--wandb-project', dest='wandb_project', type=str,
                         default='urban_dl_ablation', help='Wandb project')
     return parser
+
 
 def setup(args):
     cfg = damage_train.setup(args)
@@ -50,6 +52,7 @@ def setup(args):
         cfg.OUTPUT_DIR = os.path.join(cfg.OUTPUT_BASE_DIR, cfg.NAME)
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     return cfg
+
 
 def main():
     parser = hyperparameter_search_argument_parser()
@@ -79,6 +82,7 @@ def main():
         print(f'Best performing trial so far: {study.best_trial}')
     except ValueError:
         pass
+
 
 if __name__ == '__main__':
     main()
