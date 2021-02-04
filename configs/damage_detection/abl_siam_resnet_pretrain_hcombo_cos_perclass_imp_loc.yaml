@@ -22,6 +22,8 @@ DATASETS:
     TRAIN_USE_GTS_MASK: False # If false, we will use predicted localization to train
   INCLUDE_PRE_DISASTER: True
 TRAINER:
+  LR: 0.0002
+  WD: 1e-6
   BATCH_SIZE: 8
   LR_SCHEDULE: 'cosine_anneal'
   HYPERCOMBO_WEIGHTS: [.5, 2, .1, .1, .3, .3, .2, 11]

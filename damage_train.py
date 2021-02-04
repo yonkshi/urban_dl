@@ -67,7 +67,7 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
     elif cfg.MODEL.LOSS_TYPE == 'ComboLoss':
         criterion = combo_loss
     elif cfg.MODEL.LOSS_TYPE == 'HyperComboLoss':
-        criterion = combo_loss
+        criterion = hypercombo_loss
     elif cfg.MODEL.LOSS_TYPE == 'MeanSquareError':
         criterion = mean_square_error
     else:
@@ -241,7 +241,7 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
     # Final evaluation
     # dmg_model_eval(net, cfg, device, global_step, max_samples=None, run_type='TEST', step=global_step, epoch=epoch,
     #                use_confusion_matrix=True, include_disaster_type_breakdown=True)
-    return dmg_model_eval(net, cfg, device, global_step, max_samples=None, step=global_step, epoch=epoch, use_confusion_matrix=True, include_disaster_type_breakdown=True)
+    return dmg_model_eval(net, cfg, device, global_step, max_samples=None, step=global_step, epoch=epoch, use_confusion_matrix=True, include_disaster_type_breakdown=True, criterion=criterion)
 
 
 def dmg_model_eval(net, cfg, device, global_step,
@@ -250,6 +250,7 @@ def dmg_model_eval(net, cfg, device, global_step,
                    step=0, epoch=0,
                    use_confusion_matrix=False,
                    include_component_f1=False,
+                   criterion=None,
                    include_disaster_type_breakdown = False):
     '''
     Runner that is concerned with training changes
@@ -492,8 +493,8 @@ def combo_loss(p, y, class_weights=None):
     dice = experiment_manager.loss.soft_dice_loss_multi_class(p, y)
     loss = ce + dice
     # only return component loss if using weighted ce
-    loss_components = {'loss_component_ce': ce,
-                    'loss_component_dice': dice}
+    loss_components = {'loss_component_ce': ce.sum(),
+                    'loss_component_dice': dice.sum()}
     return loss, loss_components
 
 
@@ -515,19 +516,20 @@ def focal_loss(p, y):
     outputs = torch.clamp(p, eps, 1. - eps)
     targets = torch.clamp(y, eps, 1. - eps)
     pt = (1 - targets) * (1 - outputs) + targets * outputs
-    return (-(1. - pt) ** gamma * torch.log(pt)).mean(dims=(0, 2, 3))
+    return (-(1. - pt) ** gamma * torch.log(pt)).mean(dim=(0, 2, 3))
 
 
-def hypercombo_loss(p, y, class_weights):
+def hypercombo_loss(p, y, loss_weights=(.5, 2, .1, .1, .3, .3, .2, 11)):
     y_ = y.argmax(dim=1).long()
     ce = F.cross_entropy(p, y_)
     dices = soft_dice_loss_per_class(p, y)
     focals = focal_loss(p, y)
-    loss = ce + dice
-    # only return component loss if using weighted ce
-    loss_components = {'loss_component_ce': ce,
-                    'loss_component_dice': dice,
-                    'loss_component_focal': focal}
+    seg_loss = dices * loss_weights[0] + focals * loss_weights[1]
+    loss = sum(seg_loss * torch.tensor(loss_weights[2:7], device=seg_loss.device)) + ce * loss_weights[7]
+    loss_components = {'loss_component_ce': ce.sum(),
+                    'loss_component_dice': dices.sum(),
+                    'loss_component_focal': focals.sum(),
+                    'loss_component_segmentation': seg_loss.sum()}
 
     return loss, loss_components
 

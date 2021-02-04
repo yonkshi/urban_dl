@@ -1,4 +1,4 @@
-_BASE_: "abl_siam_resnet_pretrain_loc_combo_ce_importance_perclass.yaml"
+_BASE_: "abl_siam_resnet_pretrain_hcombo_cos_perclass_imp_loc.yaml"
 DEBUG: True
 DATALOADER:
   NUM_WORKER: 0

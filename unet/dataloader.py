@@ -25,7 +25,7 @@ class Xview2Detectron2Dataset(torch.utils.data.Dataset):
                  ):
         super().__init__()
 
-        ds_path = os.path.join(file_path,'labels.json')
+        ds_path = os.path.join(file_path, 'labels.json')
         with open(ds_path) as f:
             ds = json.load(f)
         self.dataset_metadata = ds
