@@ -25,7 +25,12 @@ TRAINER:
   LR: 0.0001
   WD: 1e-6
   BATCH_SIZE: 8
-  LR_SCHEDULE: 'cosine_anneal'
+  LR_SCHEDULE: 'multi_step'
+  SCHEDULER:
+    GAMMA: 0.5
+    MILESTONES: [ 17355,  38182,  59009,  79836, 100663, 114548, 163144, 173557,
+                  208269, 242981, 312404, 381827, 451250, 520673, 590096, 624808,
+                  659520 ]  # from https://github.com/vdurnov/xview2_1st_place_solution/blob/master/train50_cls_cce.py, scaled to 90 epochs
   HYPERCOMBO_WEIGHTS: [.5, 2, .1, .1, .3, .3, .2, 11]
   CE_CLASS_BALANCE:
     ENABLED: False

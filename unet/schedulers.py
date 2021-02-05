@@ -15,5 +15,11 @@ def scheduler_from_cfg(cfg, optimizer):
         return torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, cfg.TRAINER.SCHEDULER.T_0, cfg.TRAINER.SCHEDULER.T_MULT)
     if cfg.TRAINER.LR_SCHEDULE == 'step':
         return torch.optim.lr_scheduler.StepLR(optimizer, cfg.TRAINER.SCHEDULER.STEP_SIZE, cfg.TRAINER.SCHEDULER.GAMMA)
+    if cfg.TRAINER.LR_SCHEDULE == 'multi_step':
+        return torch.optim.lr_scheduler.MultiStepLR(
+            optimizer,
+            milestones=cfg.TRAINER.SCHEDULER.MILESTONES,
+            gamma=cfg.TRAINER.SCHEDULER.GAMMA
+        )
     else:
         raise Exception(f'Unknown scheduler {cfg.TRAINER.LR_SCHEDULE}')
