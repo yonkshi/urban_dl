@@ -98,7 +98,11 @@ class RowPairCalculator:
 
         lp, dp, lt, dt = loc_pred, dmg_pred, loc_gts, dmg_gts
 
-        lp_b, lt_b, dt_b = map(cls.extract_buildings, (lp, lt, dt))  # convert all damage scores 1-4 to 1
+        # lp_b, lt_b, dt_b = map(cls.extract_buildings, (lp, lt, dt))  # convert all damage scores 1-4 to 1
+
+        dt_b = cls.extract_buildings(dt)
+        lp_b = lp > 0.5
+        lt_b = lt > 0.5
 
         dp = dp * lp_b  # only give credit to damages where buildings are predicted
         dp, dt = dp[dt_b == 1], dt[dt_b == 1]  # only score damage where there exist buildings in target damage

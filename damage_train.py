@@ -220,7 +220,7 @@ def train_net(net, cfg, device, trial: optuna.Trial=None):
         # Evaluation for multiclass F1 score
         print('Validation set:')
         val_f1 = dmg_model_eval(net, cfg, device, global_step, max_samples=100, run_type='VALIDATION', step=global_step, epoch=epoch, use_confusion_matrix=False)
-        val_moving_avg = val_f1 * 0.3 +  val_moving_avg * 0.7
+        val_moving_avg = val_f1 * 0.3 + val_moving_avg * 0.7
         print('Training set:')
         dmg_model_eval(net, cfg, device, global_step, max_samples=100, run_type='TRAIN', step=global_step, epoch=epoch, use_confusion_matrix=False)
 
@@ -519,7 +519,7 @@ def focal_loss(p, y):
     return (-(1. - pt) ** gamma * torch.log(pt)).mean(dim=(0, 2, 3))
 
 
-def hypercombo_loss(p, y, loss_weights=(.5, 2, .1, .1, .3, .3, .2, 11)):
+def hypercombo_loss(p, y, loss_weights=(.5, 2, .1, .1, .3, .3, .2, 11)):  # (.5, 2, .1, .1, .3, .3, .2, 11)
     y_ = y.argmax(dim=1).long()
     ce = F.cross_entropy(p, y_)
     dices = soft_dice_loss_per_class(p, y)
