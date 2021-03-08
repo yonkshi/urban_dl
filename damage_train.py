@@ -474,12 +474,15 @@ def build_transforms(cfg, for_training=False, use_gts_mask = False):
     if cfg.DATASETS.LOCALIZATION_MASK.ENABLED: trfm.append(IncludeLocalizationMask(use_gts_mask))
     if cfg.DATASETS.INCLUDE_PRE_DISASTER: trfm.append(StackPreDisasterImage())
     if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
-    if cfg.AUGMENTATION.CROP_TYPE == 'uniform' and for_training:
-        trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
-    elif cfg.AUGMENTATION.CROP_TYPE == 'importance' and for_training:
-        trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE, label_type=cfg.DATASETS.LABEL_FORMAT))
-    if cfg.AUGMENTATION.RANDOM_FLIP_ROTATE and for_training:
-        trfm.append(RandomFlipRotate())
+    if for_training:
+        if cfg.AUGMENTATION.DIALTE:
+            trfm.append(Dilate())
+        if cfg.AUGMENTATION.CROP_TYPE == 'uniform':
+            trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
+        elif cfg.AUGMENTATION.CROP_TYPE == 'importance':
+            trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE, label_type=cfg.DATASETS.LABEL_FORMAT))
+        if cfg.AUGMENTATION.RANDOM_FLIP_ROTATE:
+            trfm.append(RandomFlipRotate())
     trfm.append(Npy2Torch())
     if cfg.AUGMENTATION.ENABLE_VARI: trfm.append(VARI())
     if cfg.AUGMENTATION.ZERO_MEAN: trfm.append(ZeroMeanUnitImage())

@@ -73,6 +73,7 @@ AUGMENTATION:
   RESIZE_RATIO: 1.0
   CROP_TYPE: 'none'
   CROP_SIZE: 1024
+  DILATE: False
   IMAGE_OVERSAMPLING_TYPE: 'none' # [none, simple, per_class]
   ENABLE_VARI: False # False NDVI for detecting vegetation
   RANDOM_FLIP_ROTATE: True

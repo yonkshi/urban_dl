@@ -23,6 +23,16 @@ class Resize:
         return args
 
 
+class Dilate:
+    def __init__(self, kernel=np.ones(5, 5), iterations=2):
+        self.kernel = kernel
+        self.iterations = iterations
+
+    def __call__(self, args):
+        args['y'] = cv2.dilate(args['y'].T, kernel=self.kernel, iterations=self.iterations).T
+        return args
+
+
 class VARI:
     def __call__(self, args):
         image_name = os.path.basename(args['img_path'])
