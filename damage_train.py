@@ -475,14 +475,14 @@ def build_transforms(cfg, for_training=False, use_gts_mask = False):
     if cfg.DATASETS.INCLUDE_PRE_DISASTER: trfm.append(StackPreDisasterImage())
     if cfg.AUGMENTATION.RESIZE: trfm.append(Resize(scale=cfg.AUGMENTATION.RESIZE_RATIO))
     if for_training:
-        if cfg.AUGMENTATION.DIALTE:
-            trfm.append(Dilate())
         if cfg.AUGMENTATION.CROP_TYPE == 'uniform':
             trfm.append(UniformCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE))
         elif cfg.AUGMENTATION.CROP_TYPE == 'importance':
             trfm.append(ImportanceRandomCrop(crop_size=cfg.AUGMENTATION.CROP_SIZE, label_type=cfg.DATASETS.LABEL_FORMAT))
         if cfg.AUGMENTATION.RANDOM_FLIP_ROTATE:
             trfm.append(RandomFlipRotate())
+        if cfg.AUGMENTATION.DILATE:
+            trfm.append(Dilate())
     trfm.append(Npy2Torch())
     if cfg.AUGMENTATION.ENABLE_VARI: trfm.append(VARI())
     if cfg.AUGMENTATION.ZERO_MEAN: trfm.append(ZeroMeanUnitImage())
@@ -629,6 +629,7 @@ def setup(args):
 def damage_train(trial: optuna.Trial=None, cfg=None):
     # Overwrite environment config if in debug mode
     if cfg.DEBUG:
+        cfg.DATALOADER.NUM_WORKER = 1
         cfg.DATASETS.TRAIN = cfg.DATASETS.DEBUG_TRAIN
         cfg.DATASETS.VALIDATION = cfg.DATASETS.DEBUG_VALIDATION
         cfg.DATASETS.TEST = cfg.DATASETS.DEBUG_TEST

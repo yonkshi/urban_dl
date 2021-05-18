@@ -24,12 +24,15 @@ class Resize:
 
 
 class Dilate:
-    def __init__(self, kernel=np.ones(5, 5), iterations=2):
+    def __init__(self, kernel=np.ones((3,3)), iterations=2):
         self.kernel = kernel
         self.iterations = iterations
 
     def __call__(self, args):
-        args['y'] = cv2.dilate(args['y'].T, kernel=self.kernel, iterations=self.iterations).T
+        # args['y'] = cv2.dilate(args['y'].T, kernel=self.kernel, iterations=self.iterations).T
+        # Above needs a retraded workaround because cv2
+        for i in range(args['y'].shape[-1]):
+            args['y'][..., i]= cv2.dilate(args['y'][..., i], kernel=self.kernel, iterations=self.iterations)
         return args
 
 
